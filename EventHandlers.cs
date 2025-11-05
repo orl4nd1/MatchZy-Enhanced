@@ -63,6 +63,27 @@ public partial class MatchZy
                     AutoStart();
                 }
             }
+
+            // Send player_connect event
+            if (isMatchSetup)
+            {
+                var playerInfo = new MatchZyPlayerInfo(
+                    player.SteamID.ToString(),
+                    player.PlayerName,
+                    "none" // Team will be assigned later
+                );
+
+                var playerConnectEvent = new MatchZyPlayerConnectedEvent
+                {
+                    MatchId = liveMatchId,
+                    Player = playerInfo
+                };
+
+                Task.Run(async () => {
+                    await SendEventAsync(playerConnectEvent);
+                });
+            }
+
             return HookResult.Continue;
 
         }
@@ -105,6 +126,36 @@ public partial class MatchZy
             noFlashList.Remove(userId);
             lastGrenadesData.Remove(userId);
             nadeSpecificLastGrenadeData.Remove(userId);
+
+            // Send player_disconnect event
+            if (isMatchSetup)
+            {
+                string teamName = "none";
+                if (reverseTeamSides.ContainsKey("CT") && player.TeamNum == 3)
+                {
+                    teamName = reverseTeamSides["CT"].teamName;
+                }
+                else if (reverseTeamSides.ContainsKey("TERRORIST") && player.TeamNum == 2)
+                {
+                    teamName = reverseTeamSides["TERRORIST"].teamName;
+                }
+
+                var playerInfo = new MatchZyPlayerInfo(
+                    player.SteamID.ToString(),
+                    player.PlayerName,
+                    teamName
+                );
+
+                var playerDisconnectEvent = new MatchZyPlayerDisconnectedEvent
+                {
+                    MatchId = liveMatchId,
+                    Player = playerInfo
+                };
+
+                Task.Run(async () => {
+                    await SendEventAsync(playerDisconnectEvent);
+                });
+            }
 
             return HookResult.Continue;
         }

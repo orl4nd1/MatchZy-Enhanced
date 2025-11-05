@@ -532,6 +532,64 @@ namespace MatchZy
 
             (teamSides[matchzyTeam1], teamSides[matchzyTeam2]) = (teamSides[matchzyTeam2], teamSides[matchzyTeam1]);
             (reverseTeamSides["CT"], reverseTeamSides["TERRORIST"]) = (reverseTeamSides["TERRORIST"], reverseTeamSides["CT"]);
+
+            // Send side_swap event
+            if (isMatchLive)
+            {
+                var sideSwapEvent = new MatchZySideSwapEvent
+                {
+                    MatchId = liveMatchId,
+                    MapNumber = matchConfig.CurrentMapNumber,
+                    Team1Side = teamSides[matchzyTeam1],
+                    Team2Side = teamSides[matchzyTeam2]
+                };
+
+                Task.Run(async () => {
+                    await SendEventAsync(sideSwapEvent);
+                });
+
+                // Check if this is halftime or overtime
+                var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+                int roundsPlayed = gameRules.TotalRoundsPlayed;
+                int roundsPerHalf = ConVar.Find("mp_maxrounds")!.GetPrimitiveValue<int>() / 2;
+                int roundsPerOTHalf = ConVar.Find("mp_overtime_maxrounds")!.GetPrimitiveValue<int>() / 2;
+
+                if (roundsPlayed == roundsPerHalf)
+                {
+                    // This is halftime
+                    (int t1score, int t2score) = GetTeamsScore();
+                    var halftimeStartedEvent = new MatchZyHalftimeStartedEvent
+                    {
+                        MatchId = liveMatchId,
+                        MapNumber = matchConfig.CurrentMapNumber,
+                        Team1Score = t1score,
+                        Team2Score = t2score
+                    };
+
+                    Task.Run(async () => {
+                        await SendEventAsync(halftimeStartedEvent);
+                    });
+                }
+                else if (roundsPlayed >= 2 * roundsPerHalf)
+                {
+                    // This is overtime
+                    int otround = roundsPlayed - 2 * roundsPerHalf;
+                    if ((otround + roundsPerOTHalf) % (2 * roundsPerOTHalf) == 0)
+                    {
+                        int overtimeNumber = (otround / (2 * roundsPerOTHalf)) + 1;
+                        var overtimeStartedEvent = new MatchZyOvertimeStartedEvent
+                        {
+                            MatchId = liveMatchId,
+                            MapNumber = matchConfig.CurrentMapNumber,
+                            OvertimeNumber = overtimeNumber
+                        };
+
+                        Task.Run(async () => {
+                            await SendEventAsync(overtimeStartedEvent);
+                        });
+                    }
+                }
+            }
         }
 
         private CsTeam GetPlayerTeam(CCSPlayerController player)

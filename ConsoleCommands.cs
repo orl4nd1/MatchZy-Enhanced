@@ -84,6 +84,9 @@ namespace MatchZy
                         playerReadyStatus[player.UserId.Value] = true;
                         // player.PrintToChat($"{chatPrefix} {Localizer["matchzy.youareready"]}");
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedready"]);
+                        
+                        // Send player_ready event
+                        SendPlayerReadyEvent(player, true);
                     }
                     CheckLiveRequired();
                     HandleClanTags();
@@ -113,6 +116,9 @@ namespace MatchZy
                     {
                         playerReadyStatus[player.UserId.Value] = false;
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedunready"]);
+                        
+                        // Send player_unready event
+                        SendPlayerReadyEvent(player, false);
                     }
                     HandleClanTags();
                 }
@@ -266,31 +272,41 @@ namespace MatchZy
                 {
                     return;
                 }
+                
+                int teamsReady = ((bool)unpauseData["t"] ? 1 : 0) + ((bool)unpauseData["ct"] ? 1 : 0);
+                
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
-                    Server.ExecuteCommand("mp_unpause_match;");
-                    isPaused = false;
-                    unpauseData["ct"] = false;
-                    unpauseData["t"] = false;
+                    UnpauseMatch();
                 }
                 else if (unpauseTeamName == "Admin")
                 {
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
-                    Server.ExecuteCommand("mp_unpause_match;");
-                    isPaused = false;
-                    unpauseData["ct"] = false;
-                    unpauseData["t"] = false;
+                    UnpauseMatch();
                 }
                 else
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamwantstounpause", unpauseTeamName, remainingUnpauseTeam]);
                     // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{unpauseTeamName}{ChatColors.Default} wants to unpause the match. {ChatColors.Green}{remainingUnpauseTeam}{ChatColors.Default}, please write !unpause to confirm.");
-                }
-                if (!isPaused && pausedStateTimer != null)
-                {
-                    pausedStateTimer.Kill();
-                    pausedStateTimer = null;
+                    
+                    // Send unpause_requested event
+                    string requestingTeam = player?.TeamNum == 2 ? 
+                        (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : 
+                        (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2");
+                    
+                    var unpauseRequestedEvent = new MatchZyUnpauseRequestedEvent
+                    {
+                        MatchId = liveMatchId,
+                        MapNumber = matchConfig.CurrentMapNumber,
+                        Team = requestingTeam,
+                        TeamsReady = teamsReady,
+                        TeamsNeeded = 2
+                    };
+
+                    Task.Run(async () => {
+                        await SendEventAsync(unpauseRequestedEvent);
+                    });
                 }
             }
         }

@@ -39,6 +39,7 @@ namespace MatchZy
 
         // Pause Data
         public bool isPaused = false;
+        public long pauseStartTime = 0;
         public Dictionary<string, object> unpauseData = new Dictionary<string, object> {
             { "ct", false },
             { "t", false },
@@ -280,6 +281,23 @@ namespace MatchZy
                 @event.Reason = finalEvent;
                 isSideSelectionPhase = true;
                 isKnifeRound = false;
+
+                // Send knife_round_ended event
+                string winnerTeam = knifeWinner == 3 ? 
+                    (reverseTeamSides.ContainsKey("CT") ? (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2") : "none") :
+                    (reverseTeamSides.ContainsKey("TERRORIST") ? (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : "none");
+
+                var knifeEndedEvent = new MatchZyKnifeRoundEndedEvent
+                {
+                    MatchId = liveMatchId,
+                    MapNumber = matchConfig.CurrentMapNumber,
+                    Winner = winnerTeam
+                };
+
+                Task.Run(async () => {
+                    await SendEventAsync(knifeEndedEvent);
+                });
+
                 StartAfterKnifeWarmup();
 
                 return HookResult.Changed;
