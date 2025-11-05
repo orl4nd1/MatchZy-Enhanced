@@ -6,17 +6,17 @@ public partial class MatchZy
 {
     private void SendPlayerReadyEvent(CCSPlayerController player, bool isReady)
     {
-        Log($"[SendPlayerReadyEvent] Called - isMatchSetup: {isMatchSetup}, RemoteLogURL: {matchConfig.RemoteLogURL}, isReady: {isReady}");
-        
-        if (!isMatchSetup)
-        {
-            Log($"[SendPlayerReadyEvent] Skipping - Match not setup");
-            return;
-        }
+        Log($"[SendPlayerReadyEvent] Called - isMatchSetup: {isMatchSetup}, readyAvailable: {readyAvailable}, RemoteLogURL: {matchConfig.RemoteLogURL}, isReady: {isReady}");
         
         if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
         {
             Log($"[SendPlayerReadyEvent] Skipping - RemoteLogURL not configured");
+            return;
+        }
+        
+        if (!readyAvailable)
+        {
+            Log($"[SendPlayerReadyEvent] Skipping - Ready system not available");
             return;
         }
         
@@ -97,9 +97,9 @@ public partial class MatchZy
 
     private void CheckAndSendTeamReadyEvent()
     {
-        Log($"[CheckAndSendTeamReadyEvent] Called - isMatchSetup: {isMatchSetup}, RemoteLogURL configured: {!string.IsNullOrEmpty(matchConfig.RemoteLogURL)}");
+        Log($"[CheckAndSendTeamReadyEvent] Called - readyAvailable: {readyAvailable}, RemoteLogURL configured: {!string.IsNullOrEmpty(matchConfig.RemoteLogURL)}");
         
-        if (!isMatchSetup || string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
+        if (!readyAvailable || string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
 
         bool team1Ready = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist);
         bool team2Ready = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist);

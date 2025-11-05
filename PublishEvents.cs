@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Modules.Utils;
 
 
 namespace MatchZy
@@ -15,9 +16,10 @@ namespace MatchZy
 
                 Log($"[SendEventAsync] Sending Event: {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} on {matchConfig.RemoteLogURL}");
                 
-                // Print to server console for visibility
+                // Print to server console AND chat for visibility
                 Server.NextFrame(() => {
                     Server.PrintToConsole($"[MatchZy Events] Sending '{@event.EventName}' to {matchConfig.RemoteLogURL}");
+                    Server.PrintToChatAll($"{chatPrefix} {ChatColors.Grey}Event:{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} → {ChatColors.Grey}{GetShortUrl(matchConfig.RemoteLogURL)}");
                 });
 
                 using var httpClient = new HttpClient();
@@ -38,9 +40,10 @@ namespace MatchZy
                 {
                     Log($"[SendEventAsync] Sending {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} successful with status code: {httpResponseMessage.StatusCode}");
                     
-                    // Print success to console
+                    // Print success to console and chat
                     Server.NextFrame(() => {
                         Server.PrintToConsole($"[MatchZy Events] ✓ '{@event.EventName}' sent successfully ({httpResponseMessage.StatusCode})");
+                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}✓{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} sent");
                     });
                 }
                 else
@@ -48,10 +51,11 @@ namespace MatchZy
                     string errorContent = await httpResponseMessage.Content.ReadAsStringAsync();
                     Log($"[SendEventAsync] Sending {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} failed with status code: {httpResponseMessage.StatusCode}, ResponseContent: {errorContent}");
                     
-                    // Print error to console
+                    // Print error to console and chat
                     Server.NextFrame(() => {
                         Server.PrintToConsole($"[MatchZy Events] ✗ FAILED to send '{@event.EventName}' (HTTP {httpResponseMessage.StatusCode})");
                         Server.PrintToConsole($"[MatchZy Events] Error: {errorContent}");
+                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}FAILED{ChatColors.Default} ({httpResponseMessage.StatusCode})");
                     });
                 }
             }
@@ -59,10 +63,24 @@ namespace MatchZy
             {
                 Log($"[SendEventAsync FATAL] An error occurred: {e.Message}");
                 
-                // Print exception to console
+                // Print exception to console and chat
                 Server.NextFrame(() => {
                     Server.PrintToConsole($"[MatchZy Events] ✗ EXCEPTION sending '{@event.EventName}': {e.Message}");
+                    Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}ERROR:{ChatColors.Default} {e.Message}");
                 });
+            }
+        }
+
+        private string GetShortUrl(string url)
+        {
+            try
+            {
+                var uri = new Uri(url);
+                return uri.Host + uri.PathAndQuery;
+            }
+            catch
+            {
+                return url.Length > 30 ? url.Substring(0, 27) + "..." : url;
             }
         }
     }

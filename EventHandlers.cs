@@ -65,7 +65,7 @@ public partial class MatchZy
             }
 
             // Send player_connect event
-            if (isMatchSetup)
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
             {
                 Log($"[EventPlayerConnectFull] Sending player_connect event for {player.PlayerName}");
                 
@@ -87,7 +87,7 @@ public partial class MatchZy
             }
             else
             {
-                Log($"[EventPlayerConnectFull] Skipping player_connect event - Match not setup");
+                Log($"[EventPlayerConnectFull] Skipping player_connect event - RemoteLogURL not configured");
             }
 
             return HookResult.Continue;
@@ -134,7 +134,7 @@ public partial class MatchZy
             nadeSpecificLastGrenadeData.Remove(userId);
 
             // Send player_disconnect event
-            if (isMatchSetup)
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
             {
                 Log($"[EventPlayerDisconnect] Sending player_disconnect event for {player.PlayerName}");
                 
@@ -166,7 +166,7 @@ public partial class MatchZy
             }
             else
             {
-                Log($"[EventPlayerDisconnect] Skipping player_disconnect event - Match not setup");
+                Log($"[EventPlayerDisconnect] Skipping player_disconnect event - RemoteLogURL not configured");
             }
 
             return HookResult.Continue;
