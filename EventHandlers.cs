@@ -67,6 +67,8 @@ public partial class MatchZy
             // Send player_connect event
             if (isMatchSetup)
             {
+                Log($"[EventPlayerConnectFull] Sending player_connect event for {player.PlayerName}");
+                
                 var playerInfo = new MatchZyPlayerInfo(
                     player.SteamID.ToString(),
                     player.PlayerName,
@@ -82,6 +84,10 @@ public partial class MatchZy
                 Task.Run(async () => {
                     await SendEventAsync(playerConnectEvent);
                 });
+            }
+            else
+            {
+                Log($"[EventPlayerConnectFull] Skipping player_connect event - Match not setup");
             }
 
             return HookResult.Continue;
@@ -130,6 +136,8 @@ public partial class MatchZy
             // Send player_disconnect event
             if (isMatchSetup)
             {
+                Log($"[EventPlayerDisconnect] Sending player_disconnect event for {player.PlayerName}");
+                
                 string teamName = "none";
                 if (reverseTeamSides.ContainsKey("CT") && player.TeamNum == 3)
                 {
@@ -155,6 +163,10 @@ public partial class MatchZy
                 Task.Run(async () => {
                     await SendEventAsync(playerDisconnectEvent);
                 });
+            }
+            else
+            {
+                Log($"[EventPlayerDisconnect] Skipping player_disconnect event - Match not setup");
             }
 
             return HookResult.Continue;

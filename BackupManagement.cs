@@ -384,6 +384,8 @@ namespace MatchZy
             // Send backup_loaded event
             if (backupData.TryGetValue("round", out var roundNumberStr) && int.TryParse(roundNumberStr, out int roundNum))
             {
+                Log($"[RestoreRoundBackup] Sending backup_loaded event - round {roundNum}, file: {fileName}");
+                
                 var backupLoadedEvent = new MatchZyBackupLoadedEvent
                 {
                     MatchId = liveMatchId,

@@ -6,8 +6,25 @@ public partial class MatchZy
 {
     private void SendPlayerReadyEvent(CCSPlayerController player, bool isReady)
     {
-        if (!isMatchSetup || string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
-        if (!player.UserId.HasValue) return;
+        Log($"[SendPlayerReadyEvent] Called - isMatchSetup: {isMatchSetup}, RemoteLogURL: {matchConfig.RemoteLogURL}, isReady: {isReady}");
+        
+        if (!isMatchSetup)
+        {
+            Log($"[SendPlayerReadyEvent] Skipping - Match not setup");
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+        {
+            Log($"[SendPlayerReadyEvent] Skipping - RemoteLogURL not configured");
+            return;
+        }
+        
+        if (!player.UserId.HasValue)
+        {
+            Log($"[SendPlayerReadyEvent] Skipping - Player UserId is null");
+            return;
+        }
 
         // Get ready counts
         (int team1PlayerCount, int team1ReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
@@ -35,6 +52,8 @@ public partial class MatchZy
 
         if (isReady)
         {
+            Log($"[SendPlayerReadyEvent] Creating player_ready event for {player.PlayerName}");
+            
             var readyEvent = new MatchZyPlayerReadyEvent
             {
                 MatchId = liveMatchId,
@@ -46,6 +65,7 @@ public partial class MatchZy
                 ExpectedTotal = expectedTotal
             };
 
+            Log($"[SendPlayerReadyEvent] Sending player_ready event to remote URL");
             Task.Run(async () => {
                 await SendEventAsync(readyEvent);
             });
@@ -55,6 +75,8 @@ public partial class MatchZy
         }
         else
         {
+            Log($"[SendPlayerReadyEvent] Creating player_unready event for {player.PlayerName}");
+            
             var unreadyEvent = new MatchZyPlayerUnreadyEvent
             {
                 MatchId = liveMatchId,
@@ -66,6 +88,7 @@ public partial class MatchZy
                 ExpectedTotal = expectedTotal
             };
 
+            Log($"[SendPlayerReadyEvent] Sending player_unready event to remote URL");
             Task.Run(async () => {
                 await SendEventAsync(unreadyEvent);
             });
@@ -74,6 +97,8 @@ public partial class MatchZy
 
     private void CheckAndSendTeamReadyEvent()
     {
+        Log($"[CheckAndSendTeamReadyEvent] Called - isMatchSetup: {isMatchSetup}, RemoteLogURL configured: {!string.IsNullOrEmpty(matchConfig.RemoteLogURL)}");
+        
         if (!isMatchSetup || string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
 
         bool team1Ready = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist);
@@ -88,6 +113,8 @@ public partial class MatchZy
         // Send team_ready event for CT team if ready
         if (team1Ready && reverseTeamSides.ContainsKey("CT"))
         {
+            Log($"[CheckAndSendTeamReadyEvent] CT team is ready, sending team_ready event");
+            
             var teamReadyEvent = new MatchZyTeamReadyEvent
             {
                 MatchId = liveMatchId,
@@ -105,6 +132,8 @@ public partial class MatchZy
         // Send team_ready event for T team if ready
         if (team2Ready && reverseTeamSides.ContainsKey("TERRORIST"))
         {
+            Log($"[CheckAndSendTeamReadyEvent] T team is ready, sending team_ready event");
+            
             var teamReadyEvent = new MatchZyTeamReadyEvent
             {
                 MatchId = liveMatchId,
@@ -122,6 +151,8 @@ public partial class MatchZy
         // Send all_players_ready event if both teams are ready
         if (team1Ready && team2Ready)
         {
+            Log($"[CheckAndSendTeamReadyEvent] Both teams ready, sending all_players_ready event");
+            
             var allPlayersReadyEvent = new MatchZyAllPlayersReadyEvent
             {
                 MatchId = liveMatchId,

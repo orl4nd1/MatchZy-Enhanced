@@ -252,6 +252,7 @@ namespace MatchZy
             isWarmup = false;
 
             // Send warmup_ended event
+            Log($"[StartKnifeRound] Sending warmup_ended event");
             var warmupEndedEvent = new MatchZyWarmupEndedEvent
             {
                 MatchId = liveMatchId,
@@ -262,6 +263,7 @@ namespace MatchZy
             });
 
             // Send knife_round_started event
+            Log($"[StartKnifeRound] Sending knife_round_started event");
             var knifeStartedEvent = new MatchZyKnifeRoundStartedEvent
             {
                 MatchId = liveMatchId,
@@ -351,6 +353,7 @@ namespace MatchZy
             // Send warmup_ended event if not coming from knife round
             if (!isSideSelectionPhase)
             {
+                Log($"[StartLive] Sending warmup_ended event");
                 var warmupEndedEvent = new MatchZyWarmupEndedEvent
                 {
                     MatchId = liveMatchId,
@@ -1075,6 +1078,7 @@ namespace MatchZy
             // Send round_started event
             if (isMatchLive)
             {
+                Log($"[HandlePostRoundStartEvent] Sending round_started event");
                 (int t1score, int t2score) = GetTeamsScore();
                 
                 var roundStartedEvent = new MatchZyRoundStartedEvent
@@ -1267,6 +1271,8 @@ namespace MatchZy
                 // Send match_paused event
                 if (player != null && player.UserId.HasValue)
                 {
+                    Log($"[PauseMatch] Sending match_paused event - paused by {player.PlayerName}");
+                    
                     var playerInfo = new MatchZyPlayerInfo(
                         player.SteamID.ToString(),
                         player.PlayerName,
@@ -1332,6 +1338,8 @@ namespace MatchZy
             SetMatchPausedFlags();
 
             // Send match_paused event for admin pause
+            Log($"[ForcePauseMatch] Sending match_paused event - admin pause");
+            
             var adminPlayerInfo = new MatchZyPlayerInfo(
                 player?.SteamID.ToString() ?? "Console",
                 player?.PlayerName ?? "Admin",
@@ -1395,6 +1403,8 @@ namespace MatchZy
             }
 
             // Send match_unpaused event
+            Log($"[UnpauseMatch] Sending match_unpaused event - pause duration: {pauseDuration}s");
+            
             var matchUnpausedEvent = new MatchZyMatchUnpausedEvent
             {
                 MatchId = liveMatchId,

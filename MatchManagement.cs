@@ -536,6 +536,8 @@ namespace MatchZy
             // Send side_swap event
             if (isMatchLive)
             {
+                Log($"[SwapSidesInTeamData] Sending side_swap event");
+                
                 var sideSwapEvent = new MatchZySideSwapEvent
                 {
                     MatchId = liveMatchId,
@@ -557,6 +559,7 @@ namespace MatchZy
                 if (roundsPlayed == roundsPerHalf)
                 {
                     // This is halftime
+                    Log($"[SwapSidesInTeamData] Halftime detected, sending halftime_started event");
                     (int t1score, int t2score) = GetTeamsScore();
                     var halftimeStartedEvent = new MatchZyHalftimeStartedEvent
                     {
@@ -577,6 +580,8 @@ namespace MatchZy
                     if ((otround + roundsPerOTHalf) % (2 * roundsPerOTHalf) == 0)
                     {
                         int overtimeNumber = (otround / (2 * roundsPerOTHalf)) + 1;
+                        Log($"[SwapSidesInTeamData] Overtime detected, sending overtime_started event - OT#{overtimeNumber}");
+                        
                         var overtimeStartedEvent = new MatchZyOvertimeStartedEvent
                         {
                             MatchId = liveMatchId,

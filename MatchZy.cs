@@ -203,7 +203,9 @@ namespace MatchZy
                 { ".besttspawn", OnBestTSpawnCommand },
                 { ".worsttspawn", OnWorstTSpawnCommand },
                 { ".savepos", OnSavePosCommand},
-                { ".loadpos", OnLoadPosCommand}
+                { ".loadpos", OnLoadPosCommand},
+                { ".te", OnTestEventCommand},
+                { ".testevent", OnTestEventCommand}
             };
 
             RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFullHandler);
@@ -287,6 +289,8 @@ namespace MatchZy
                     (reverseTeamSides.ContainsKey("CT") ? (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2") : "none") :
                     (reverseTeamSides.ContainsKey("TERRORIST") ? (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : "none");
 
+                Log($"[EventRoundEnd] Knife round ended, sending knife_round_ended event - winner: {winnerTeam}");
+                
                 var knifeEndedEvent = new MatchZyKnifeRoundEndedEvent
                 {
                     MatchId = liveMatchId,

@@ -291,6 +291,8 @@ namespace MatchZy
                     // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{unpauseTeamName}{ChatColors.Default} wants to unpause the match. {ChatColors.Green}{remainingUnpauseTeam}{ChatColors.Default}, please write !unpause to confirm.");
                     
                     // Send unpause_requested event
+                    Log($"[OnUnpauseCommand] Sending unpause_requested event - team {unpauseTeamName}");
+                    
                     string requestingTeam = player?.TeamNum == 2 ? 
                         (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : 
                         (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2");
