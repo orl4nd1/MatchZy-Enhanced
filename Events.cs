@@ -485,3 +485,20 @@ public class MatchZySideSwapEvent : MatchZyMapEvent
     {
     }
 }
+
+// Test Event
+public class MatchZyTestEvent : MatchZyMatchEvent
+{
+    [JsonPropertyName("message")]
+    public required string Message { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public required long Timestamp { get; init; }
+
+    [JsonPropertyName("triggered_by")]
+    public required string TriggeredBy { get; init; }
+
+    public MatchZyTestEvent() : base("test_event")
+    {
+    }
+}

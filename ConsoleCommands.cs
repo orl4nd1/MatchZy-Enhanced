@@ -752,5 +752,67 @@ namespace MatchZy
 
             return HookResult.Stop;
         }
+
+        [ConsoleCommand("css_te", "Sends a test event to the remote log URL")]
+        [ConsoleCommand("css_testevent", "Sends a test event to the remote log URL")]
+        public void OnTestEventCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (!IsPlayerAdmin(player, "css_te", "@css/config"))
+            {
+                SendPlayerNotAdminMessage(player);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+            {
+                ReplyToUserCommand(player, "Remote log URL is not configured! Set matchzy_remote_log_url first.");
+                return;
+            }
+
+            // Show the endpoint to the admin
+            ReplyToUserCommand(player, $"Sending test event to: {ChatColors.Green}{matchConfig.RemoteLogURL}");
+
+            // Create and send test event
+            var testEvent = new MatchZyTestEvent
+            {
+                MatchId = liveMatchId,
+                Message = "This is a test event from MatchZy",
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                TriggeredBy = player?.PlayerName ?? "Console"
+            };
+
+            Task.Run(async () => {
+                try
+                {
+                    await SendEventAsync(testEvent);
+                    
+                    // Notify admin of success
+                    Server.NextFrame(() => {
+                        if (player != null && player.IsValid)
+                        {
+                            ReplyToUserCommand(player, $"{ChatColors.Green}✓{ChatColors.Default} Test event sent successfully! Check your endpoint logs.");
+                        }
+                        else
+                        {
+                            Log("[TestEvent] Test event sent successfully!");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Notify admin of failure
+                    Server.NextFrame(() => {
+                        if (player != null && player.IsValid)
+                        {
+                            ReplyToUserCommand(player, $"{ChatColors.Red}✗{ChatColors.Default} Failed to send test event: {ex.Message}");
+                        }
+                        else
+                        {
+                            Log($"[TestEvent FATAL] Failed to send test event: {ex.Message}");
+                        }
+                    });
+                }
+            });
+        }
     }
 }
