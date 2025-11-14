@@ -65,7 +65,7 @@ public partial class MatchZy
             }
 
             // Send player_connect event
-            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && isMatchSetup)
             {
                 Log($"[EventPlayerConnectFull] Sending player_connect event for {player.PlayerName}");
                 
@@ -87,7 +87,14 @@ public partial class MatchZy
             }
             else
             {
-                Log($"[EventPlayerConnectFull] Skipping player_connect event - RemoteLogURL not configured");
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    Log($"[EventPlayerConnectFull] Skipping player_connect event - RemoteLogURL not configured");
+                }
+                else
+                {
+                    Log($"[EventPlayerConnectFull] Skipping player_connect event - Match not setup");
+                }
             }
 
             return HookResult.Continue;
@@ -134,7 +141,7 @@ public partial class MatchZy
             nadeSpecificLastGrenadeData.Remove(userId);
 
             // Send player_disconnect event
-            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && isMatchSetup)
             {
                 Log($"[EventPlayerDisconnect] Sending player_disconnect event for {player.PlayerName}");
                 
@@ -166,7 +173,14 @@ public partial class MatchZy
             }
             else
             {
-                Log($"[EventPlayerDisconnect] Skipping player_disconnect event - RemoteLogURL not configured");
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    Log($"[EventPlayerDisconnect] Skipping player_disconnect event - RemoteLogURL not configured");
+                }
+                else
+                {
+                    Log($"[EventPlayerDisconnect] Skipping player_disconnect event - Match not setup");
+                }
             }
 
             return HookResult.Continue;

@@ -140,6 +140,30 @@ namespace MatchZy
             return playerData.Count;
         }
 
+        // Helper function to update tournament status ConVars
+        private void UpdateTournamentStatus(string status, string matchSlug = "")
+        {
+            try
+            {
+                tournamentStatus.Value = status;
+                
+                if (!string.IsNullOrEmpty(matchSlug))
+                {
+                    tournamentMatch.Value = matchSlug;
+                }
+                
+                // Update timestamp to current Unix time
+                long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                tournamentUpdated.Value = timestamp.ToString();
+                
+                Log($"[UpdateTournamentStatus] Status: {status}, Match: {tournamentMatch.Value}, Timestamp: {timestamp}");
+            }
+            catch (Exception e)
+            {
+                Log($"[UpdateTournamentStatus FATAL] An error occurred: {e.Message}");
+            }
+        }
+
         private void SendUnreadyPlayersMessage()
         {
             if (!isWarmup || matchStarted) return;
@@ -234,6 +258,7 @@ namespace MatchZy
             unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
             isWarmup = true;
             ExecWarmupCfg();
+            UpdateTournamentStatus("warmup");
         }
 
         private void StartKnifeRound()
@@ -290,6 +315,7 @@ namespace MatchZy
             PrintToAllChat($"{ChatColors.Olive}KNIFE!");
             PrintToAllChat($"{ChatColors.Lime}KNIFE!");
             PrintToAllChat($"{ChatColors.Green}KNIFE!");
+            UpdateTournamentStatus("knife");
         }
 
         private void SendSideSelectionMessage()
@@ -374,6 +400,7 @@ namespace MatchZy
             {
                 await SendEventAsync(goingLiveEvent);
             });
+            UpdateTournamentStatus("live");
         }
 
         private void KillPhaseTimers()
@@ -523,6 +550,7 @@ namespace MatchZy
                     unreadyPlayerMessageTimer = null;
                     unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
                 }
+                UpdateTournamentStatus("idle", "");
             }
             catch (Exception ex)
             {
@@ -879,6 +907,8 @@ namespace MatchZy
         private void HandleMatchEnd()
         {
             if (!isMatchLive) return;
+
+            UpdateTournamentStatus("postgame");
 
             // This ensures that the mp_match_restart_delay is not shorter than what is required for the GOTV recording to finish.
             // Ref: Get5
@@ -1415,6 +1445,7 @@ namespace MatchZy
             Task.Run(async () => {
                 await SendEventAsync(matchUnpausedEvent);
             });
+            UpdateTournamentStatus("live");
         }
 
         private void SetMatchPausedFlags()
@@ -1427,6 +1458,7 @@ namespace MatchZy
             pauseStartTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             pausedStateTimer ??= AddTimer(chatTimerDelay, SendPausedStateMessage, TimerFlags.REPEAT);
+            UpdateTournamentStatus("paused");
         }
 
         private void StartMatchMode()

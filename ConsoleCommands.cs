@@ -771,7 +771,6 @@ namespace MatchZy
                 PrintToPlayerChat(player, message);
             }
         }
-
         [ConsoleCommand("css_te", "Sends a test event to the remote log URL")]
         [ConsoleCommand("css_testevent", "Sends a test event to the remote log URL")]
         public void OnTestEventCommand(CCSPlayerController? player, CommandInfo? command)

@@ -71,6 +71,7 @@ namespace MatchZy
                 {
                     // command.ReplyToCommand("Match load failed! Resetting current match");
                     ReplyToUserCommand(player, Localizer["matchzy.mm.matchloadfailed"]);
+                    UpdateTournamentStatus("error");
                     ResetMatch();
                 }
                 loadedConfigFile = fileName;
@@ -78,6 +79,7 @@ namespace MatchZy
             catch (Exception e)
             {
                 Log($"[LoadMatch - FATAL] An error occured: {e.Message}");
+                UpdateTournamentStatus("error");
                 return;
             }
         }
@@ -127,6 +129,7 @@ namespace MatchZy
                     {
                         // command.ReplyToCommand("Match load failed! Resetting current match");
                         ReplyToUserCommand(player, Localizer["matchzy.mm.matchloadfailed"]);
+                        UpdateTournamentStatus("error");
                         ResetMatch();
                     }
                     loadedConfigFile = url;
@@ -135,12 +138,14 @@ namespace MatchZy
                 {
                     // command.ReplyToCommand($"[LoadMatchFromURL] HTTP request failed with status code: {response.StatusCode}");
                     ReplyToUserCommand(player, Localizer["matchzy.mm.httprequestfailed", response.StatusCode]);
+                    UpdateTournamentStatus("error");
                     Log($"[LoadMatchFromURL] HTTP request failed with status code: {response.StatusCode}");
                 }
             }
             catch (Exception e)
             {
                 Log($"[LoadMatchFromURL - FATAL] An error occured: {e.Message}");
+                UpdateTournamentStatus("error");
                 return;
             }
         }
@@ -261,6 +266,7 @@ namespace MatchZy
             if (validationError != "")
             {
                 Log($"[LoadMatchDataCommand] {validationError}");
+                UpdateTournamentStatus("error");
                 return false;
             }
 
@@ -268,6 +274,9 @@ namespace MatchZy
             {
                 liveMatchId = (long)jsonDataObject["matchid"]!;
             }
+            
+            // Update tournament status to loading with match ID
+            UpdateTournamentStatus("loading", liveMatchId.ToString());
             JToken team1 = jsonDataObject["team1"]!;
             JToken team2 = jsonDataObject["team2"]!;
             JToken maplist = jsonDataObject["maplist"]!;
@@ -572,6 +581,7 @@ namespace MatchZy
                     Task.Run(async () => {
                         await SendEventAsync(halftimeStartedEvent);
                     });
+                    UpdateTournamentStatus("halftime");
                 }
                 else if (roundsPlayed >= 2 * roundsPerHalf)
                 {
