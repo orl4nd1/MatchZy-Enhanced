@@ -755,6 +755,23 @@ namespace MatchZy
             return HookResult.Stop;
         }
 
+        [ConsoleCommand("matchzy_version", "Displays the current MatchZy version")]
+        [ConsoleCommand("css_matchzy_version", "Displays the current MatchZy version")]
+        [ConsoleCommand("css_version", "Displays the current MatchZy version")]
+        public void OnMatchZyVersionCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            string message = $"{chatPrefix} {ChatColors.Green}MatchZy{ChatColors.Default} version: {ChatColors.Lime}{ModuleVersion}{ChatColors.Default}";
+
+            if (player == null)
+            {
+                Server.PrintToConsole($"[MatchZy] Version: {ModuleVersion}");
+            }
+            else
+            {
+                PrintToPlayerChat(player, message);
+            }
+        }
+
         [ConsoleCommand("css_te", "Sends a test event to the remote log URL")]
         [ConsoleCommand("css_testevent", "Sends a test event to the remote log URL")]
         public void OnTestEventCommand(CCSPlayerController? player, CommandInfo? command)

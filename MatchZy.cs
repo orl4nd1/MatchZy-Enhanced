@@ -204,6 +204,8 @@ namespace MatchZy
                 { ".worsttspawn", OnWorstTSpawnCommand },
                 { ".savepos", OnSavePosCommand},
                 { ".loadpos", OnLoadPosCommand},
+                { ".version", OnMatchZyVersionCommand},
+                { ".matchzyversion", OnMatchZyVersionCommand},
                 { ".te", OnTestEventCommand},
                 { ".testevent", OnTestEventCommand}
             };
