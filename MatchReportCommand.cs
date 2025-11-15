@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -116,6 +119,18 @@ public record MatchReportServer
     public string RemoteLogUrl { get; init; } = "";
 }
 
+public record MatchReportUploadEnvelope
+{
+    [JsonPropertyName("serverId")]
+    public string ServerId { get; init; } = "";
+
+    [JsonPropertyName("matchSlug")]
+    public string? MatchSlug { get; init; }
+
+    [JsonPropertyName("report")]
+    public MatchReportPayload Report { get; init; } = new();
+}
+
 public partial class MatchZy : BasePlugin
 {
     private static readonly JsonSerializerOptions MatchReportSerializerOptions = new()
@@ -132,7 +147,12 @@ public partial class MatchZy : BasePlugin
         try
         {
             MatchReportPayload payload = BuildMatchReport();
-            command.ReplyToCommand(JsonSerializer.Serialize(payload, MatchReportSerializerOptions));
+            bool uploaded = UploadMatchReport(payload).GetAwaiter().GetResult();
+
+            if (!uploaded)
+            {
+                command.ReplyToCommand(JsonSerializer.Serialize(payload, MatchReportSerializerOptions));
+            }
         }
         catch (Exception e)
         {
@@ -427,6 +447,93 @@ public partial class MatchZy : BasePlugin
         }
 
         return pauseSource.Equals("admin", StringComparison.OrdinalIgnoreCase) ? "admin" : "";
+    }
+
+    private async Task<bool> UploadMatchReport(MatchReportPayload payload)
+    {
+        string endpoint = matchReportEndpoint.Value;
+        string serverId = matchReportServerId.Value;
+        string token = matchReportToken.Value;
+
+        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(serverId))
+        {
+            Log("[MatchReport] Upload skipped - report endpoint or server ID not configured");
+            return false;
+        }
+
+        MatchReportUploadEnvelope envelope = new()
+        {
+            ServerId = serverId,
+            MatchSlug = string.IsNullOrWhiteSpace(payload.Match.Slug) ? null : payload.Match.Slug,
+            Report = payload
+        };
+
+        string jsonBody = JsonSerializer.Serialize(envelope, MatchReportSerializerOptions);
+
+        using HttpClient client = new();
+
+        const int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                Server.PrintToConsole($"[MatchZy] Uploading match report (attempt {attempt}/{maxAttempts})...");
+                using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+                {
+                    Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+                };
+
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    request.Headers.TryAddWithoutValidation("x-matchzy-token", token);
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode && ResponseIndicatesSuccess(responseBody))
+                {
+                    Server.PrintToConsole($"[MatchZy] Match report upload succeeded ({(int)response.StatusCode})");
+                    return true;
+                }
+
+                Log($"[MatchReport] Upload failed (attempt {attempt}) StatusCode: {(int)response.StatusCode}, Content: {responseBody}");
+            }
+            catch (Exception ex)
+            {
+                Log($"[MatchReport] Upload exception (attempt {attempt}): {ex.Message}");
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+            }
+        }
+
+        Server.PrintToConsole("[MatchZy] Match report upload failed after retries. Falling back to console output.");
+        return false;
+    }
+
+    private static bool ResponseIndicatesSuccess(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return true;
+        }
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("success", out var successProp))
+            {
+                return successProp.ValueKind == JsonValueKind.True;
+            }
+        }
+        catch
+        {
+            // ignore parse errors, treat as failure
+        }
+
+        return false;
     }
 }
 }

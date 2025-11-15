@@ -35,6 +35,11 @@ namespace MatchZy
         public FakeConVar<string> tournamentMatch = new("matchzy_tournament_match", "Match slug/identifier currently loaded on this server", "");
         public FakeConVar<string> tournamentUpdated = new("matchzy_tournament_updated", "Unix timestamp of last tournament status update", "0");
 
+        // Match report upload
+        public FakeConVar<string> matchReportEndpoint = new("matchzy_report_endpoint", "HTTP endpoint for match report uploads (https://host/api/events/report)", "");
+        public FakeConVar<string> matchReportServerId = new("matchzy_report_server_id", "Server identifier to send with match report uploads", "");
+        public FakeConVar<string> matchReportToken = new("matchzy_report_token", "Authentication token for match report uploads (sent as x-matchzy-token)", "");
+
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
         public void MatchZyWLConvar(CCSPlayerController? player, CommandInfo command)
         {
