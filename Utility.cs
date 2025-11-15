@@ -259,6 +259,7 @@ namespace MatchZy
             isWarmup = true;
             ExecWarmupCfg();
             UpdateTournamentStatus("warmup");
+            TriggerMatchReportUpload("warmup_start");
         }
 
         private void StartKnifeRound()
@@ -334,6 +335,7 @@ namespace MatchZy
             PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} Won the knife. Waiting for them to type {ChatColors.Green}.stay{ChatColors.Default} or {ChatColors.Green}.switch{ChatColors.Default}");
             sideSelectionMessageTimer ??= AddTimer(chatTimerDelay, SendSideSelectionMessage, TimerFlags.REPEAT);
+            TriggerMatchReportUpload("post_knife_warmup");
         }
 
         private void SetLiveFlags()
