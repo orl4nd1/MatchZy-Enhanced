@@ -554,29 +554,46 @@ public partial class MatchZy : BasePlugin
             matchReportUploadScheduled = true;
         }
 
-        Task.Run(async () =>
+        Server.NextFrame(() =>
         {
+            MatchReportPayload? payload = null;
             try
             {
-                await Task.Delay(500);
-                MatchReportPayload payload = BuildMatchReport();
-                bool uploaded = await UploadMatchReport(payload, fallbackToConsole: false);
-                if (!uploaded)
-                {
-                    Log($"[MatchReport] Auto upload failed (trigger: {reason})");
-                }
+                payload = BuildMatchReport();
             }
             catch (Exception ex)
             {
-                Log($"[MatchReport] Auto upload exception (trigger: {reason}) - {ex.Message}");
-            }
-            finally
-            {
+                Log($"[MatchReport] Failed to build report on main thread (trigger: {reason}) - {ex.Message}");
                 lock (matchReportUploadLock)
                 {
                     matchReportUploadScheduled = false;
                 }
+                return;
             }
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(500);
+                    bool uploaded = await UploadMatchReport(payload!, fallbackToConsole: false);
+                    if (!uploaded)
+                    {
+                        Log($"[MatchReport] Auto upload failed (trigger: {reason})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"[MatchReport] Auto upload exception (trigger: {reason}) - {ex.Message}");
+                }
+                finally
+                {
+                    lock (matchReportUploadLock)
+                    {
+                        matchReportUploadScheduled = false;
+                    }
+                }
+            });
         });
     }
 }
