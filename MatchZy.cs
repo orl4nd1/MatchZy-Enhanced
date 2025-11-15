@@ -56,6 +56,7 @@ namespace MatchZy
         public int connectedPlayers = 0;
         private Dictionary<int, bool> playerReadyStatus = new Dictionary<int, bool>();
         private Dictionary<int, CCSPlayerController> playerData = new Dictionary<int, CCSPlayerController>();
+        private readonly Dictionary<ulong, long> playerConnectionTimes = new();
 
         // Admin Data
         private Dictionary<string, string> loadedAdmins = new Dictionary<string, string>();

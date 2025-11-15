@@ -48,6 +48,7 @@ public partial class MatchZy
                 {
                     playerReadyStatus[player.UserId.Value] = true;
                 }
+                playerConnectionTimes[player.SteamID] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             }
             // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
             // Update: Commenting the below function as it was being called multiple times on map change.
@@ -123,6 +124,7 @@ public partial class MatchZy
                 connectedPlayers--;
             }
             playerData.Remove(userId);
+            playerConnectionTimes.Remove(player.SteamID);
 
             if (matchzyTeam1.coach.Contains(player))
             {
