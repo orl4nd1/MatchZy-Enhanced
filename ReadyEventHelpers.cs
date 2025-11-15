@@ -99,6 +99,8 @@ public partial class MatchZy
                 await SendEventAsync(unreadyEvent);
             });
         }
+
+        TriggerMatchReportUpload(isReady ? "player_ready" : "player_unready");
     }
 
     private void CheckAndSendTeamReadyEvent()

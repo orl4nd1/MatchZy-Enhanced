@@ -1124,6 +1124,8 @@ namespace MatchZy
                     await SendEventAsync(roundStartedEvent);
                 });
             }
+
+            TriggerMatchReportUpload("round_start");
         }
 
         private void HandlePostRoundEndEvent(EventRoundEnd @event)
@@ -1194,6 +1196,7 @@ namespace MatchZy
                     }
 
                     isRoundRestoring = false;
+                    TriggerMatchReportUpload("round_end");
                 }
             }
             catch (Exception e)

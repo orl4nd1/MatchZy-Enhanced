@@ -14,7 +14,7 @@ namespace MatchZy
 
         public override string ModuleName => "MatchZy";
 
-        public override string ModuleVersion => "0.8.20";
+        public override string ModuleVersion => "0.8.21";
 
         public override string ModuleAuthor => "WD- (https://github.com/shobhit-pathak/)";
 
@@ -57,6 +57,8 @@ namespace MatchZy
         private Dictionary<int, bool> playerReadyStatus = new Dictionary<int, bool>();
         private Dictionary<int, CCSPlayerController> playerData = new Dictionary<int, CCSPlayerController>();
         private readonly Dictionary<ulong, long> playerConnectionTimes = new();
+        private readonly object matchReportUploadLock = new();
+        private bool matchReportUploadScheduled = false;
 
         // Admin Data
         private Dictionary<string, string> loadedAdmins = new Dictionary<string, string>();

@@ -147,7 +147,7 @@ public partial class MatchZy : BasePlugin
         try
         {
             MatchReportPayload payload = BuildMatchReport();
-            bool uploaded = UploadMatchReport(payload).GetAwaiter().GetResult();
+            bool uploaded = UploadMatchReport(payload, fallbackToConsole: true).GetAwaiter().GetResult();
 
             if (!uploaded)
             {
@@ -449,7 +449,7 @@ public partial class MatchZy : BasePlugin
         return pauseSource.Equals("admin", StringComparison.OrdinalIgnoreCase) ? "admin" : "";
     }
 
-    private async Task<bool> UploadMatchReport(MatchReportPayload payload)
+    private async Task<bool> UploadMatchReport(MatchReportPayload payload, bool fallbackToConsole)
     {
         string endpoint = matchReportEndpoint.Value;
         string serverId = matchReportServerId.Value;
@@ -509,7 +509,10 @@ public partial class MatchZy : BasePlugin
             }
         }
 
-        Server.PrintToConsole("[MatchZy] Match report upload failed after retries. Falling back to console output.");
+        if (fallbackToConsole)
+        {
+            Server.PrintToConsole("[MatchZy] Match report upload failed after retries. Falling back to console output.");
+        }
         return false;
     }
 
@@ -534,6 +537,47 @@ public partial class MatchZy : BasePlugin
         }
 
         return false;
+    }
+    private void TriggerMatchReportUpload(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(matchReportEndpoint.Value) || string.IsNullOrWhiteSpace(matchReportServerId.Value))
+        {
+            return;
+        }
+
+        lock (matchReportUploadLock)
+        {
+            if (matchReportUploadScheduled)
+            {
+                return;
+            }
+            matchReportUploadScheduled = true;
+        }
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500);
+                MatchReportPayload payload = BuildMatchReport();
+                bool uploaded = await UploadMatchReport(payload, fallbackToConsole: false);
+                if (!uploaded)
+                {
+                    Log($"[MatchReport] Auto upload failed (trigger: {reason})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[MatchReport] Auto upload exception (trigger: {reason}) - {ex.Message}");
+            }
+            finally
+            {
+                lock (matchReportUploadLock)
+                {
+                    matchReportUploadScheduled = false;
+                }
+            }
+        });
     }
 }
 }

@@ -98,6 +98,7 @@ public partial class MatchZy
                 }
             }
 
+            TriggerMatchReportUpload("player_connect");
             return HookResult.Continue;
 
         }
@@ -185,6 +186,7 @@ public partial class MatchZy
                 }
             }
 
+            TriggerMatchReportUpload("player_disconnect");
             return HookResult.Continue;
         }
         catch (Exception e)
