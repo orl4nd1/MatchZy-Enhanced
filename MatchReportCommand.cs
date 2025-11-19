@@ -144,21 +144,52 @@ public partial class MatchZy : BasePlugin
     [ConsoleCommand("css_match_report", "Returns a structured JSON snapshot of the current match state")]
     public void OnMatchReportCommand(CCSPlayerController? player, CommandInfo command)
     {
-        try
+        // Schedule on main thread to avoid "Invoked on a non-main thread" errors
+        Server.NextFrame(() =>
         {
-            MatchReportPayload payload = BuildMatchReport();
-            bool uploaded = UploadMatchReport(payload, fallbackToConsole: true).GetAwaiter().GetResult();
-
-            if (!uploaded)
+            MatchReportPayload? payload = null;
+            try
             {
-                command.ReplyToCommand(JsonSerializer.Serialize(payload, MatchReportSerializerOptions));
+                payload = BuildMatchReport();
             }
-        }
-        catch (Exception e)
-        {
-            Log($"[MatchReport] Failed to generate report: {e.Message}");
-            command.ReplyToCommand(JsonSerializer.Serialize(new { error = "match_report_failed", reason = e.Message }, MatchReportSerializerOptions));
-        }
+            catch (Exception e)
+            {
+                Log($"[MatchReport] Failed to build report: {e.Message}");
+                command.ReplyToCommand(JsonSerializer.Serialize(new { error = "match_report_failed", reason = e.Message }, MatchReportSerializerOptions));
+                return;
+            }
+
+            // Read ConVar values on main thread before starting async work
+            string endpoint = matchReportEndpoint.Value;
+            string serverId = matchReportServerId.Value;
+            string token = matchReportToken.Value;
+
+            // Run async upload on background thread, but ensure all CSSharp native calls are wrapped
+            Task.Run(async () =>
+            {
+                try
+                {
+                    bool uploaded = await UploadMatchReport(payload, endpoint, serverId, token, fallbackToConsole: true);
+                    
+                    // Schedule reply on main thread
+                    Server.NextFrame(() =>
+                    {
+                        if (!uploaded)
+                        {
+                            command.ReplyToCommand(JsonSerializer.Serialize(payload, MatchReportSerializerOptions));
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    Log($"[MatchReport] Failed to upload report: {e.Message}");
+                    Server.NextFrame(() =>
+                    {
+                        command.ReplyToCommand(JsonSerializer.Serialize(new { error = "match_report_upload_failed", reason = e.Message }, MatchReportSerializerOptions));
+                    });
+                }
+            });
+        });
     }
 
     private MatchReportPayload BuildMatchReport()
@@ -449,12 +480,8 @@ public partial class MatchZy : BasePlugin
         return pauseSource.Equals("admin", StringComparison.OrdinalIgnoreCase) ? "admin" : "";
     }
 
-    private async Task<bool> UploadMatchReport(MatchReportPayload payload, bool fallbackToConsole)
+    private async Task<bool> UploadMatchReport(MatchReportPayload payload, string endpoint, string serverId, string token, bool fallbackToConsole)
     {
-        string endpoint = matchReportEndpoint.Value;
-        string serverId = matchReportServerId.Value;
-        string token = matchReportToken.Value;
-
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(serverId))
         {
             Log("[MatchReport] Upload skipped - report endpoint or server ID not configured");
@@ -477,7 +504,7 @@ public partial class MatchZy : BasePlugin
         {
             try
             {
-                Server.PrintToConsole($"[MatchZy] Uploading match report (attempt {attempt}/{maxAttempts})...");
+                Server.NextFrame(() => Server.PrintToConsole($"[MatchZy] Uploading match report (attempt {attempt}/{maxAttempts})..."));
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
                 {
                     Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
@@ -488,11 +515,11 @@ public partial class MatchZy : BasePlugin
                     request.Headers.TryAddWithoutValidation("x-matchzy-token", token);
                 }
 
-                HttpResponseMessage response = await client.SendAsync(request);
-                string responseBody = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (response.IsSuccessStatusCode && ResponseIndicatesSuccess(responseBody))
                 {
-                    Server.PrintToConsole($"[MatchZy] Match report upload succeeded ({(int)response.StatusCode})");
+                    Server.NextFrame(() => Server.PrintToConsole($"[MatchZy] Match report upload succeeded ({(int)response.StatusCode})"));
                     return true;
                 }
 
@@ -511,7 +538,7 @@ public partial class MatchZy : BasePlugin
 
         if (fallbackToConsole)
         {
-            Server.PrintToConsole("[MatchZy] Match report upload failed after retries. Falling back to console output.");
+            Server.NextFrame(() => Server.PrintToConsole("[MatchZy] Match report upload failed after retries. Falling back to console output."));
         }
         return false;
     }
@@ -571,12 +598,17 @@ public partial class MatchZy : BasePlugin
                 return;
             }
 
+            // Read ConVar values on main thread before starting async work
+            string endpoint = matchReportEndpoint.Value;
+            string serverId = matchReportServerId.Value;
+            string token = matchReportToken.Value;
+
             Task.Run(async () =>
             {
                 try
                 {
                     await Task.Delay(500);
-                    bool uploaded = await UploadMatchReport(payload!, fallbackToConsole: false);
+                    bool uploaded = await UploadMatchReport(payload!, endpoint, serverId, token, fallbackToConsole: false);
                     if (!uploaded)
                     {
                         Log($"[MatchReport] Auto upload failed (trigger: {reason})");
