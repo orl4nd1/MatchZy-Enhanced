@@ -150,13 +150,45 @@ namespace MatchZy
         {
             if (player != null) return;
             string url = command.ArgByIndex(1);
-            if (url.Trim() == "") return;
+            
+            // Remove quotes if present
+            url = url.Trim().Trim('"').Trim('\'');
+            
+            // If URL is empty and it was set dynamically, don't overwrite it
+            if (url == "" && demoUploadURLSetDynamically)
+            {
+                Log($"[MatchZyDemoUploadURL] Ignoring empty URL from config - demoUploadURL was set dynamically and will not be overwritten. Current value: {demoUploadURL}");
+                return;
+            }
+            
+            // If URL is empty, just return (initial load from config with empty value)
+            if (url == "")
+            {
+                Log($"[MatchZyDemoUploadURL] Demo upload URL not configured (empty). Set matchzy_demo_upload_url to enable automatic uploads.");
+                return;
+            }
+            
             if (!IsValidUrl(url))
             {
                 Log($"[MatchZyDemoUploadURL] Invalid URL: {url}. Please provide a valid URL for uploading the demo!");
                 return;
             }
+            
+            // Check if we're overwriting a dynamically set value
+            if (demoUploadURLSetDynamically && demoUploadURL != url)
+            {
+                Log($"[MatchZyDemoUploadURL] WARNING: Overwriting dynamically set demoUploadURL. Old: {demoUploadURL}, New: {url}");
+            }
+            
             demoUploadURL = url;
+            
+            // Mark as dynamically set if it's a valid non-empty URL
+            // This prevents config.cfg from overwriting it later
+            if (url != "")
+            {
+                demoUploadURLSetDynamically = true;
+                Log($"[MatchZyDemoUploadURL] Demo upload URL set to: {url}");
+            }
         }
 
         [ConsoleCommand("matchzy_stop_command_available", "Whether .stop command is enabled or not (to restore the current round). Default value: false")]

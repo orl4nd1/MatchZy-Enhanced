@@ -2029,59 +2029,135 @@ namespace MatchZy
             if (filePath == null || fileUploadURL == "")
             {
                 Log($"[UploadFileAsync] Not able to upload the file, either filePath or fileUploadURL is not set. filePath: {filePath} fileUploadURL: {fileUploadURL}");
+                if (filePath != null && File.Exists(filePath))
+                {
+                    FileInfo fileInfo = new FileInfo(filePath);
+                    Log($"[UploadFileAsync] Demo file exists locally at: {filePath} (Size: {fileInfo.Length / 1024 / 1024} MB)");
+                    Log($"[UploadFileAsync] To enable upload, set matchzy_demo_upload_url in your config.");
+                }
                 return;
             }
 
             try
             {
                 using var httpClient = new HttpClient();
-                Log($"[UploadFileAsync] Going to upload the file on {fileUploadURL}. Complete path: {filePath}");
+                Log($"[UploadFileAsync] ===== Starting demo upload =====");
+                Log($"[UploadFileAsync] Upload URL: {fileUploadURL}");
+                Log($"[UploadFileAsync] File path: {filePath}");
 
                 if (!File.Exists(filePath))
                 {
                     Log($"[UploadFileAsync ERROR] File not found: {filePath}");
+                    Log($"[UploadFileAsync ERROR] The demo file was not created. Check if GOTV is enabled (tv_enable 1)");
                     return;
                 }
+
+                FileInfo fileInfo = new FileInfo(filePath);
+                long fileSizeBytes = fileInfo.Length;
+                double fileSizeMB = fileSizeBytes / 1024.0 / 1024.0;
+                Log($"[UploadFileAsync] File found. Size: {fileSizeMB:F2} MB ({fileSizeBytes} bytes)");
+                Log($"[UploadFileAsync] Reading file into memory...");
 
                 using FileStream fileStream = File.OpenRead(filePath);
 
                 byte[] fileContent = new byte[fileStream.Length];
                 await fileStream.ReadAsync(fileContent, 0, (int)fileStream.Length);
+                Log($"[UploadFileAsync] File read successfully. Preparing HTTP request...");
 
                 using ByteArrayContent content = new(fileContent);
                 content.Headers.Add("Content-Type", "application/octet-stream");
 
-                content.Headers.Add("MatchZy-FileName", Path.GetFileName(filePath));
+                string fileName = Path.GetFileName(filePath);
+                content.Headers.Add("MatchZy-FileName", fileName);
                 content.Headers.Add("MatchZy-MatchId", matchId.ToString());
                 content.Headers.Add("MatchZy-MapNumber", mapNumber.ToString());
                 content.Headers.Add("MatchZy-RoundNumber", roundNumber.ToString());
 
                 // For Get5 Panel
-                content.Headers.Add("Get5-FileName", Path.GetFileName(filePath));
+                content.Headers.Add("Get5-FileName", fileName);
                 content.Headers.Add("Get5-MatchId", matchId.ToString());
                 content.Headers.Add("Get5-MapNumber", mapNumber.ToString());
                 content.Headers.Add("Get5-RoundNumber", roundNumber.ToString());
 
+                Log($"[UploadFileAsync] HTTP Headers:");
+                Log($"[UploadFileAsync]   - MatchZy-FileName: {fileName}");
+                Log($"[UploadFileAsync]   - MatchZy-MatchId: {matchId}");
+                Log($"[UploadFileAsync]   - MatchZy-MapNumber: {mapNumber}");
+                Log($"[UploadFileAsync]   - MatchZy-RoundNumber: {roundNumber}");
 
                 if (!string.IsNullOrEmpty(headerKey) && !string.IsNullOrEmpty(headerValue))
                 {
                     httpClient.DefaultRequestHeaders.Add(headerKey, headerValue);
+                    Log($"[UploadFileAsync]   - Custom header: {headerKey} = {headerValue}");
                 }
 
+                Log($"[UploadFileAsync] Sending POST request to {fileUploadURL}...");
+                DateTime uploadStart = DateTime.Now;
                 HttpResponseMessage response = await httpClient.PostAsync(fileUploadURL, content);
+                TimeSpan uploadDuration = DateTime.Now - uploadStart;
+                Log($"[UploadFileAsync] Upload completed in {uploadDuration.TotalSeconds:F2} seconds");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Log($"[UploadFileAsync] File upload successful for matchId: {matchId} mapNumber: {mapNumber} fileName: {Path.GetFileName(filePath)}.");
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    Log($"[UploadFileAsync] ===== Upload SUCCESS =====");
+                    Log($"[UploadFileAsync] Status: {response.StatusCode}");
+                    Log($"[UploadFileAsync] MatchId: {matchId}, MapNumber: {mapNumber}");
+                    Log($"[UploadFileAsync] FileName: {fileName}");
+                    Log($"[UploadFileAsync] FileSize: {fileSizeMB:F2} MB");
+                    Log($"[UploadFileAsync] Response: {responseBody}");
+                    Log($"[UploadFileAsync] ===========================");
+                    
+                    // Send success message to chat
+                    Server.NextFrame(() =>
+                    {
+                        PrintToAllChat($"{ChatColors.Green}Demo upload succeeded{ChatColors.Default} ({fileSizeMB:F1} MB)");
+                    });
                 }
                 else
                 {
-                    Log($"[UploadFileAsync ERROR] Failed to upload file. Status code: {response.StatusCode} Response: {await response.Content.ReadAsStringAsync()}");
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    string errorReason = responseBody.Length > 100 ? responseBody.Substring(0, 100) + "..." : responseBody;
+                    if (string.IsNullOrEmpty(errorReason))
+                    {
+                        errorReason = $"HTTP {response.StatusCode}";
+                    }
+                    Log($"[UploadFileAsync] ===== Upload FAILED =====");
+                    Log($"[UploadFileAsync] Status code: {response.StatusCode}");
+                    Log($"[UploadFileAsync] Response body: {responseBody}");
+                    Log($"[UploadFileAsync] MatchId: {matchId}, MapNumber: {mapNumber}");
+                    Log($"[UploadFileAsync] FileName: {fileName}");
+                    Log($"[UploadFileAsync] ===========================");
+                    
+                    // Send failure message to chat
+                    Server.NextFrame(() =>
+                    {
+                        PrintToAllChat($"{ChatColors.Red}Failed to upload demo: {errorReason}{ChatColors.Default}");
+                    });
                 }
             }
             catch (Exception e)
             {
-                Log($"[UploadFileAsync FATAL] An error occurred: {e.Message}");
+                string errorMessage = e.Message;
+                if (errorMessage.Length > 100)
+                {
+                    errorMessage = errorMessage.Substring(0, 100) + "...";
+                }
+                Log($"[UploadFileAsync] ===== Upload FATAL ERROR =====");
+                Log($"[UploadFileAsync] Exception type: {e.GetType().Name}");
+                Log($"[UploadFileAsync] Error message: {e.Message}");
+                if (e.InnerException != null)
+                {
+                    Log($"[UploadFileAsync] Inner exception: {e.InnerException.Message}");
+                }
+                Log($"[UploadFileAsync] Stack trace: {e.StackTrace}");
+                Log($"[UploadFileAsync] ==============================");
+                
+                // Send error message to chat
+                Server.NextFrame(() =>
+                {
+                    PrintToAllChat($"{ChatColors.Red}Failed to upload demo: {errorMessage}{ChatColors.Default}");
+                });
             }
         }
 
