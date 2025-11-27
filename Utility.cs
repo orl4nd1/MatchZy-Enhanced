@@ -848,7 +848,6 @@ namespace MatchZy
             }
             else
             {
-                StartDemoRecording();
                 StartLive();
             }
             if (showCreditsOnMatchStart.Value)
@@ -1006,6 +1005,9 @@ namespace MatchZy
             }
             matchConfig.CurrentMapNumber += 1;
             string nextMap = matchConfig.Maplist[matchConfig.CurrentMapNumber];
+            
+            // Calculate total delay before map change (restartDelay - 4 + 3 = restartDelay - 1)
+            int totalDelay = restartDelay - 1;
 
             if (isPaused)
                 UnpauseMatch();
@@ -1014,6 +1016,71 @@ namespace MatchZy
             stopData["t"] = false;
 
             KillPhaseTimers();
+            
+            // Announce map change with countdown
+            string mapDisplayName = nextMap.StartsWith("de_") ? nextMap.Substring(3) : nextMap;
+            string timeText;
+            if (totalDelay >= 60)
+            {
+                int minutes = totalDelay / 60;
+                int seconds = totalDelay % 60;
+                if (seconds > 0)
+                {
+                    timeText = $"{minutes} minute{(minutes > 1 ? "s" : "")} {seconds} second{(seconds > 1 ? "s" : "")}";
+                }
+                else
+                {
+                    timeText = $"{minutes} minute{(minutes > 1 ? "s" : "")}";
+                }
+            }
+            else
+            {
+                timeText = $"{totalDelay} second{(totalDelay > 1 ? "s" : "")}";
+            }
+            
+            PrintToAllChat($"{ChatColors.Grey}Next map: {ChatColors.Green}{mapDisplayName}{ChatColors.Default} will load in {ChatColors.Yellow}{timeText}{ChatColors.Default}.");
+            PrintToAllChat($"{ChatColors.Grey}Take a break! Use the restroom, grab some water, or stretch! 💧🚶");
+            
+            // Schedule countdown announcements
+            // 60 seconds remaining (if total delay >= 70 seconds)
+            if (totalDelay >= 70)
+            {
+                AddTimer(totalDelay - 60, () =>
+                {
+                    if (!isMatchSetup) return;
+                    PrintToAllChat($"{ChatColors.Grey}Next map loads in {ChatColors.Yellow}1 minute{ChatColors.Default}...");
+                });
+            }
+            
+            // 30 seconds remaining (if total delay >= 40 seconds)
+            if (totalDelay >= 40)
+            {
+                AddTimer(totalDelay - 30, () =>
+                {
+                    if (!isMatchSetup) return;
+                    PrintToAllChat($"{ChatColors.Grey}Next map loads in {ChatColors.Yellow}30 seconds{ChatColors.Default}...");
+                });
+            }
+            
+            // 15 seconds remaining (if total delay >= 25 seconds)
+            if (totalDelay >= 25)
+            {
+                AddTimer(totalDelay - 15, () =>
+                {
+                    if (!isMatchSetup) return;
+                    PrintToAllChat($"{ChatColors.Yellow}Next map loads in 15 seconds...{ChatColors.Default}");
+                });
+            }
+            
+            // 5 seconds remaining (if total delay >= 10 seconds)
+            if (totalDelay >= 10)
+            {
+                AddTimer(totalDelay - 5, () =>
+                {
+                    if (!isMatchSetup) return;
+                    PrintToAllChat($"{ChatColors.Lime}Next map loads in 5 seconds!{ChatColors.Default}");
+                });
+            }
 
             AddTimer(restartDelay - 4, () =>
             {

@@ -681,8 +681,70 @@ namespace MatchZy
 
             if (resetCvarsOnSeriesEnd) ResetChangedConvars();
             isMatchLive = false;
-            AddTimer(restartDelay, () => {
-                ResetMatch(false);
+            
+            // Wait for demo upload to complete, then kick all players and reset match
+            // Demo upload starts 15 seconds after map end, so we wait restartDelay + 60 seconds to ensure upload completes
+            int kickDelay = restartDelay + 60; // Give extra time for demo upload to finish
+            
+            int minutes = kickDelay / 60;
+            int seconds = kickDelay % 60;
+            string timeText = minutes > 0 ? $"{minutes} minute{(minutes > 1 ? "s" : "")} {seconds} second{(seconds > 1 ? "s" : "")}" : $"{seconds} second{(seconds > 1 ? "s" : "")}";
+            
+            PrintToAllChat($"{ChatColors.Grey}Series ended. Server will reset in {ChatColors.Yellow}{timeText}{ChatColors.Default} after demo upload completes.");
+            PrintToAllChat($"{ChatColors.Grey}All players will be disconnected to prepare the server for the next match.{ChatColors.Default}");
+            
+            // Schedule countdown warnings before kick
+            if (kickDelay >= 30)
+            {
+                AddTimer(kickDelay - 30, () =>
+                {
+                    PrintToAllChat($"{ChatColors.Yellow}Server resetting in 30 seconds. All players will be disconnected.{ChatColors.Default}");
+                });
+            }
+            
+            if (kickDelay >= 15)
+            {
+                AddTimer(kickDelay - 15, () =>
+                {
+                    PrintToAllChat($"{ChatColors.Yellow}Server resetting in 15 seconds...{ChatColors.Default}");
+                });
+            }
+            
+            if (kickDelay >= 5)
+            {
+                AddTimer(kickDelay - 5, () =>
+                {
+                    PrintToAllChat($"{ChatColors.Lime}Server resetting in 5 seconds!{ChatColors.Default}");
+                });
+            }
+            
+            AddTimer(kickDelay, () => {
+                // Kick all players
+                Log("[EndSeries] Kicking all players after series end...");
+                var playerEntities = Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller");
+                int kickedCount = 0;
+                foreach (var player in playerEntities)
+                {
+                    if (player == null) continue;
+                    if (!player.IsValid || player.IsBot || player.IsHLTV) continue;
+                    if (player.Connected != PlayerConnectedState.PlayerConnected) continue;
+                    
+                    if (player.UserId.HasValue)
+                    {
+                        Log($"[EndSeries] Kicking player: {player.PlayerName} (UserId: {player.UserId})");
+                        KickPlayer(player);
+                        kickedCount++;
+                    }
+                }
+                Log($"[EndSeries] Kicked {kickedCount} players. Resetting match...");
+                
+                // Update status to idle to indicate server is ready for allocation
+                UpdateTournamentStatus("idle", "");
+                
+                // Reset match after a short delay to ensure kicks are processed
+                AddTimer(2.0f, () => {
+                    ResetMatch(false);
+                });
             });
         }
 
