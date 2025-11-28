@@ -1,59 +1,149 @@
-MatchZy - Match Plugin for CS2!
-==============
+<div align="center">
 
-MatchZy is a plugin for CS2 (Counter Strike 2) for running and managing practice/pugs/scrims/matches with easy configuration!
+  <img src="docs/assets/logo.svg" alt="MatchZy" width="140" height="140">
 
-[![Discord](https://discordapp.com/api/guilds/1169549878490304574/widget.png?style=banner2)](https://discord.gg/2zvhy9m7qg)
+# MatchZy
 
-## Feature Highlights:
+⚡ **Enhanced CS2 match management plugin tailored for tournament automation**
 
-* Pug mode with simple commands to manage!
-* Support of [Get5 Panel!](https://shobhit-pathak.github.io/MatchZy/get5/)
-* Support BO1/BO3/BO5 and Veto when using Match configuration or Get5 Panel!
-* [Setting up matches](https://shobhit-pathak.github.io/MatchZy/match_setup/) and locking players into their team
-* Practice Mode with `.bot`, `.spawn`, `.ctspawn`, `.tspawn`, `.nobots`, `.rethrow`, `.last`, `.timer`, `.clear`, `.exitprac` and many more commands!
-* Knife round (With expected logic, i.e., team with most players win. If same number of players, then team with HP advantage wins. If same HP, winner is decided randomly)
-* Automatically starts demo recording and stop recording when match is ended (Make sure you have tv_enable 1)
-* Automatically uploads demo on map end on the given URL.
-* Players whitelisting (Thanks to [DEAFPS](https://github.com/DEAFPS)!)
-* Coaching system
-* Damage report after every round
-* Support for round restore (Currently using the vanilla valve's backup system)
-* Ability to create admin and allowing them access to admin commands
-* Database Stats and CSV Stats! MatchZy stores data and stats of all the matches in a local SQLite database (MySQL Database is also supported!) and also creates a CSV file for detailed stats of every player in that match!
-* Provides easy configuration
-* And much more!!
+  <p>Enhanced fork of MatchZy tailored for the automatic tournament platform. Adds more events and enables external tools to setup, control, and track matches in real-time.</p>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 
-## Documentation
+**🔗 [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)** • **[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)**
 
-## [shobhit-pathak.github.io/MatchZy/](https://shobhit-pathak.github.io/MatchZy/)
+</div>
 
-## Donation
+---
 
-Buy Me A Coffee:
+## 🚀 Quick Start
 
-[!["Buy Me A Coffee"](https://cdn.buymeacoffee.com/buttons/default-blue.png)](https://www.buymeacoffee.com/shobhitwd)
+### Automatic Installation (Recommended)
 
-Steam Tradelink: 
+**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** includes this enhanced MatchZy fork and sets up servers automatically configured for MatchZy Auto Tournament:
 
-https://steamcommunity.com/tradeoffer/new/?partner=194101533&token=1TI76S3p
+```bash
 
-## Want CS2 Server with MatchZy?
+wget https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/install.sh
 
-Buy it from DatHost (MatchZy can be installed directly on DatHost servers by using their 1-click installer from mods and plugins section!):
-https://dathost.net/r/matchzy 
+bash install.sh
 
-## License
-MIT
+```
 
-## Credits and thanks!
-* [Get5](https://github.com/splewis/get5) - A lot of functionalities and workings have been referred from Get5 and they did an amazing job for managing matches in CS:GO. Huge thanks to them!
-* [G5V](https://github.com/PhlexPlexico/G5V) and [G5API](https://github.com/PhlexPlexico/G5API) - Amazing work with the web panel for managing the servers!
-* [eBot](https://github.com/deStrO/eBot-CSGO) - Amazing job in CS:GO and then provided this great panel again in CS2 which is helping a lot of organizers now. Some logics have been referred from eBot as well!
-* [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/) - Amazing job with development of CSSharp which gave us a platform to build our own plugins and also sparked my interest in plugin development!
-* [AlliedModders and community](https://alliedmods.net/) - They are the reason this whole plugin was possible! They are very helpful and inspire a lot!
-* [LOTGaming](https://lotgaming.xyz/) - Helped me a lot with initial testing and provided servers on different systems and locations!
-* [CHR15cs](https://github.com/CHR15cs) - Helped me a lot with the practice mode!
-* [K4ryuu](https://github.com/K4ryuu) - Awesome job on damage report!
-* [DEAFPS](https://github.com/DEAFPS) - Great contribution for Practice mode!
+### Manual Installation
+
+1. **Download** the latest release from [Releases](https://github.com/sivert-io/MatchZy/releases)
+
+2. **Extract** to your CS2 server's `game/csgo/` directory
+
+3. **Configure** files in `cfg/MatchZy/`
+
+4. **Restart** your server
+
+👉 **[Documentation](https://mat.sivert.io/)** • **[Original MatchZy Docs](https://shobhit-pathak.github.io/MatchZy/)** (for reference)
+
+---
+
+## ✨ Enhanced Features
+
+This fork is tailored for tournament automation and adds:
+
+✨ **Match Report API** — Structured JSON reports for match state
+
+📡 **Additional Events** — More events for external tools to track match progress in real-time
+
+🔧 **External Tool Integration** — Enables external tools to setup, control, and track matches in real-time
+
+🔄 **Thread-Safe Operations** — Fixed non-main thread issues for reliable HTTP operations
+
+---
+
+## 🏆 MatchZy Auto Tournament
+
+**This enhanced fork was created specifically for [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)** — a complete tournament automation platform.
+
+The additional events and APIs enable external tools to setup matches, control match flow, and track progress in real-time, making it perfect for automated tournament management.
+
+👉 **[Get Started with MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**
+
+---
+
+## 🖥️ CS2 Server Manager
+
+**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** is a multi-server management tool that includes this enhanced MatchZy fork and automatically configures servers for use with MatchZy Auto Tournament.
+
+- 🚀 Deploys 3–5 dedicated servers in minutes
+
+- 🔧 Includes MatchZy enhanced fork and all required plugins
+
+- ⚙️ Pre-configured for tournament automation
+
+- 🎯 Zero manual configuration required
+
+👉 **[CS2 Server Manager Guide](https://mat.sivert.io/guides/cs2-server-manager/)**
+
+---
+
+## ⚙️ Requirements
+
+- **CounterStrikeSharp** (latest version) — [Installation Guide](https://github.com/roflmuffin/CounterStrikeSharp)
+
+- **CS2 Dedicated Server**
+
+- **.NET 8.0 Runtime** (for running the plugin)
+
+---
+
+## 🔗 Links
+
+- [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
+
+- [CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)
+
+- [Original MatchZy](https://github.com/shobhit-pathak/MatchZy)
+
+- [CounterStrikeSharp Docs](https://docs.cssharp.dev/)
+
+---
+
+## 🙏 Credits & Thanks
+
+**Original MatchZy:**
+
+- **[shobhit-pathak/MatchZy](https://github.com/shobhit-pathak/MatchZy)** — Original MatchZy plugin by WD-
+
+**Enhanced Fork:**
+
+- This enhanced fork is maintained by [sivert-io](https://github.com/sivert-io) for [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
+
+- Tailored for tournament automation with additional events and APIs for external tools to setup, control, and track matches in real-time
+
+**Original Credits:**
+
+- **[Get5](https://github.com/splewis/get5)** — Referenced for many functionalities and match management concepts
+
+- **[G5V](https://github.com/PhlexPlexico/G5V)** and **[G5API](https://github.com/PhlexPlexico/G5API)** — Amazing work with the web panel
+
+- **[eBot](https://github.com/deStrO/eBot-CSGO)** — Great panel and logic references
+
+- **[CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/)** — The platform that made this plugin possible
+
+- **[AlliedModders](https://alliedmods.net/)** — Community and inspiration
+
+- **[LOTGaming](https://lotgaming.xyz/)** — Initial testing and server support
+
+- **[CHR15cs](https://github.com/CHR15cs)** — Practice mode contributions
+
+- **[K4ryuu](https://github.com/K4ryuu)** — Damage report feature
+
+- **[DEAFPS](https://github.com/DEAFPS)** — Player whitelisting and practice mode contributions
+
+---
+
+<div align="center">
+
+<strong>Made with ❤️ for the CS2 community</strong>
+
+</div>

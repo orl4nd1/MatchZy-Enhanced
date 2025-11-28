@@ -5,3 +5,6 @@ publish/
 MatchZy.sln
 MatchZy-*/
 *.zip
+
+# macOS
+.DS_Store
