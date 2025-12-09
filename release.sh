@@ -8,6 +8,15 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Source .env if present so DISCORD_WEBHOOK_URL and others are available
+if [ -f ".env" ]; then
+    echo -e "${BLUE}Sourcing .env file...${NC}"
+    set -a
+    # shellcheck source=/dev/null
+    source ".env"
+    set +a
+fi
+
 echo -e "${BLUE}🚀 MatchZy Automated Release Script${NC}\n"
 
 # Get current version from MatchZy.cs
@@ -120,12 +129,88 @@ git push origin "v${VERSION}"
 REPO_URL=$(git remote get-url origin | sed -E 's|.*github.com[:/](.*).git|\1|')
 gh repo set-default "$REPO_URL" 2>/dev/null || true
 
-# Create GitHub release
-echo -e "\n${BLUE}🌟 Creating GitHub release...${NC}"
-gh release create "v${VERSION}" \
-    "${BUILD_ROOT}/${RELEASE_DIR}.zip" \
-    --title "MatchZy v${VERSION}" \
-    --notes "## Installation
+# Generate changelog from Git history for this release
+echo -e "\n${BLUE}📝 Generating changelog for GitHub release...${NC}"
+get_changelog() {
+    local prev_tag
+    local current_tag="v${VERSION}"
+
+    # Get the previous tag (second most recent, excluding the current one)
+    prev_tag=$(git tag --sort=-v:refname | grep -v "^${current_tag}$" | sed -n '1p' 2>/dev/null || echo "")
+
+    # Extract PR titles from merge commits
+    # Format: "Merge pull request #XX..." followed by blank line, then PR title
+    # Reverse order so oldest PRs are first (git log shows newest first by default)
+    extract_pr_titles() {
+        local log_range="$1"
+        local temp_output
+        temp_output=$(git log ${log_range} --merges --format="%B" 2>/dev/null | \
+            awk '
+                /^Merge pull request/ {
+                    # Skip the merge line and blank line, get the next non-empty line (PR title)
+                    getline
+                    getline
+                    if (NF > 0) {
+                        print "- " $0
+                    }
+                }
+            ' | head -30)
+
+        # Reverse the order (oldest first) - use tail -r on macOS, tac on Linux
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "$temp_output" | tail -r
+        else
+            echo "$temp_output" | tac
+        fi
+    }
+
+    # Fallback: if there are no merge commits (e.g. squash/rebase workflow), use
+    # regular commit subjects between tags (excluding release/tagging commits).
+    extract_commit_subjects() {
+        local log_range="$1"
+        git log ${log_range} --format="%s" 2>/dev/null | \
+            grep -viE '^Release v[0-9]+\.[0-9]+\.[0-9]+$' | \
+            head -30 | \
+            awk '{print "- " $0}'
+    }
+
+    if [ -z "$prev_tag" ]; then
+        # No previous tag, get all merged PRs or commits up to the current tag
+        if git rev-parse "${current_tag}" >/dev/null 2>&1; then
+            changelog=$(extract_pr_titles "${current_tag}")
+            if [ -z "$changelog" ]; then
+                changelog=$(extract_commit_subjects "${current_tag}")
+            fi
+            echo "$changelog"
+        else
+            # Tag doesn't exist, get recent history on current branch
+            changelog=$(extract_pr_titles "")
+            if [ -z "$changelog" ]; then
+                changelog=$(extract_commit_subjects "")
+            fi
+            echo "$changelog"
+        fi
+    else
+        # Get changes between previous tag and current tag
+        changelog=$(extract_pr_titles "${prev_tag}..${current_tag}")
+        if [ -z "$changelog" ]; then
+            changelog=$(extract_commit_subjects "${prev_tag}..${current_tag}")
+        fi
+        echo "$changelog"
+    fi
+}
+
+CHANGELOG=$(get_changelog)
+if [ -z "$CHANGELOG" ] || [ ${#CHANGELOG} -lt 10 ]; then
+    CHANGELOG="- Release v${VERSION}"
+fi
+
+RELEASE_NOTES=$(cat <<EOF
+## Changelog
+
+${CHANGELOG}
+
+## Installation
 
 1. Download \`${RELEASE_DIR}.zip\`
 2. Extract the contents to your CS2 server's \`game/csgo/\` directory
@@ -143,9 +228,28 @@ Config files are located in \`csgo/cfg/MatchZy/\`:
 - \`config.cfg\` - Main plugin configuration
 - \`admins.json\` - Admin permissions
 - \`database.json\` - Database settings
-- \`live.cfg\`, \`warmup.cfg\`, \`knife.cfg\` - Match configs" \
+- \`live.cfg\`, \`warmup.cfg\`, \`knife.cfg\` - Match configs
+EOF
+)
+
+# Create GitHub release
+echo -e "\n${BLUE}🌟 Creating GitHub release...${NC}"
+gh release create "v${VERSION}" \
+    "${BUILD_ROOT}/${RELEASE_DIR}.zip" \
+    --title "MatchZy v${VERSION}" \
+    --notes "$RELEASE_NOTES" \
     --draft=false \
     --latest
+
+# Optional: send Discord webhook notification if configured
+if [ -x "./discord-webhook.sh" ]; then
+    echo -e "\n${BLUE}🔔 Sending Discord release notification (if configured)...${NC}"
+    if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
+        ./discord-webhook.sh "${VERSION}" || echo -e "${YELLOW}⚠️ Discord webhook failed, continuing without stopping release.${NC}"
+    else
+        echo -e "${YELLOW}DISCORD_WEBHOOK_URL not set; skipping Discord notification.${NC}"
+    fi
+fi
 
 # Cleanup
 echo -e "\n${BLUE}🧹 Cleaning up temporary files...${NC}"

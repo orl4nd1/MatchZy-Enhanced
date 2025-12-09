@@ -10,3 +10,5 @@ MatchZy-*/
 
 # macOS
 .DS_Store
+
+.env
