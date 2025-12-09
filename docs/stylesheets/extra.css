@@ -6,6 +6,7 @@
   --md-primary-fg-color--light: #5EE5D9;
   --md-primary-fg-color--dark: #002D30;
   --md-accent-fg-color: #5EE5D9;         /* Bright cyan-teal for accents */
+  --md-typeset-a-color: #5EE5D9;          /* Links use accent teal in light mode */
 }
 
 [data-md-color-scheme="slate"] {
@@ -155,5 +156,20 @@
 .md-typeset details {
   border-width: 0;
   border-left-width: 4px;
+}
+
+/* Ensure all links use accent color */
+.md-typeset a {
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset a:hover {
+  color: var(--md-accent-fg-color);
+  opacity: 0.8;
+}
+
+/* Light mode link hover */
+:root .md-typeset a:hover {
+  color: #5EE5D9;
 }
 
