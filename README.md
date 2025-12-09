@@ -82,7 +82,7 @@ The additional events and APIs enable external tools to setup matches, control m
 
 - 🎯 Zero manual configuration required
 
-👉 **[CS2 Server Manager Guide](https://mat.sivert.io/guides/cs2-server-manager/)**
+👉 **[CS2 Server Manager Guide](https://csm.sivert.io/)**
 
 ---
 

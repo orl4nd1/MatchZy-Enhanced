@@ -13,7 +13,7 @@ Matchzy Enhanced handles in-game match management (server configs, match lifecyc
 
 ## Related projects
 
-- [CS2 Server Manager](https://mat.sivert.io/guides/cs2-server-manager/) – multi-server CS2 deployment and management.
+- [CS2 Server Manager](https://csm.sivert.io/) – multi-server CS2 deployment and management.
 - [MatchZy Auto Tournament](https://mat.sivert.io) – web UI and API for automated CS2 tournaments.
 
 ### Documentation structure
