@@ -5,7 +5,7 @@ title: Integration with MatchZy Auto Tournament
 ## Overview
 
 This page explains how the **MatchZy (Enhanced)** plugin integrates with  
-**[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**.
+**[MatchZy Auto Tournament](https://mat.sivert.io)**.
 
 At a high level:
 

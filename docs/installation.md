@@ -9,11 +9,11 @@ title: Installation
   See the official docs: <https://github.com/roflmuffin/CounterStrikeSharp>
 - **.NET 8.0 runtime** on the server (for running the plugin’s compiled DLL).
 
-If you are using **[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)**, it can set all of this up for you automatically and includes **Matchzy Enhanced** (this enhanced MatchZy fork) by default.
+If you are using **[CS2 Server Manager](https://mat.sivert.io/guides/cs2-server-manager/)**, it can set all of this up for you automatically and includes **Matchzy Enhanced** (this enhanced MatchZy fork) by default.
 
 ## Option 1: Install via CS2 Server Manager (recommended)
 
-If you are using MatchZy together with **MatchZy Auto Tournament**, this is the easiest path:
+If you are using MatchZy together with **[MatchZy Auto Tournament](https://mat.sivert.io)**, this is the easiest path:
 
 1. Follow the CS2 Server Manager guide:  
    <https://mat.sivert.io/guides/cs2-server-manager/>

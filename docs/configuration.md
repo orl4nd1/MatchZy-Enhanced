@@ -11,7 +11,7 @@ MatchZy reads configuration from:
 - **JSON match configs** – loaded from a URL (typically MatchZy Auto Tournament).
 
 This page focuses on the parts that matter most when integrating with  
-**[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**.
+**[MatchZy Auto Tournament](https://mat.sivert.io)**.
 
 For detailed timing of when each config file is executed, see  
 `Config loading behavior` (which documents the exact flow).

@@ -10,7 +10,7 @@ Simulation mode lets you **run full matches with bots** while:
 - Emitting the **same events and reports** you would see with real players.
 - Using **canonical player identities** (SteamIDs + names) taken from the JSON match config.
 
-From the perspective of **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)** and any external systems, the match looks like a real player match, except for an optional `simulated` flag in reports.
+From the perspective of **[MatchZy Auto Tournament](https://mat.sivert.io)** and any external systems, the match looks like a real player match, except for an optional `simulated` flag in reports.
 
 This is useful for:
 

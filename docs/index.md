@@ -4,10 +4,10 @@ title: Matchzy Enhanced Docs
 
 ## Matchzy Enhanced – Tournament Automation Focus
 
-This is the documentation hub for **Matchzy Enhanced** (an enhanced MatchZy plugin for CS2), built specifically to integrate with **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**.
+This is the documentation hub for **Matchzy Enhanced** (an enhanced MatchZy plugin for CS2), built specifically to integrate with **[MatchZy Auto Tournament](https://mat.sivert.io)**.
 
 - **Plugin repo**: [sivert-io/MatchZy](https://github.com/sivert-io/MatchZy)
-- **Tournament platform**: [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
+- **Tournament platform**: [MatchZy Auto Tournament](https://mat.sivert.io)
 
 Matchzy Enhanced handles in-game match management (server configs, match lifecycle, events, stats, demo uploads), while MatchZy Auto Tournament orchestrates **what to play** (matches, maps, formats, teams) and consumes MatchZy’s events and reports.
 

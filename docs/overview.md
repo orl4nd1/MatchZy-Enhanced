@@ -5,7 +5,7 @@ title: Overview
 ## What is Matchzy Enhanced?
 
 Matchzy Enhanced is a **CS2 match management plugin** designed to work hand‑in‑hand with  
-**[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**.
+**[MatchZy Auto Tournament](https://mat.sivert.io)**.
 
 The original MatchZy plugin already offered a Get5‑style experience for CS2.  
 This fork extends it with:
