@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="docs/assets/logo.svg" alt="MatchZy" width="140" height="140">
+  <img src="docs/icon.svg" alt="MatchZy" width="140" height="140">
 
 # MatchZy
 
