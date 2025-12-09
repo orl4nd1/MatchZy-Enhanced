@@ -440,8 +440,6 @@ public partial class MatchZy : BasePlugin
     {
         if (!isMatchSetup)
         {
-            if (isVeto) return "veto";
-            if (isPreVeto) return "pre_veto";
             return "idle";
         }
 

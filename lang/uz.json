@@ -61,8 +61,6 @@
   "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "Joriy tayyorgarlik talab qilinadi: {0}. Foydalanish: !readyrequired <tayyor_oʻyinchilar_soni>",
   "matchzy.cc.roundknife": "Pichoq raund endi: {0}!",
-  "matchzy.cc.skipvetomatchstarted": "Agar oʻyin allaqachon boshlangan boʻlsa, oʻtkazib yuborish veto buyrugʻini ishlatib boʻlmaydi!",
-  "matchzy.cc.skipveto": "Veto bosqichi bekor qilindi!",
   "matchzy.cc.matchpaused": "Oʻyin allaqachon toʻxtatilgan, siz taktik taym-autni boshlay olmaysiz!",
   "matchzy.cc.nomorepauses": "Sizda taktik taym-aut qolmadi!",
 

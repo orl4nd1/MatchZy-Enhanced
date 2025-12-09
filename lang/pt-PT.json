@@ -61,8 +61,6 @@
   "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "Mínimo Atual de Jogadores Prontos Necessário: {0}. Uso: !readyrequired <numero_de_jogadores_prontos_necessario>",
   "matchzy.cc.roundknife": "Ronda de faca está agora {0}!",
-  "matchzy.cc.skipvetomatchstarted": "Comando para Ignorar Voto não pode ser usado se o jogo já se encontra em curso!",
-  "matchzy.cc.skipveto": "Fase de votos cancelada!",
   "matchzy.cc.matchpaused": "Jogo já se encontra em pausa, impossível iniciar pausa tática!",
   "matchzy.cc.nomorepauses": "Já não tens pausas táticas!",
 

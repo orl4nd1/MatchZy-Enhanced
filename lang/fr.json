@@ -61,8 +61,6 @@
     "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
     "matchzy.cc.minreadyrequired": "Current Ready Required: {0}. Usage: !readyrequired <number_of_ready_players_required>",
     "matchzy.cc.roundknife": "Knife round is now {0}!",
-    "matchzy.cc.skipvetomatchstarted": "Skip veto command cannot be used if match has already started!",
-    "matchzy.cc.skipveto": "Veto phase has been cancelled!",
     "matchzy.cc.matchpaused": "Match is already paused, cannot start a tactical timeout!",
     "matchzy.cc.nomorepauses": "You do not have any tactical timeouts left!",
   

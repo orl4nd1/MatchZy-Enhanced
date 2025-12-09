@@ -61,8 +61,6 @@
   "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "Jugadores preparados actuales: {0}. Uso: !readyrequired <número_de_jugadores_preparados_necesarios>",
   "matchzy.cc.roundknife": "¡Ronda de cuchillos está actualmente {0}!",
-  "matchzy.cc.skipvetomatchstarted": "¡Comando para ignorar veto no puede ser usado si la partida ya ha comenzado.!",
-  "matchzy.cc.skipveto": "¡La fase de veto ha sido cancelada!",
   "matchzy.cc.matchpaused": "¡La partida ya está pausada y no se puede empezar una pausa táctica!!",
   "matchzy.cc.nomorepauses": "¡No te quedan pausas tácticas!",
 

@@ -204,46 +204,6 @@ public class MapResultEvent : MatchZyMapEvent
     }
 }
 
-public class MatchZyMapSelectionEvent : MatchZyMatchTeamEvent
-{
-    [JsonPropertyName("map_name")]
-    public required string MapName { get; init; }
-
-    protected MatchZyMapSelectionEvent(string eventName) : base(eventName)
-    {
-    }
-}
-
-public class MatchZyMapPickedEvent : MatchZyMapSelectionEvent
-{
-    [JsonPropertyName("map_number")]
-    public required int MapNumber { get; init; }
-
-    public MatchZyMapPickedEvent() : base("map_picked")
-    {
-    }
-}
-
-public class MatchZyMapVetoedEvent : MatchZyMapSelectionEvent
-{
-    public MatchZyMapVetoedEvent() : base("map_vetoed")
-    {
-    }
-}
-
-public class MatchZySidePickedEvent : MatchZyMapSelectionEvent
-{
-    [JsonPropertyName("map_number")]
-    public required int MapNumber { get; init; }
-
-    [JsonPropertyName("side")]
-    public required string Side { get; init; }
-
-    public MatchZySidePickedEvent() : base("side_picked")
-    {
-    }
-}
-
 public class MatchZyDemoUploadedEvent : MatchZyMatchEvent
 {
     [JsonPropertyName("map_number")]

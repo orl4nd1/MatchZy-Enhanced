@@ -138,8 +138,6 @@ namespace MatchZy
                 { ".start", OnStartCommand },
                 { ".force", OnStartCommand },
                 { ".forcestart", OnStartCommand },
-                { ".skipveto", OnSkipVetoCommand },
-                { ".sv", OnSkipVetoCommand },
                 { ".restart", OnRestartMatchCommand },
                 { ".rr", OnRestartMatchCommand },
                 { ".endmatch", OnEndMatchCommand },
@@ -241,7 +239,7 @@ namespace MatchZy
 
             RegisterEventHandler<EventPlayerTeam>((@event, info) =>
             {
-                if (!isMatchSetup && !isVeto) return HookResult.Continue;
+                if (!isMatchSetup) return HookResult.Continue;
 
                 CCSPlayerController? player = @event.Userid;
 
@@ -259,18 +257,18 @@ namespace MatchZy
                 return HookResult.Continue;
             });
 
-            AddCommandListener("jointeam", (player, info) =>
-            {
-                if ((isMatchSetup || isVeto) && player != null && player.IsValid) {
-                    if (int.TryParse(info.ArgByIndex(1), out int joiningTeam)) {
-                        int playerTeam = (int)GetPlayerTeam(player);
-                        if (joiningTeam != playerTeam) {
-                            return HookResult.Stop;
+                AddCommandListener("jointeam", (player, info) =>
+                {
+                    if (isMatchSetup && player != null && player.IsValid) {
+                        if (int.TryParse(info.ArgByIndex(1), out int joiningTeam)) {
+                            int playerTeam = (int)GetPlayerTeam(player);
+                            if (joiningTeam != playerTeam) {
+                                return HookResult.Stop;
+                            }
                         }
                     }
-                }
-                return HookResult.Continue;
-            });
+                    return HookResult.Continue;
+                });
 
             AddCommandListener("noclip", OnConsoleNoClip); // Override noclip
 
@@ -513,14 +511,6 @@ namespace MatchZy
                 if (message.StartsWith(".coach"))
                 {
                     HandleCoachCommand(player, messageCommandArg);
-                }
-                if (message.StartsWith(".ban"))
-                {
-                    HandeMapBanCommand(player, messageCommandArg);
-                }
-                if (message.StartsWith(".pick"))
-                {
-                    HandeMapPickCommand(player, messageCommandArg);
                 }
                 if (message.StartsWith(".back"))
                 {

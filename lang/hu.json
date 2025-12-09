@@ -55,8 +55,6 @@
   "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "Jelenlegi készenlévő szükséges: {0}. Használat: !readyrequired <szükséges készenlévő játékosok száma>",
   "matchzy.cc.roundknife": "A késes kör most {0}!",
-  "matchzy.cc.skipvetomatchstarted": "A vétó átugrás parancs nem használható, ha a meccs már elkezdődött!",
-  "matchzy.cc.skipveto": "A vétó fázis törölve!",
   "matchzy.cc.matchpaused": "A meccs már meg van állítva, nem indítható taktikai szünet!",
   "matchzy.cc.nomorepauses": "Nincs több taktikai szüneted!",
   "matchzy.mm.matchisalreadysetup": "[LoadMatch] Egy meccs már be van állítva ezzel az azonosítóval: {green}{0}{default}, nem lehet új meccset betölteni!",

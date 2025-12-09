@@ -61,8 +61,6 @@
     "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
     "matchzy.cc.minreadyrequired": "当前配置下需要的最少准备玩家数: {0}. 使用示例: !readyrequired <number_of_ready_players_required>",
     "matchzy.cc.roundknife": "拼刀局 {0}!",
-    "matchzy.cc.skipvetomatchstarted": "跳过Ban/Pick 无法在比赛已开始的情况下使用!",
-    "matchzy.cc.skipveto": "Ban/Pick 流程已取消!",
     "matchzy.cc.matchpaused": "比赛已暂停, 无法开启战术暂停!",
     "matchzy.cc.nomorepauses": "你的战术暂停次数已使用完!",
   

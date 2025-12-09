@@ -279,7 +279,7 @@
 **Practice Mode/Match Mode**
 
 - Fixed boost command working in match mode.
-- Added `.skipveto` command which will skip veto in match setup (thanks to @lanslide-team)
+- Added `.skipveto` command which will skip veto in match setup (thanks to @lanslide-team) _(note: veto and this command are removed in the enhanced Auto Tournament fork)_
 - Added complete support of `get5_status` command which will now return detailed status of the match setup (thanks to @The0mikkel)
 - Added `mp_solid_teammates 1` in knife round for solid teammates.
 - Disabled overtime when `.playout` command is used.

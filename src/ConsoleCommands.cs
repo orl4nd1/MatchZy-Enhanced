@@ -161,11 +161,6 @@ namespace MatchZy
         public void OnTCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || player.UserId == null) return;
-            if (isVeto) {
-                HandleSideChoice(CsTeam.Terrorist, player.UserId.Value);
-                return;
-            }
-
             if (isSideSelectionPhase && player.TeamNum == knifeWinner) {
                 if (player.Team == CsTeam.Terrorist) {
                     OnTeamStay(player, command);
@@ -182,11 +177,6 @@ namespace MatchZy
         public void OnCTCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || player.UserId == null) return;
-            if (isVeto) {
-                HandleSideChoice(CsTeam.CounterTerrorist, player.UserId.Value);
-                return;
-            }
-
             if (isSideSelectionPhase && player.TeamNum == knifeWinner) {
                 if (player.Team == CsTeam.CounterTerrorist) {
                     OnTeamStay(player, command);
@@ -352,46 +342,6 @@ namespace MatchZy
                         ReplyToUserCommand(player, Localizer["matchzy.cc.nomorepauses"]);
                     }
                 }
-            }
-        }
-
-        [ConsoleCommand("css_skipveto", "Skips the current veto phase")]
-        [ConsoleCommand("css_sv", "Skips the current veto phase")]
-        public void OnSkipVetoCommand(CCSPlayerController? player, CommandInfo? command)
-        {
-            if (IsPlayerAdmin(player, "css_skipveto", "@css/config"))
-            {
-                if (matchStarted)
-                {
-                    if (player == null)
-                    {
-                        // ReplyToUserCommand(player, $"Skip veto command cannot be used if match has already started!");
-                        ReplyToUserCommand(player, Localizer["matchzy.cc.skipvetomatchstarted"]);
-                    }
-                    else
-                    {
-                        // player.PrintToChat($"{chatPrefix} Skip veto command cannot be used if match has already started!");
-                        PrintToPlayerChat(player, Localizer["matchzy.cc.skipvetomatchstarted"]);
-                    }
-                }
-                else
-                {
-                    SkipVeto();
-                    if (player == null)
-                    {
-                        // ReplyToUserCommand(player, $"Veto phase has been cancelled!");
-                        ReplyToUserCommand(player, Localizer["matchzy.cc.skipveto"]);
-                    }
-                    else
-                    {
-                        // player.PrintToChat($"{chatPrefix} Veto phase has been cancelled!");
-                        PrintToPlayerChat(player, Localizer["matchzy.cc.skipveto"]);
-                    }
-                }
-            }
-            else
-            {
-                SendPlayerNotAdminMessage(player);
             }
         }
 

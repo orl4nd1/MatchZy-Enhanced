@@ -55,8 +55,6 @@
     "matchzy.cc.playoutstatus": "Режим игры на максимальное количество раундов: {green}{0}{default}",
     "matchzy.cc.minreadyrequired": "Текущее требуемое количество готовых: {0}. Использование: !readyrequired <количество_необходимых_готовых_игроков>",
     "matchzy.cc.roundknife": "Ножевой раунд теперь {0}!",
-    "matchzy.cc.skipvetomatchstarted": "Команду пропуска вето нельзя использовать, если матч уже начался!",
-    "matchzy.cc.skipveto": "Фаза вето отменена!",
     "matchzy.cc.matchpaused": "Матч уже на паузе, невозможно начать тактический перерыв!",
     "matchzy.cc.nomorepauses": "У вас не осталось тактических перерывов!",
     "matchzy.mm.matchisalreadysetup": "[LoadMatch] Матч уже настроен с идентификатором: {green}{0}{default}, нельзя загрузить новый матч!",

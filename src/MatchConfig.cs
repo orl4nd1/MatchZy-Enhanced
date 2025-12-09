@@ -13,6 +13,8 @@ namespace MatchZy
         [JsonPropertyName("maps_pool")]
         public List<string> MapsPool { get; set; } = new List<string>();
 
+        // DEPRECATED: kept for JSON compatibility with original MatchZy / Get5-style veto configs.
+        // The enhanced Auto Tournament fork ignores these when deciding maps; maps are driven entirely by the external platform.
         [JsonPropertyName("maps_left_in_veto_pool")]
         public List<string> MapsLeftInVetoPool { get; set; } = new List<string>();
 

@@ -515,8 +515,6 @@ namespace MatchZy
                 liveMatchId = -1;
                 isPractice = false;
                 isDryRun = false;
-                isVeto = false;
-                isPreVeto = false;
                 ClearSimulationState();
 
                 lastBackupFileName = "";
@@ -897,11 +895,7 @@ namespace MatchZy
 
             GetSpawns();
 
-            if (isPreVeto)
-            {
-                CreateVeto();
-            }
-            else if (isKnifeRequired)
+            if (isKnifeRequired)
             {
                 StartKnifeRound();
             }

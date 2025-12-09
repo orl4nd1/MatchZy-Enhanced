@@ -61,8 +61,6 @@
   "matchzy.cc.playoutstatus": "プレイアウト: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "現在準備が必要: {0}. 使用法: !readyrequired <number_of_ready_players_required>",
   "matchzy.cc.roundknife": "ナイフラウンド中 {0}!",
-  "matchzy.cc.skipvetomatchstarted": "試合がすでに開始されている場合、スキップ拒否コマンドは使用できません。",
-  "matchzy.cc.skipveto": "拒否フェーズはキャンセルされました!",
   "matchzy.cc.matchpaused": "試合はすでに一時停止している為、タイムアウトはできません",
   "matchzy.cc.nomorepauses": "タイムアウトは残っていません!",
 

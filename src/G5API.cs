@@ -190,14 +190,6 @@ namespace MatchZy
             {
                 state = Get5GameState.None; // If the match has not been set up, then the state is none
             }
-            else if (isVeto)
-            {
-                state = Get5GameState.Veto;
-            }
-            else if (isPreVeto)
-            {
-                state = Get5GameState.PreVeto;
-            }
             else if (isKnifeRound)
             {
                 state = Get5GameState.Knife;

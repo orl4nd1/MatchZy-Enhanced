@@ -61,8 +61,6 @@
   "matchzy.cc.playoutstatus": "Playout: {green}{0}{default}",
   "matchzy.cc.minreadyrequired": "Prontos Necessários Atuais: {0}. Use: !readyrequired <número_de_jogadores_prontos_necessários>",
   "matchzy.cc.roundknife": "Round Faca agora é {green}{0}{default}!",
-  "matchzy.cc.skipvetomatchstarted": "O comando de pular veto não pode ser usado se o jogo já tiver começado!",
-  "matchzy.cc.skipveto": "A fase de veto foi cancelada!",
   "matchzy.cc.matchpaused": "O jogo já está pausado, não é possível iniciar um tempo técnico!",
   "matchzy.cc.nomorepauses": "Você não tem mais tempos técnicos disponíveis!",
 
