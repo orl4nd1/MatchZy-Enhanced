@@ -68,7 +68,7 @@ fi
 
 # Clean previous builds
 echo -e "\n${BLUE}🧹 Cleaning previous builds...${NC}"
-rm -rf bin/ obj/
+rm -rf build/ bin/ obj/
 
 # Restore dependencies
 echo -e "\n${BLUE}📥 Restoring dependencies...${NC}"
@@ -87,7 +87,7 @@ mkdir -p "${BUILD_ROOT}/${RELEASE_DIR}/cfg/MatchZy"
 
 # Copy plugin files to proper directory structure
 echo -e "\n${BLUE}📂 Creating directory structure...${NC}"
-cp -r bin/Release/net8.0/publish/* "${BUILD_ROOT}/${RELEASE_DIR}/addons/counterstrikesharp/plugins/MatchZy/"
+cp -r build/Release/net8.0/publish/* "${BUILD_ROOT}/${RELEASE_DIR}/addons/counterstrikesharp/plugins/MatchZy/"
 
 # Copy config files
 echo -e "${BLUE}📂 Copying config files...${NC}"

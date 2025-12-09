@@ -61,11 +61,11 @@ Users simply extract to their `csgo/` directory!
 
 ```bash
 # Clean and build
-rm -rf bin/ obj/
+rm -rf build/ bin/ obj/
 dotnet restore
 dotnet publish -c Release
 
-# Output: bin/Release/net8.0/publish/
+# Output: build/Release/net8.0/publish/
 ```
 
 ## Troubleshooting
@@ -82,7 +82,7 @@ git push origin :refs/tags/v0.8.16
 ### Build errors
 
 ```bash
-rm -rf bin/ obj/
+rm -rf build/ bin/ obj/
 dotnet clean
 ./release.sh patch
 ```
