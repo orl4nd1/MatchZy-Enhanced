@@ -1,21 +1,36 @@
 ---
-title: MatchZy (Enhanced) Docs
+title: Matchzy Enhanced Docs
 ---
 
-## MatchZy (Enhanced) – Tournament Automation Focus
+## Matchzy Enhanced – Tournament Automation Focus
 
-This is the documentation hub for the **enhanced MatchZy plugin for CS2**, tailored for use with **MatchZy Auto Tournament** and automated match management.
+This is the documentation hub for **Matchzy Enhanced** (an enhanced MatchZy plugin for CS2), built specifically to integrate with **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)**.
 
-- **Plugin repo**: [sivert-io/MatchZy](https://github.com/sivert-io/MatchZy)
+- **Plugin repo**: [sivert-io/MatchZy](https://github.com/sivert-io/MatchZy)  
 - **Tournament platform**: [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
 
-### What you’ll find here
+Matchzy Enhanced handles in-game match management (server configs, match lifecycle, events, stats, demo uploads), while MatchZy Auto Tournament orchestrates **what to play** (matches, maps, formats, teams) and consumes MatchZy’s events and reports.
 
-- **Demo upload API details** – how MatchZy uploads `.dem` files to your API.
-- **Config loading behavior** – when and how config files are executed.
-- **Simulation mode notes** – internal design/implementation notes for the new simulation mode.
-- **Release & changelog** – release process notes and historical changes for this fork.
+### Documentation structure
 
-The content is intentionally lean for now; it will be expanded and restructured as we rewrite the full documentation.
+- **Getting Started**
+  - High-level **overview** of what this fork adds.
+  - **Installation** instructions for CS2 servers (standalone or via CS2 Server Manager).
+  - **Configuration** reference for core convars and JSON match configs.
+  - **Simulation mode** guide for running bot-driven matches that still look like real players from the platform’s perspective.
+  - How this plugin integrates with **MatchZy Auto Tournament**.
 
+- **Plugin Docs**
+  - **Demo upload API** specification.
+  - **Demo upload guide** with practical setup and troubleshooting.
+  - Detailed **config loading behavior** for `.cfg` files.
+  - **Server allocation status** fields used by the tournament platform.
 
+- **Development**
+  - Internal **simulation mode design / TODO** notes.
+  - **Release process** for building and publishing new versions.
+
+- **Changelog**
+  - Historical changes for this enhanced fork.
+
+If you’re using Matchzy Enhanced together with MatchZy Auto Tournament, start with **Getting Started → Overview** and then follow **Installation** and **Integration with MatchZy Auto Tournament**.

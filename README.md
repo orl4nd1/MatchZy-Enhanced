@@ -1,8 +1,8 @@
 <div align="center">
 
-  <img src="docs/icon.svg" alt="MatchZy" width="140" height="140">
+  <img src="docs/icon.svg" alt="Matchzy Enhanced" width="140" height="140">
 
-# MatchZy
+# Matchzy Enhanced
 
 ⚡ **Enhanced CS2 match management plugin tailored for tournament automation**
 
@@ -22,7 +22,7 @@
 
 ### Automatic Installation (Recommended)
 
-**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** includes this enhanced MatchZy fork and sets up servers automatically configured for MatchZy Auto Tournament:
+**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** includes **Matchzy Enhanced** (this enhanced MatchZy fork) and sets up servers automatically configured for MatchZy Auto Tournament:
 
 ```bash
 
@@ -72,7 +72,7 @@ The additional events and APIs enable external tools to setup matches, control m
 
 ## 🖥️ CS2 Server Manager
 
-**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** is a multi-server management tool that includes this enhanced MatchZy fork and automatically configures servers for use with MatchZy Auto Tournament.
+**[CS2 Server Manager](https://github.com/sivert-io/cs2-server-manager)** is a multi-server management tool that includes **Matchzy Enhanced** (this enhanced MatchZy fork) and automatically configures servers for use with MatchZy Auto Tournament.
 
 - 🚀 Deploys 3–5 dedicated servers in minutes
 
@@ -141,9 +141,9 @@ The `.csproj` remains at the root; `dotnet build` and `dotnet publish` still wor
 
 - **[shobhit-pathak/MatchZy](https://github.com/shobhit-pathak/MatchZy)** — Original MatchZy plugin by WD-
 
-**Enhanced Fork:**
+**Enhanced Fork (Matchzy Enhanced):**
 
-- This enhanced fork is maintained by [sivert-io](https://github.com/sivert-io) for [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
+- **Matchzy Enhanced** (this fork) is maintained by [sivert-io](https://github.com/sivert-io) for [MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)
 
 - Tailored for tournament automation with additional events and APIs for external tools to setup, control, and track matches in real-time
 

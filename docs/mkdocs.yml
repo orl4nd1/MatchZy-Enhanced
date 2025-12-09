@@ -1,8 +1,8 @@
-site_name: MatchZy (Enhanced)
+site_name: Matchzy Enhanced
 site_url: https://mat.sivert.io/matchzy-plugin/
 site_author: Sivert Gullberg Hansen
 site_description: >
-  Enhanced CS2 MatchZy plugin tailored for tournament automation with MatchZy Auto Tournament.
+  Matchzy Enhanced — an enhanced CS2 MatchZy plugin tailored for tournament automation with MatchZy Auto Tournament.
 
 repo_name: sivert-io/MatchZy
 repo_url: https://github.com/sivert-io/MatchZy
@@ -124,13 +124,19 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Overview: overview.md
+      - Installation: installation.md
+      - Configuration: configuration.md
+      - Simulation mode: simulation-mode.md
+      - Integration with MatchZy Auto Tournament: integration.md
   - Plugin Docs:
       - Demo upload API: API_ENDPOINT_SPECIFICATION.md
       - Demo upload guide: DEMO_UPLOAD_GUIDE.md
       - Config loading behavior: CONFIG_LOADING_BEHAVIOR.md
       - Server allocation status: SERVER_ALLOCATION_STATUS.md
   - Development:
-      - Simulation mode notes: SIMULATION_MODE_TODO.md
+      - Simulation mode internals: SIMULATION_MODE_TODO.md
       - Release process: RELEASE.md
   - Changelog: CHANGELOG.md
 
