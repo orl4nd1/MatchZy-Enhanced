@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🚀 MatchZy Automated Release Script${NC}\n"
 
 # Get current version from MatchZy.cs
-CURRENT_VERSION=$(grep 'ModuleVersion =>' MatchZy.cs | sed -E 's/.*"(.*)".*/\1/')
+CURRENT_VERSION=$(grep 'ModuleVersion =>' src/MatchZy.cs | sed -E 's/.*\"(.*)\".*/\1/')
 if [ -z "$CURRENT_VERSION" ]; then
     echo -e "${RED}❌ Could not detect version from MatchZy.cs${NC}"
     exit 1
@@ -53,7 +53,7 @@ fi
 
 # Update version in MatchZy.cs if bumped
 if [ "$BUMP_TYPE" != "none" ]; then
-    sed -i '' "s/ModuleVersion => \".*\"/ModuleVersion => \"${VERSION}\"/" MatchZy.cs
+    sed -i '' "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
     echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
 fi
 
@@ -78,27 +78,31 @@ dotnet restore
 echo -e "\n${BLUE}🔨 Building project (Release mode)...${NC}"
 dotnet publish -c Release
 
-# Create release directory structure
+# Create release directory structure under build/
 RELEASE_DIR="MatchZy-${VERSION}"
-rm -rf "$RELEASE_DIR" "${RELEASE_DIR}.zip"
-mkdir -p "$RELEASE_DIR/addons/counterstrikesharp/plugins/MatchZy"
-mkdir -p "$RELEASE_DIR/cfg/MatchZy"
+BUILD_ROOT="build"
+rm -rf "${BUILD_ROOT}/${RELEASE_DIR}" "${BUILD_ROOT}/${RELEASE_DIR}.zip"
+mkdir -p "${BUILD_ROOT}/${RELEASE_DIR}/addons/counterstrikesharp/plugins/MatchZy"
+mkdir -p "${BUILD_ROOT}/${RELEASE_DIR}/cfg/MatchZy"
 
 # Copy plugin files to proper directory structure
 echo -e "\n${BLUE}📂 Creating directory structure...${NC}"
-cp -r bin/Release/net8.0/publish/* "$RELEASE_DIR/addons/counterstrikesharp/plugins/MatchZy/"
+cp -r bin/Release/net8.0/publish/* "${BUILD_ROOT}/${RELEASE_DIR}/addons/counterstrikesharp/plugins/MatchZy/"
 
 # Copy config files
 echo -e "${BLUE}📂 Copying config files...${NC}"
-cp -r cfg/MatchZy/* "$RELEASE_DIR/cfg/MatchZy/"
+cp -r cfg/MatchZy/* "${BUILD_ROOT}/${RELEASE_DIR}/cfg/MatchZy/"
 
 # Create zip file
 echo -e "\n${BLUE}🗜️  Creating release archive...${NC}"
-zip -r -q "${RELEASE_DIR}.zip" "$RELEASE_DIR"
+mkdir -p "${BUILD_ROOT}"
+(
+  cd "${BUILD_ROOT}" && zip -r -q "${RELEASE_DIR}.zip" "${RELEASE_DIR}"
+)
 
 # Get file size for display
-SIZE=$(du -h "${RELEASE_DIR}.zip" | cut -f1)
-echo -e "${GREEN}✓ Created ${RELEASE_DIR}.zip (${SIZE})${NC}"
+SIZE=$(du -h "${BUILD_ROOT}/${RELEASE_DIR}.zip" | cut -f1)
+echo -e "${GREEN}✓ Created ${BUILD_ROOT}/${RELEASE_DIR}.zip (${SIZE})${NC}"
 
 # Commit changes
 echo -e "\n${BLUE}💾 Committing changes...${NC}"
@@ -119,7 +123,7 @@ gh repo set-default "$REPO_URL" 2>/dev/null || true
 # Create GitHub release
 echo -e "\n${BLUE}🌟 Creating GitHub release...${NC}"
 gh release create "v${VERSION}" \
-    "${RELEASE_DIR}.zip" \
+    "${BUILD_ROOT}/${RELEASE_DIR}.zip" \
     --title "MatchZy v${VERSION}" \
     --notes "## Installation
 
@@ -145,7 +149,7 @@ Config files are located in \`csgo/cfg/MatchZy/\`:
 
 # Cleanup
 echo -e "\n${BLUE}🧹 Cleaning up temporary files...${NC}"
-rm -rf "$RELEASE_DIR"
+rm -rf "${BUILD_ROOT:?}/${RELEASE_DIR}"
 
 echo -e "\n${GREEN}✅ Release v${VERSION} published successfully!${NC}"
 echo -e "${GREEN}🔗 View release: https://github.com/${REPO_URL}/releases/tag/v${VERSION}${NC}"

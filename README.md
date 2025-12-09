@@ -108,6 +108,33 @@ The additional events and APIs enable external tools to setup matches, control m
 
 ---
 
+## 🧱 Project Structure
+
+The C# source files are organized under a `src` directory to keep the repository root focused on configuration, docs, and packaging:
+
+```text
+MatchZy/
+  MatchZy.csproj
+  src/
+    MatchZy.cs
+    Utility.cs
+    MatchManagement.cs
+    SimulationMode.cs
+    Events.cs
+    ConfigConvars.cs
+    ConsoleCommands.cs
+    PracticeMode.cs
+    ... (other plugin partials and support classes)
+  cfg/
+  lang/
+  spawns/
+  docs/
+  release.sh
+  README.md
+```
+
+The `.csproj` remains at the root; `dotnet build` and `dotnet publish` still work as before, but all plugin code now lives in `src/` instead of cluttering the top-level directory.
+
 ## 🙏 Credits & Thanks
 
 **Original MatchZy:**
