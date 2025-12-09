@@ -345,8 +345,34 @@ namespace MatchZy
                         AutoStart();
                         return;
                     }
-                    if (isWarmup) StartWarmup();
-                    if (isPractice) StartPracticeMode();
+
+                    if (isWarmup)
+                    {
+                        StartWarmup();
+                    }
+
+                    if (isPractice)
+                    {
+                        StartPracticeMode();
+                    }
+
+                    // For simulation mode in multi-map series (bo3/bo5, etc.),
+                    // ensure bots are (re)spawned and the simulated ready flow
+                    // is started again on each subsequent map.
+                    //
+                    // We only do this when we're beyond the first map (CurrentMapNumber > 0)
+                    // to avoid double-initializing the very first map, which is already
+                    // handled in LoadMatchFromJSON via MaybeStartSimulationFlow().
+                    if (isSimulationMode && matchConfig != null && matchConfig.CurrentMapNumber > 0)
+                    {
+                        // Reset per-map simulation orchestration state so the ready flow
+                        // can run again cleanly for the new map.
+                        simulationReadyFlowScheduled = false;
+                        simulationPlayersByUserId.Clear();
+                        assignedSimulationSteamIds.Clear();
+
+                        MaybeStartSimulationFlow();
+                    }
                 });
             });
 
