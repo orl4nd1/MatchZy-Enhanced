@@ -714,6 +714,12 @@ namespace MatchZy
             if (resetCvarsOnSeriesEnd) ResetChangedConvars();
             isMatchLive = false;
 
+            // In simulation mode, schedule bots to disconnect gradually after the series ends.
+            if (isSimulationMode)
+            {
+                ScheduleSimulationBotDisconnects();
+            }
+
             // Wait for demo upload to complete, then kick all players and reset match
             // Demo upload starts 15 seconds after map end, so we wait restartDelay + 60 seconds to ensure upload completes
             int kickDelay = restartDelay + 60; // Give extra time for demo upload to finish

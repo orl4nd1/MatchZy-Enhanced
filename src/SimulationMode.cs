@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
@@ -232,6 +233,79 @@ public partial class MatchZy
 
         // Give bots a short time window to connect and be mapped, then drive ready flow.
         AddTimer(3.0f, StartSimulationReadyFlow);
+    }
+
+    /// <summary>
+    /// After a simulated series concludes, gracefully disconnect bots.
+    /// Waits ~30 seconds, then kicks bots one by one at random intervals
+    /// so that they appear to leave the server gradually.
+    /// </summary>
+    private void ScheduleSimulationBotDisconnects()
+    {
+        if (!isSimulationMode)
+        {
+            return;
+        }
+
+        const float initialDelaySeconds = 30.0f;
+
+        Log("[SimulationMode] Scheduling simulated bot disconnects after series end.");
+
+        // First wait a short fixed period after series end.
+        AddTimer(initialDelaySeconds, () =>
+        {
+            if (!isSimulationMode)
+            {
+                return;
+            }
+
+            var bots = new List<CCSPlayerController>();
+
+            foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
+            {
+                if (player == null) continue;
+                if (!player.IsValid || !player.IsBot || player.IsHLTV) continue;
+                if (player.Connected != PlayerConnectedState.PlayerConnected) continue;
+
+                bots.Add(player);
+            }
+
+            if (bots.Count == 0)
+            {
+                Log("[SimulationMode] No bots found to disconnect after series end.");
+                return;
+            }
+
+            Log($"[SimulationMode] Disconnecting {bots.Count} simulation bots over a random interval.");
+
+            // Kick bots one by one with a small random delay between each
+            var random = new Random();
+            float accumulatedDelay = 0.0f;
+
+            foreach (var bot in bots)
+            {
+                // Random interval between 1 and 5 seconds for each bot
+                float interval = 1.0f + (float)(random.NextDouble() * 4.0);
+                accumulatedDelay += interval;
+
+                var botRef = bot;
+                AddTimer(accumulatedDelay, () =>
+                {
+                    if (!isSimulationMode)
+                    {
+                        return;
+                    }
+
+                    if (!IsPlayerValid(botRef) || !botRef.IsBot)
+                    {
+                        return;
+                    }
+
+                    Log($"[SimulationMode] Disconnecting simulation bot {botRef.PlayerName} (UserId {botRef.UserId}).");
+                    KickPlayer(botRef);
+                });
+            }
+        });
     }
 }
 
