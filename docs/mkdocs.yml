@@ -139,6 +139,9 @@ nav:
       - Simulation mode internals: SIMULATION_MODE_TODO.md
       - Release process: RELEASE.md
   - Changelog: CHANGELOG.md
+  - Related:
+      - CS2 Server Manager: https://mat.sivert.io/guides/cs2-server-manager/
+      - MatchZy Auto Tournament: https://mat.sivert.io
 
 extra_css:
   - stylesheets/extra.css
