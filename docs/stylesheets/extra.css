@@ -1,12 +1,12 @@
-/* Match the project's Material Design 3 MatchZy Teal theme */
+/* Match the project's Material Design 3 MatchZy Mint theme - matching logo colors */
 
 :root {
-  /* Light mode overrides */
-  --md-primary-fg-color: #00464D;        /* Teal for light mode */
-  --md-primary-fg-color--light: #5EE5D9;
-  --md-primary-fg-color--dark: #002D30;
-  --md-accent-fg-color: #5EE5D9;         /* Bright cyan-teal for accents */
-  --md-typeset-a-color: #5EE5D9;          /* Links use accent teal in light mode */
+  /* Light mode overrides - matching logo background #D5F4E2 and text #19191B */
+  --md-primary-fg-color: #1A6B5A;        /* Darker mint-teal for light mode (complements logo bg) */
+  --md-primary-fg-color--light: #4EC5A3;  /* Medium mint-teal */
+  --md-primary-fg-color--dark: #0F4A3D;  /* Darkest mint-teal */
+  --md-accent-fg-color: #4EC5A3;         /* Medium mint-teal for accents (works with logo) */
+  --md-typeset-a-color: #1A6B5A;         /* Links use darker mint-teal in light mode for contrast */
 }
 
 [data-md-color-scheme="slate"] {
@@ -66,16 +66,16 @@
   border-radius: 44px !important;        /* Match project button radius */
 }
 
-/* Primary button - filled teal */
+/* Primary button - filled mint-teal */
 .md-button--primary {
-  background-color: #00464D !important;
+  background-color: #1A6B5A !important;
   color: white !important;
-  border-color: #00464D !important;
+  border-color: #1A6B5A !important;
 }
 
 .md-button--primary:hover {
-  background-color: #0B5359 !important;
-  border-color: #0B5359 !important;
+  background-color: #2D8F6F !important;
+  border-color: #2D8F6F !important;
 }
 
 [data-md-color-scheme="slate"] .md-button--primary {
@@ -90,15 +90,15 @@
   border-color: #5EE5D9 !important;
 }
 
-/* Secondary button - outlined teal */
+/* Secondary button - outlined mint-teal */
 .md-button:not(.md-button--primary) {
-  color: #00464D !important;
-  border-color: #00464D !important;
+  color: #1A6B5A !important;
+  border-color: #1A6B5A !important;
 }
 
 .md-button:not(.md-button--primary):hover {
-  background-color: rgba(0, 70, 77, 0.1) !important;
-  border-color: #0B5359 !important;
+  background-color: rgba(26, 107, 90, 0.1) !important;
+  border-color: #2D8F6F !important;
 }
 
 [data-md-color-scheme="slate"] .md-button:not(.md-button--primary) {
@@ -163,43 +163,13 @@
   border-left-width: 4px;
 }
 
-/* Ensure all links use accent color - using !important to override Material defaults */
-.md-typeset a {
-  color: #5EE5D9 !important;
+/* Only content links (markdown content) use accent color - exclude nav, buttons, etc. */
+.md-typeset a:not(.md-button):not(.md-nav__link):not(.md-header__button):not(.md-footer__link):not(.md-search-result__link) {
+  color: #1A6B5A !important;  /* Darker mint-teal for better contrast on light backgrounds */
 }
 
-.md-typeset a:hover {
-  color: #5EE5D9 !important;
-  opacity: 0.8;
-}
-
-/* Light mode links */
-:root .md-typeset a {
-  color: #5EE5D9 !important;
-}
-
-:root .md-typeset a:hover {
-  color: #5EE5D9 !important;
-  opacity: 0.8;
-}
-
-/* Dark mode links */
-[data-md-color-scheme="slate"] .md-typeset a {
-  color: #5EE5D9 !important;
-}
-
-[data-md-color-scheme="slate"] .md-typeset a:hover {
-  color: #5EE5D9 !important;
-  opacity: 0.8;
-}
-
-/* Override any other link selectors */
-a {
-  color: #5EE5D9 !important;
-}
-
-a:hover {
-  color: #5EE5D9 !important;
-  opacity: 0.8;
+.md-typeset a:not(.md-button):not(.md-nav__link):not(.md-header__button):not(.md-footer__link):not(.md-search-result__link):hover {
+  color: #2D8F6F !important;  /* Slightly lighter on hover */
+  opacity: 0.9;
 }
 
