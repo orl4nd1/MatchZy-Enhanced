@@ -146,16 +146,16 @@ namespace MatchZy
             try
             {
                 tournamentStatus.Value = status;
-                
+
                 if (!string.IsNullOrEmpty(matchSlug))
                 {
                     tournamentMatch.Value = matchSlug;
                 }
-                
+
                 // Update timestamp to current Unix time
                 long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 tournamentUpdated.Value = timestamp.ToString();
-                
+
                 Log($"[UpdateTournamentStatus] Status: {status}, Match: {tournamentMatch.Value}, Timestamp: {timestamp}");
             }
             catch (Exception e)
@@ -283,7 +283,8 @@ namespace MatchZy
                 MatchId = liveMatchId,
                 MapNumber = matchConfig.CurrentMapNumber
             };
-            Task.Run(async () => {
+            Task.Run(async () =>
+            {
                 await SendEventAsync(warmupEndedEvent);
             });
 
@@ -294,7 +295,8 @@ namespace MatchZy
                 MatchId = liveMatchId,
                 MapNumber = matchConfig.CurrentMapNumber
             };
-            Task.Run(async () => {
+            Task.Run(async () =>
+            {
                 await SendEventAsync(knifeStartedEvent);
             });
 
@@ -445,7 +447,8 @@ namespace MatchZy
                     MatchId = liveMatchId,
                     MapNumber = matchConfig.CurrentMapNumber
                 };
-                Task.Run(async () => {
+                Task.Run(async () =>
+                {
                     await SendEventAsync(warmupEndedEvent);
                 });
             }
@@ -856,7 +859,8 @@ namespace MatchZy
                     if (playerData[key].TeamNum == 3)
                     {
                         matchzyTeam1.teamName = "team_" + RemoveSpecialCharacters(playerData[key].PlayerName.Replace(" ", "_"));
-                        foreach (var coach in matchzyTeam1.coach) {
+                        foreach (var coach in matchzyTeam1.coach)
+                        {
                             coach.Clan = $"[{matchzyTeam1.teamName} COACH]";
                         }
                         break;
@@ -875,7 +879,8 @@ namespace MatchZy
                     if (playerData[key].TeamNum == 2)
                     {
                         matchzyTeam2.teamName = "team_" + RemoveSpecialCharacters(playerData[key].PlayerName.Replace(" ", "_"));
-                        foreach (var coach in matchzyTeam2.coach) {
+                        foreach (var coach in matchzyTeam2.coach)
+                        {
                             coach.Clan = $"[{matchzyTeam2.teamName} COACH]";
                         }
                         break;
@@ -1058,7 +1063,7 @@ namespace MatchZy
             }
             matchConfig.CurrentMapNumber += 1;
             string nextMap = matchConfig.Maplist[matchConfig.CurrentMapNumber];
-            
+
             // Calculate total delay before map change (restartDelay - 4 + 3 = restartDelay - 1)
             int totalDelay = restartDelay - 1;
 
@@ -1069,7 +1074,7 @@ namespace MatchZy
             stopData["t"] = false;
 
             KillPhaseTimers();
-            
+
             // Announce map change with countdown
             string mapDisplayName = nextMap.StartsWith("de_") ? nextMap.Substring(3) : nextMap;
             string timeText;
@@ -1090,10 +1095,10 @@ namespace MatchZy
             {
                 timeText = $"{totalDelay} second{(totalDelay > 1 ? "s" : "")}";
             }
-            
+
             PrintToAllChat($"{ChatColors.Grey}Next map: {ChatColors.Green}{mapDisplayName}{ChatColors.Default} will load in {ChatColors.Yellow}{timeText}{ChatColors.Default}.");
             PrintToAllChat($"{ChatColors.Grey}Take a break! Use the restroom, grab some water, or stretch! 💧🚶");
-            
+
             // Schedule countdown announcements
             // 60 seconds remaining (if total delay >= 70 seconds)
             if (totalDelay >= 70)
@@ -1104,7 +1109,7 @@ namespace MatchZy
                     PrintToAllChat($"{ChatColors.Grey}Next map loads in {ChatColors.Yellow}1 minute{ChatColors.Default}...");
                 });
             }
-            
+
             // 30 seconds remaining (if total delay >= 40 seconds)
             if (totalDelay >= 40)
             {
@@ -1114,7 +1119,7 @@ namespace MatchZy
                     PrintToAllChat($"{ChatColors.Grey}Next map loads in {ChatColors.Yellow}30 seconds{ChatColors.Default}...");
                 });
             }
-            
+
             // 15 seconds remaining (if total delay >= 25 seconds)
             if (totalDelay >= 25)
             {
@@ -1124,7 +1129,7 @@ namespace MatchZy
                     PrintToAllChat($"{ChatColors.Yellow}Next map loads in 15 seconds...{ChatColors.Default}");
                 });
             }
-            
+
             // 5 seconds remaining (if total delay >= 10 seconds)
             if (totalDelay >= 10)
             {
@@ -1232,7 +1237,7 @@ namespace MatchZy
             {
                 Log($"[HandlePostRoundStartEvent] Sending round_started event");
                 (int t1score, int t2score) = GetTeamsScore();
-                
+
                 var roundStartedEvent = new MatchZyRoundStartedEvent
                 {
                     MatchId = liveMatchId,
@@ -1242,7 +1247,8 @@ namespace MatchZy
                     Team2Score = t2score
                 };
 
-                Task.Run(async () => {
+                Task.Run(async () =>
+                {
                     await SendEventAsync(roundStartedEvent);
                 });
             }
@@ -1389,7 +1395,7 @@ namespace MatchZy
                 PrintToPlayerChat(player, Localizer["matchzy.pause.techpausenotenabled"]);
                 return;
             }
-            if(!string.IsNullOrEmpty(techPausePermission.Value) && techPausePermission.Value != "\"\"")
+            if (!string.IsNullOrEmpty(techPausePermission.Value) && techPausePermission.Value != "\"\"")
             {
                 if (!IsPlayerAdmin(player, "css_pause", techPausePermission.Value))
                 {
@@ -1427,7 +1433,7 @@ namespace MatchZy
                 if (player != null && player.UserId.HasValue)
                 {
                     Log($"[PauseMatch] Sending match_paused event - paused by {player.PlayerName}");
-                    
+
                     var playerInfo = BuildPlayerInfo(player, pauseTeamName);
 
                     var matchPausedEvent = new MatchZyMatchPausedEvent
@@ -1440,7 +1446,8 @@ namespace MatchZy
                         PauseTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                     };
 
-                    Task.Run(async () => {
+                    Task.Run(async () =>
+                    {
                         await SendEventAsync(matchPausedEvent);
                     });
                 }
@@ -1490,7 +1497,7 @@ namespace MatchZy
 
             // Send match_paused event for admin pause
             Log($"[ForcePauseMatch] Sending match_paused event - admin pause");
-            
+
             MatchZyPlayerInfo adminPlayerInfo;
             if (player != null)
             {
@@ -1511,7 +1518,8 @@ namespace MatchZy
                 PauseTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            Task.Run(async () => {
+            Task.Run(async () =>
+            {
                 await SendEventAsync(matchPausedEvent);
             });
         }
@@ -1538,7 +1546,7 @@ namespace MatchZy
         private void UnpauseMatch()
         {
             Server.ExecuteCommand("mp_unpause_match;");
-            
+
             // Calculate pause duration
             long pauseDuration = 0;
             if (pauseStartTime > 0)
@@ -1550,7 +1558,7 @@ namespace MatchZy
             pauseStartTime = 0;
             unpauseData["ct"] = false;
             unpauseData["t"] = false;
-            
+
             if (!isPaused && pausedStateTimer != null)
             {
                 pausedStateTimer.Kill();
@@ -1559,7 +1567,7 @@ namespace MatchZy
 
             // Send match_unpaused event
             Log($"[UnpauseMatch] Sending match_unpaused event - pause duration: {pauseDuration}s");
-            
+
             var matchUnpausedEvent = new MatchZyMatchUnpausedEvent
             {
                 MatchId = liveMatchId,
@@ -1567,7 +1575,8 @@ namespace MatchZy
                 PauseDuration = pauseDuration
             };
 
-            Task.Run(async () => {
+            Task.Run(async () =>
+            {
                 await SendEventAsync(matchUnpausedEvent);
             });
             UpdateTournamentStatus("live");
@@ -2114,13 +2123,20 @@ namespace MatchZy
             if (GetGameMode() == 2 && GetGameType() == 0) return true;
             return false;
         }
-
         public void KickPlayer(CCSPlayerController player)
         {
-            if (player.UserId.HasValue)
-            {
-                Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
-            }
+            if (player == null || !player.IsValid)
+                return;
+
+            // In simulation mode, bots represent configured players and must not be removed
+            // by generic MatchZy logic. For regular matches, bots can still be kicked.
+            if (isSimulationMode && player.IsBot)
+                return;
+
+            if (!player.UserId.HasValue)
+                return;
+
+            Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
         }
 
         public bool IsPlayerValid(CCSPlayerController? player)
@@ -2242,7 +2258,7 @@ namespace MatchZy
                     Log($"[UploadFileAsync] FileSize: {fileSizeMB:F2} MB");
                     Log($"[UploadFileAsync] Response: {responseBody}");
                     Log($"[UploadFileAsync] ===========================");
-                    
+
                     // Send success message to chat
                     Server.NextFrame(() =>
                     {
@@ -2263,7 +2279,7 @@ namespace MatchZy
                     Log($"[UploadFileAsync] MatchId: {matchId}, MapNumber: {mapNumber}");
                     Log($"[UploadFileAsync] FileName: {fileName}");
                     Log($"[UploadFileAsync] ===========================");
-                    
+
                     // Send failure message to chat
                     Server.NextFrame(() =>
                     {
@@ -2287,7 +2303,7 @@ namespace MatchZy
                 }
                 Log($"[UploadFileAsync] Stack trace: {e.StackTrace}");
                 Log($"[UploadFileAsync] ==============================");
-                
+
                 // Send error message to chat
                 Server.NextFrame(() =>
                 {
@@ -2425,7 +2441,7 @@ namespace MatchZy
             foreach (var player in players)
             {
                 if (!IsPlayerValid(player)) continue;
-                
+
                 if (teamSpawns[player.TeamNum].Count == 0) break;
 
                 int randomIndex = random.Next(teamSpawns[player.TeamNum].Count);
