@@ -32,6 +32,7 @@ namespace MatchZy
         public bool isKnifeRound = false;
         public bool isSideSelectionPhase = false;
         public bool isMatchLive = false;
+        public bool isSimulationMode = false;
         public long liveMatchId = -1;
         public int autoStartMode = 1;
 

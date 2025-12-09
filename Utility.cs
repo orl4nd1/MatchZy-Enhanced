@@ -273,7 +273,6 @@ namespace MatchZy
 
             // Setting match phases bools
             matchStarted = true;
-            isKnifeRound = true;
             readyAvailable = false;
             isWarmup = false;
 
@@ -299,6 +298,34 @@ namespace MatchZy
                 await SendEventAsync(knifeStartedEvent);
             });
 
+            if (isSimulationMode)
+            {
+                // In simulation mode, we don't actually run a knife round.
+                // Randomly assign sides and immediately end the knife phase.
+                RandomizeSimulationSides();
+
+                // Randomly pick a winner slot for the knife event payload.
+                string winnerSlot = new Random().Next(0, 2) == 0 ? "team1" : "team2";
+                var knifeEndedEvent = new MatchZyKnifeRoundEndedEvent
+                {
+                    MatchId = liveMatchId,
+                    MapNumber = matchConfig.CurrentMapNumber,
+                    Winner = winnerSlot
+                };
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(knifeEndedEvent);
+                });
+
+                // Go live immediately after "knife" in simulation mode.
+                isKnifeRound = false;
+                UpdateTournamentStatus("knife");
+                StartLive();
+                return;
+            }
+
+            isKnifeRound = true;
+
             var absolutePath = Path.Join(Server.GameDirectory + "/csgo/cfg", knifeCfgPath);
 
             if (File.Exists(Path.Join(Server.GameDirectory + "/csgo/cfg", knifeCfgPath)))
@@ -317,6 +344,37 @@ namespace MatchZy
             PrintToAllChat($"{ChatColors.Lime}KNIFE!");
             PrintToAllChat($"{ChatColors.Green}KNIFE!");
             UpdateTournamentStatus("knife");
+        }
+
+        private void RandomizeSimulationSides()
+        {
+            try
+            {
+                bool team1StartsCT = new Random().Next(0, 2) == 0;
+
+                if (team1StartsCT)
+                {
+                    teamSides[matchzyTeam1] = "CT";
+                    teamSides[matchzyTeam2] = "TERRORIST";
+                    reverseTeamSides["CT"] = matchzyTeam1;
+                    reverseTeamSides["TERRORIST"] = matchzyTeam2;
+                }
+                else
+                {
+                    teamSides[matchzyTeam1] = "TERRORIST";
+                    teamSides[matchzyTeam2] = "CT";
+                    reverseTeamSides["CT"] = matchzyTeam2;
+                    reverseTeamSides["TERRORIST"] = matchzyTeam1;
+                }
+
+                isKnifeRequired = false;
+                SetTeamNames();
+                Log($"[SimulationMode] Randomized sides - team1: {teamSides[matchzyTeam1]}, team2: {teamSides[matchzyTeam2]}");
+            }
+            catch (Exception e)
+            {
+                Log($"[SimulationMode] Failed to randomize sides: {e.Message}");
+            }
         }
 
         private void SendSideSelectionMessage()
@@ -459,6 +517,7 @@ namespace MatchZy
                 isDryRun = false;
                 isVeto = false;
                 isPreVeto = false;
+                ClearSimulationState();
 
                 lastBackupFileName = "";
                 lastMatchZyBackupFileName = "";
@@ -1375,11 +1434,7 @@ namespace MatchZy
                 {
                     Log($"[PauseMatch] Sending match_paused event - paused by {player.PlayerName}");
                     
-                    var playerInfo = new MatchZyPlayerInfo(
-                        player.SteamID.ToString(),
-                        player.PlayerName,
-                        pauseTeamName
-                    );
+                    var playerInfo = BuildPlayerInfo(player, pauseTeamName);
 
                     var matchPausedEvent = new MatchZyMatchPausedEvent
                     {
@@ -1442,11 +1497,15 @@ namespace MatchZy
             // Send match_paused event for admin pause
             Log($"[ForcePauseMatch] Sending match_paused event - admin pause");
             
-            var adminPlayerInfo = new MatchZyPlayerInfo(
-                player?.SteamID.ToString() ?? "Console",
-                player?.PlayerName ?? "Admin",
-                "Admin"
-            );
+            MatchZyPlayerInfo adminPlayerInfo;
+            if (player != null)
+            {
+                adminPlayerInfo = BuildPlayerInfo(player, "Admin");
+            }
+            else
+            {
+                adminPlayerInfo = new MatchZyPlayerInfo("Console", "Admin", "Admin");
+            }
 
             var matchPausedEvent = new MatchZyMatchPausedEvent
             {
@@ -1853,12 +1912,27 @@ namespace MatchZy
                     if (!player.IsValid || player.ActionTrackingServices == null) continue;
 
                     var playerStats = player.ActionTrackingServices.MatchStats;
+
+                    // In simulation mode, prefer the configured SteamID if available.
                     ulong steamid64 = player.SteamID;
+                    string displaySteamId = steamid64.ToString();
+                    string displayName = player.PlayerName;
+
+                    if (isSimulationMode && player.UserId.HasValue &&
+                        simulationPlayersByUserId.TryGetValue(player.UserId.Value, out var identity))
+                    {
+                        if (ulong.TryParse(identity.ConfigSteamId, out var simulatedSteamId64))
+                        {
+                            steamid64 = simulatedSteamId64;
+                            displaySteamId = identity.ConfigSteamId;
+                        }
+                        displayName = identity.ConfigName;
+                    }
 
                     // Create a nested dictionary to store individual stats for the player
                     Dictionary<string, object> stats = new Dictionary<string, object>
                     {
-                        { "PlayerName", player.PlayerName },
+                        { "PlayerName", displayName },
                         { "Kills", playerStats.Kills },
                         { "Deaths", playerStats.Deaths },
                         { "Assists", playerStats.Assists },
@@ -1947,8 +2021,8 @@ namespace MatchZy
 
                     StatsPlayer statsPlayer = new()
                     {
-                        SteamId = steamid64.ToString(),
-                        Name = player.PlayerName,
+                        SteamId = displaySteamId,
+                        Name = displayName,
                         Stats = playerStatsInstance
                     };
 

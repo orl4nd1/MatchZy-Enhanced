@@ -15,8 +15,9 @@ public partial class MatchZy
             if (!IsPlayerValid(player)) return HookResult.Continue;
             Log($"[FULL CONNECT] Player ID: {player!.UserId}, Name: {player.PlayerName} has connected!");
 
-            // Handling whitelisted players
-            if (!player.IsBot || !player.IsHLTV)
+            // Handling whitelisted players (skip for simulation bots)
+            bool isSimulationBot = isSimulationMode && player.IsBot;
+            if (!isSimulationBot && (!player.IsBot || !player.IsHLTV))
             {
                 var steamId = player.SteamID;
 
@@ -49,6 +50,12 @@ public partial class MatchZy
                     playerReadyStatus[player.UserId.Value] = true;
                 }
                 playerConnectionTimes[player.SteamID] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+                // In simulation mode, map this bot to a configured player identity.
+                if (isSimulationMode && player.IsBot)
+                {
+                    AssignSimulationIdentityForBot(player);
+                }
             }
             // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
             // Update: Commenting the below function as it was being called multiple times on map change.
@@ -70,11 +77,9 @@ public partial class MatchZy
             {
                 Log($"[EventPlayerConnectFull] Sending player_connect event for {player.PlayerName}");
                 
-                var playerInfo = new MatchZyPlayerInfo(
-                    player.SteamID.ToString(),
-                    player.PlayerName,
-                    "none" // Team will be assigned later
-                );
+                // Team will be assigned later for connects; in simulation mode the identity
+                // may already be mapped to a configured player.
+                var playerInfo = BuildPlayerInfo(player, "none");
 
                 var playerConnectEvent = new MatchZyPlayerConnectedEvent
                 {
@@ -127,6 +132,12 @@ public partial class MatchZy
             playerData.Remove(userId);
             playerConnectionTimes.Remove(player.SteamID);
 
+            // Clear simulation mapping for this player, if any.
+            if (isSimulationMode && simulationPlayersByUserId.Remove(userId))
+            {
+                Log($"[EventPlayerDisconnect] Cleared simulation mapping for UserId {userId}");
+            }
+
             if (matchzyTeam1.coach.Contains(player))
             {
                 matchzyTeam1.coach.Remove(player);
@@ -158,11 +169,7 @@ public partial class MatchZy
                     teamName = reverseTeamSides["TERRORIST"].teamName;
                 }
 
-                var playerInfo = new MatchZyPlayerInfo(
-                    player.SteamID.ToString(),
-                    player.PlayerName,
-                    teamName
-                );
+                var playerInfo = BuildPlayerInfo(player, teamName);
 
                 var playerDisconnectEvent = new MatchZyPlayerDisconnectedEvent
                 {

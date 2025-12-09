@@ -50,11 +50,7 @@ public partial class MatchZy
             teamName = reverseTeamSides["TERRORIST"].teamName;
         }
 
-        var playerInfo = new MatchZyPlayerInfo(
-            player.SteamID.ToString(),
-            player.PlayerName,
-            teamName
-        );
+        var playerInfo = BuildPlayerInfo(player, teamName);
 
         if (isReady)
         {

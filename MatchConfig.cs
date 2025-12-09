@@ -52,6 +52,11 @@ namespace MatchZy
         [JsonPropertyName("wingman")]
         public bool Wingman { get; set; } = false;
 
+        // When true, MatchZy runs the match in bot-driven simulation mode instead of waiting for real players.
+        // This flag is optional and defaults to false to preserve existing behavior.
+        [JsonPropertyName("simulation")]
+        public bool Simulation { get; set; } = false;
+
         [JsonPropertyName("match_side_type")]
         public string MatchSideType { get; set; } = "standard";
 

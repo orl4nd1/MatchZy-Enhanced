@@ -31,6 +31,7 @@ public record MatchReportMatch
     public string Phase { get; init; } = "";
     public MatchReportMap Map { get; init; } = new();
     public MatchReportScore Score { get; init; } = new();
+    public bool Simulated { get; init; }
     public bool Paused { get; init; }
     public string PauseRequestedBy { get; init; } = "";
     public string PauseTeamSlot { get; init; } = "";
@@ -239,12 +240,13 @@ public partial class MatchZy : BasePlugin
                     Team1 = matchzyTeam1.seriesScore,
                     Team2 = matchzyTeam2.seriesScore
                 }
-            },
-            Paused = isPaused,
-            PauseRequestedBy = pauseRequestedBy,
-            PauseTeamSlot = pauseTeamSlot,
-            Ready = readyState,
-            ConnectedPlayers = connections.Count
+                },
+                Paused = isPaused,
+                PauseRequestedBy = pauseRequestedBy,
+                PauseTeamSlot = pauseTeamSlot,
+                Ready = readyState,
+                ConnectedPlayers = connections.Count,
+                Simulated = isSimulationMode
         };
 
         var team1Connections = connections.Where(c => c.Slot == "team1").ToList();
@@ -308,10 +310,21 @@ public partial class MatchZy : BasePlugin
                 ? timestamp
                 : fallbackTimestamp;
 
+            string steamId = player.SteamID.ToString();
+            string name = player.PlayerName;
+
+            if (isSimulationMode && player.UserId.HasValue &&
+                simulationPlayersByUserId.TryGetValue(player.UserId.Value, out var identity))
+            {
+                steamId = identity.ConfigSteamId;
+                name = identity.ConfigName;
+                slot = identity.TeamSlot;
+            }
+
             snapshot.Add(new MatchReportPlayerConnection
             {
-                SteamId = player.SteamID.ToString(),
-                Name = player.PlayerName,
+                SteamId = steamId,
+                Name = name,
                 Slot = slot,
                 TeamSide = ResolvePlayerTeamSide(slot),
                 Ready = readyFlag,
@@ -327,6 +340,12 @@ public partial class MatchZy : BasePlugin
     {
         if (matchzyTeam1.coach.Contains(player)) return "team1";
         if (matchzyTeam2.coach.Contains(player)) return "team2";
+
+        if (isSimulationMode && player.UserId.HasValue &&
+            simulationPlayersByUserId.TryGetValue(player.UserId.Value, out var identity))
+        {
+            return identity.TeamSlot;
+        }
 
         string steamId = player.SteamID.ToString();
         if (PlayerIsInConfig(matchzyTeam1.teamPlayers, steamId)) return "team1";

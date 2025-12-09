@@ -300,6 +300,23 @@ namespace MatchZy
 
             GetOptionalMatchValues(jsonDataObject);
 
+            // Track whether this match should be run in bot-driven simulation mode.
+            isSimulationMode = matchConfig.Simulation;
+
+            if (isSimulationMode)
+            {
+                // Validate that we actually have configured players for simulation.
+                bool team1HasPlayers = matchzyTeam1.teamPlayers is JObject t1 && t1.Properties().Any();
+                bool team2HasPlayers = matchzyTeam2.teamPlayers is JObject t2 && t2.Properties().Any();
+
+                if (!team1HasPlayers && !team2HasPlayers)
+                {
+                    Log("[LOADMATCH] Simulation requested but no players configured for team1/team2. Aborting match load.");
+                    UpdateTournamentStatus("error");
+                    return false;
+                }
+            }
+
             if (matchConfig.MapsPool.Count == matchConfig.NumMaps)
             {
                 matchConfig.SkipVeto = true;
@@ -370,6 +387,12 @@ namespace MatchZy
             StartWarmup();
 
             isMatchSetup = true;
+
+            // If this match is configured for simulation, kick off the simulation orchestration.
+            if (isSimulationMode)
+            {
+                MaybeStartSimulationFlow();
+            }
 
             if(matchConfig.SkipVeto) SetMapSides();
 
@@ -489,6 +512,10 @@ namespace MatchZy
             if (jsonDataObject["wingman"] != null)
             {
                 matchConfig.Wingman = bool.Parse(jsonDataObject["wingman"]!.ToString());
+            }
+            if (jsonDataObject["simulation"] != null)
+            {
+                matchConfig.Simulation = bool.Parse(jsonDataObject["simulation"]!.ToString());
             }
             if (jsonDataObject["veto_mode"] != null)
             {
