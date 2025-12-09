@@ -1,11 +1,11 @@
-/* Match the project's Material Design 3 Purple theme */
+/* Match the project's Material Design 3 MatchZy Teal theme */
 
 :root {
   /* Light mode overrides */
-  --md-primary-fg-color: #6750A4;        /* Purple for light mode */
-  --md-primary-fg-color--light: #D0BCFF;
-  --md-primary-fg-color--dark: #381E72;
-  --md-accent-fg-color: #D0BCFF;         /* Bright purple for accents */
+  --md-primary-fg-color: #00464D;        /* Teal for light mode */
+  --md-primary-fg-color--light: #5EE5D9;
+  --md-primary-fg-color--dark: #002D30;
+  --md-accent-fg-color: #5EE5D9;         /* Bright cyan-teal for accents */
 }
 
 [data-md-color-scheme="slate"] {
@@ -13,13 +13,13 @@
   
   /* Header/Navbar - truly dark background */
   --md-primary-fg-color: #1C1B1F;        /* Dark background - same as body */
-  --md-primary-fg-color--light: #E8DEF8;
+  --md-primary-fg-color--light: #CFF9F4;
   --md-primary-fg-color--dark: #0D0D0F;
   --md-primary-bg-color: #E6E1E5;
   
-  /* Accent - bright purple for links, buttons, active states */
-  --md-accent-fg-color: #D0BCFF;         /* M3 Purple primary - same as frontend */
-  --md-accent-fg-color--transparent: rgba(208, 188, 255, 0.1);
+  /* Accent - bright cyan-teal for links, buttons, active states */
+  --md-accent-fg-color: #5EE5D9;         /* M3 Teal primary - same as frontend */
+  --md-accent-fg-color--transparent: rgba(94, 229, 217, 0.1);
   
   /* Background colors to match project */
   --md-default-bg-color: #1C1B1F;        /* Same as project background.default */
@@ -30,23 +30,23 @@
   --md-code-bg-color: #2B2930;           /* Same as project paper background */
   --md-code-fg-color: #E6E1E5;
   
-  /* Links - use bright purple */
-  --md-typeset-a-color: #D0BCFF;
+  /* Links - use bright cyan-teal */
+  --md-typeset-a-color: #5EE5D9;
   
   /* Table of contents active item */
   --md-typeset-table-color: #2B2930;
 }
 
-/* Enhanced purple highlights for dark mode */
+/* Enhanced teal highlights for dark mode */
 [data-md-color-scheme="slate"] {
   /* Sidebar active nav item */
   .md-nav__link--active {
-    color: #D0BCFF !important;
+    color: #5EE5D9 !important;
   }
   
   /* Hover states */
   .md-nav__link:hover {
-    color: #E8DEF8 !important;
+    color: #CFF9F4 !important;
   }
   
   /* Search highlights */
@@ -56,7 +56,7 @@
   
   /* Admonition headers */
   .md-typeset .admonition-title {
-    background-color: rgba(208, 188, 255, 0.1);
+    background-color: rgba(94, 229, 217, 0.1);
   }
 }
 
@@ -65,49 +65,49 @@
   border-radius: 44px !important;        /* Match project button radius */
 }
 
-/* Primary button - filled purple */
+/* Primary button - filled teal */
 .md-button--primary {
-  background-color: #6750A4 !important;
+  background-color: #00464D !important;
   color: white !important;
-  border-color: #6750A4 !important;
+  border-color: #00464D !important;
 }
 
 .md-button--primary:hover {
-  background-color: #7965AF !important;
-  border-color: #7965AF !important;
+  background-color: #0B5359 !important;
+  border-color: #0B5359 !important;
 }
 
 [data-md-color-scheme="slate"] .md-button--primary {
-  background-color: #D0BCFF !important;
+  background-color: #5EE5D9 !important;
   color: #1C1B1F !important;
-  border-color: #D0BCFF !important;
+  border-color: #5EE5D9 !important;
 }
 
 [data-md-color-scheme="slate"] .md-button--primary:hover {
   background-color: transparent !important;
-  color: #D0BCFF !important;
-  border-color: #D0BCFF !important;
+  color: #5EE5D9 !important;
+  border-color: #5EE5D9 !important;
 }
 
-/* Secondary button - outlined purple */
+/* Secondary button - outlined teal */
 .md-button:not(.md-button--primary) {
-  color: #6750A4 !important;
-  border-color: #6750A4 !important;
+  color: #00464D !important;
+  border-color: #00464D !important;
 }
 
 .md-button:not(.md-button--primary):hover {
-  background-color: rgba(103, 80, 164, 0.1) !important;
-  border-color: #7965AF !important;
+  background-color: rgba(0, 70, 77, 0.1) !important;
+  border-color: #0B5359 !important;
 }
 
 [data-md-color-scheme="slate"] .md-button:not(.md-button--primary) {
-  color: #D0BCFF !important;
-  border-color: #D0BCFF !important;
+  color: #5EE5D9 !important;
+  border-color: #5EE5D9 !important;
 }
 
 [data-md-color-scheme="slate"] .md-button:not(.md-button--primary):hover {
-  background-color: rgba(208, 188, 255, 0.1) !important;
-  border-color: #E8DEF8 !important;
+  background-color: rgba(94, 229, 217, 0.1) !important;
+  border-color: #CFF9F4 !important;
 }
 
 /* Logo styling */
@@ -136,7 +136,7 @@
 /* Tabs styling */
 [data-md-color-scheme="slate"] .md-tabs {
   background-color: #1C1B1F;
-  border-bottom: 0.05rem solid rgba(208, 188, 255, 0.1);
+  border-bottom: 0.05rem solid rgba(94, 229, 217, 0.1);
 }
 
 /* Code blocks with subtle borders */
