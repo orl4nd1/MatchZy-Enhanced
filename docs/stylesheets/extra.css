@@ -10,32 +10,32 @@
 }
 
 [data-md-color-scheme="slate"] {
-  /* Dark mode - match project exactly */
+  /* Dark mode */
   
-  /* Header/Navbar - truly dark background */
-  --md-primary-fg-color: #1C1B1F;        /* Dark background - same as body */
+  /* Header/Navbar - dark teal-tinted background */
+  --md-primary-fg-color: #1B1F1E;        /* Dark teal-tinted background */
   --md-primary-fg-color--light: #CFF9F4;
-  --md-primary-fg-color--dark: #0D0D0F;
+  --md-primary-fg-color--dark: #0D0F0E;
   --md-primary-bg-color: #E6E1E5;
   
   /* Accent - bright cyan-teal for links, buttons, active states */
   --md-accent-fg-color: #5EE5D9;         /* M3 Teal primary - same as frontend */
   --md-accent-fg-color--transparent: rgba(94, 229, 217, 0.1);
   
-  /* Background colors to match project */
-  --md-default-bg-color: #1C1B1F;        /* Same as project background.default */
+  /* Background colors with teal hue */
+  --md-default-bg-color: #1B1F1E;        /* Teal-tinted dark background */
   --md-default-fg-color: #E6E1E5;        /* Same as project text.primary */
-  --md-default-fg-color--light: #CAC4D0; /* Same as project text.secondary */
+  --md-default-fg-color--light: #CACDD0; /* Teal-tinted secondary text */
   
-  /* Code block colors */
-  --md-code-bg-color: #2B2930;           /* Same as project paper background */
+  /* Code block colors with teal hue */
+  --md-code-bg-color: #2A302F;           /* Teal-tinted code background */
   --md-code-fg-color: #E6E1E5;
   
-  /* Links - use bright cyan-teal */
+  /* Links - use bright cyan-teal (overridden by direct selectors below) */
   --md-typeset-a-color: #5EE5D9;
   
   /* Table of contents active item */
-  --md-typeset-table-color: #2B2930;
+  --md-typeset-table-color: #2A302F;
 }
 
 /* Enhanced teal highlights for dark mode */
@@ -52,7 +52,7 @@
   
   /* Search highlights */
   .md-search-result__meta {
-    background-color: #2B2930;
+    background-color: #2A302F;
   }
   
   /* Admonition headers */
@@ -80,7 +80,7 @@
 
 [data-md-color-scheme="slate"] .md-button--primary {
   background-color: #5EE5D9 !important;
-  color: #1C1B1F !important;
+  color: #1B1F1E !important;
   border-color: #5EE5D9 !important;
 }
 
@@ -111,6 +111,11 @@
   border-color: #CFF9F4 !important;
 }
 
+/* Additional teal-tinted backgrounds */
+[data-md-color-scheme="slate"] .md-header {
+  background-color: #1B1F1E;
+}
+
 /* Logo styling */
 .md-header__button.md-logo img,
 .md-header__button.md-logo svg {
@@ -136,7 +141,7 @@
 
 /* Tabs styling */
 [data-md-color-scheme="slate"] .md-tabs {
-  background-color: #1C1B1F;
+  background-color: #1B1F1E;
   border-bottom: 0.05rem solid rgba(94, 229, 217, 0.1);
 }
 
@@ -147,7 +152,7 @@
 
 /* Navigation path breadcrumbs */
 [data-md-color-scheme="slate"] .md-path {
-  color: #CAC4D0;
+  color: #CACDD0;
 }
 
 /* Admonition styling to match mkdocs-material style */
@@ -158,18 +163,43 @@
   border-left-width: 4px;
 }
 
-/* Ensure all links use accent color */
+/* Ensure all links use accent color - using !important to override Material defaults */
 .md-typeset a {
-  color: var(--md-typeset-a-color);
+  color: #5EE5D9 !important;
 }
 
 .md-typeset a:hover {
-  color: var(--md-accent-fg-color);
+  color: #5EE5D9 !important;
   opacity: 0.8;
 }
 
-/* Light mode link hover */
+/* Light mode links */
+:root .md-typeset a {
+  color: #5EE5D9 !important;
+}
+
 :root .md-typeset a:hover {
-  color: #5EE5D9;
+  color: #5EE5D9 !important;
+  opacity: 0.8;
+}
+
+/* Dark mode links */
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: #5EE5D9 !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: #5EE5D9 !important;
+  opacity: 0.8;
+}
+
+/* Override any other link selectors */
+a {
+  color: #5EE5D9 !important;
+}
+
+a:hover {
+  color: #5EE5D9 !important;
+  opacity: 0.8;
 }
 
