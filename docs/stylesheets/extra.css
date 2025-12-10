@@ -6,7 +6,7 @@
   --md-primary-fg-color--light: #4EC5A3;  /* Medium mint-teal */
   --md-primary-fg-color--dark: #0F4A3D;  /* Darkest mint-teal */
   --md-accent-fg-color: #4EC5A3;         /* Medium mint-teal for accents (works with logo) */
-  --md-typeset-a-color: #1A6B5A;         /* Links use darker mint-teal in light mode for contrast */
+  --md-typeset-a-color: #4EC5A3;         /* Content links use accent color in light mode */
 }
 
 [data-md-color-scheme="slate"] {
@@ -31,7 +31,7 @@
   --md-code-bg-color: #2A302F;           /* Teal-tinted code background */
   --md-code-fg-color: #E6E1E5;
   
-  /* Links - use bright cyan-teal (overridden by direct selectors below) */
+  /* Links - use bright cyan-teal */
   --md-typeset-a-color: #5EE5D9;
   
   /* Table of contents active item */
@@ -165,11 +165,10 @@
 
 /* Only content links (markdown content) use accent color - exclude nav, buttons, etc. */
 .md-typeset a:not(.md-button):not(.md-nav__link):not(.md-header__button):not(.md-footer__link):not(.md-search-result__link) {
-  color: #1A6B5A !important;  /* Darker mint-teal for better contrast on light backgrounds */
+  color: var(--md-accent-fg-color) !important;
 }
 
 .md-typeset a:not(.md-button):not(.md-nav__link):not(.md-header__button):not(.md-footer__link):not(.md-search-result__link):hover {
-  color: #2D8F6F !important;  /* Slightly lighter on hover */
   opacity: 0.9;
 }
 
