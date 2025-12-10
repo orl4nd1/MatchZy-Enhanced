@@ -1,5 +1,8 @@
 ---
 title: MatchZy Enhanced
+hide:
+  - navigation
+  - toc
 ---
 
 # MatchZy Enhanced
@@ -66,5 +69,3 @@ See:
 MIT License • Built on MatchZy • Made with :material-heart: for the CS2 community
 
 </div>
-
-
