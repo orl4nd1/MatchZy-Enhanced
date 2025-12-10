@@ -5,8 +5,8 @@
   --md-primary-fg-color: #1A6B5A;        /* Darker mint-teal for light mode (complements logo bg) */
   --md-primary-fg-color--light: #4EC5A3;  /* Medium mint-teal */
   --md-primary-fg-color--dark: #0F4A3D;  /* Darkest mint-teal */
-  --md-accent-fg-color: #4EC5A3;         /* Medium mint-teal for accents (works with logo) */
-  --md-typeset-a-color: #4EC5A3;         /* Content links use accent color in light mode */
+  --md-accent-fg-color: hsl(163, 51%, 54%);         /* Medium mint-teal for accents (works with logo) */
+  --md-typeset-a-color: var(--md-accent-fg-color);  /* Content links use accent color in light mode */
 }
 
 [data-md-color-scheme="slate"] {
@@ -18,9 +18,9 @@
   --md-primary-fg-color--dark: #0D0F0E;
   --md-primary-bg-color: #E6E1E5;
   
-  /* Accent - bright cyan-teal for links, buttons, active states */
-  --md-accent-fg-color: #5EE5D9;         /* M3 Teal primary - same as frontend */
-  --md-accent-fg-color--transparent: rgba(94, 229, 217, 0.1);
+  /* Accent - bright mint-teal for links, buttons, active states */
+  --md-accent-fg-color: hsl(163, 51%, 54%);
+  --md-accent-fg-color--transparent: hsla(163, 51%, 54%, 0.1);
   
   /* Background colors with teal hue */
   --md-default-bg-color: #1B1F1E;        /* Teal-tinted dark background */
