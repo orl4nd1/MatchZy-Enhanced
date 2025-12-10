@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Redirect build outputs from the default 'bin' and 'obj' folders into a single 'build' folder.
+         Defined here so it takes effect before Microsoft.Common.props to avoid MSB3539 warnings. -->
+    <BaseOutputPath>build/</BaseOutputPath>
+    <BaseIntermediateOutputPath>build/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
+
+

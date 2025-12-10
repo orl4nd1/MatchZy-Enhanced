@@ -2,11 +2,11 @@
 set -e
 
 # Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+YELLOW="\033[1;33m"
+RED="\033[0;31m"
+NC="\033[0m" # No Color
 
 # Source .env if present so DISCORD_WEBHOOK_URL and others are available
 if [ -f ".env" ]; then
@@ -20,14 +20,14 @@ fi
 echo -e "${BLUE}🚀 MatchZy Automated Release Script${NC}\n"
 
 # Get current version from MatchZy.cs
-CURRENT_VERSION=$(grep 'ModuleVersion =>' src/MatchZy.cs | sed -E 's/.*\"(.*)\".*/\1/')
+CURRENT_VERSION=$(grep "ModuleVersion =>" src/MatchZy.cs | sed -E "s/.*\"(.*)\".*/\1/")
 if [ -z "$CURRENT_VERSION" ]; then
     echo -e "${RED}❌ Could not detect version from MatchZy.cs${NC}"
     exit 1
 fi
 
 # Parse version components
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
 # Check for version bump argument
 BUMP_TYPE="${1:-none}"
@@ -62,7 +62,7 @@ fi
 
 # Update version in MatchZy.cs if bumped
 if [ "$BUMP_TYPE" != "none" ]; then
-    sed -i '' "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
     echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
 fi
 
@@ -126,81 +126,13 @@ git push origin "$CURRENT_BRANCH"
 git push origin "v${VERSION}"
 
 # Set default repo for gh CLI (if not already set)
-REPO_URL=$(git remote get-url origin | sed -E 's|.*github.com[:/](.*).git|\1|')
+REPO_URL=$(git remote get-url origin | sed -E "s|.*github.com[:/](.*).git|\\1|")
 gh repo set-default "$REPO_URL" 2>/dev/null || true
 
-# Generate changelog from Git history for this release
 echo -e "\n${BLUE}📝 Generating changelog for GitHub release...${NC}"
-get_changelog() {
-    local prev_tag
-    local current_tag="v${VERSION}"
 
-    # Get the previous tag (second most recent, excluding the current one)
-    prev_tag=$(git tag --sort=-v:refname | grep -v "^${current_tag}$" | sed -n '1p' 2>/dev/null || echo "")
-
-    # Extract PR titles from merge commits
-    # Format: "Merge pull request #XX..." followed by blank line, then PR title
-    # Reverse order so oldest PRs are first (git log shows newest first by default)
-    extract_pr_titles() {
-        local log_range="$1"
-        local temp_output
-        temp_output=$(git log ${log_range} --merges --format="%B" 2>/dev/null | \
-            awk '
-                /^Merge pull request/ {
-                    # Skip the merge line and blank line, get the next non-empty line (PR title)
-                    getline
-                    getline
-                    if (NF > 0) {
-                        print "- " $0
-                    }
-                }
-            ' | head -30)
-
-        # Reverse the order (oldest first) - use tail -r on macOS, tac on Linux
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            echo "$temp_output" | tail -r
-        else
-            echo "$temp_output" | tac
-        fi
-    }
-
-    # Fallback: if there are no merge commits (e.g. squash/rebase workflow), use
-    # regular commit subjects between tags (excluding release/tagging commits).
-    extract_commit_subjects() {
-        local log_range="$1"
-        git log ${log_range} --format="%s" 2>/dev/null | \
-            grep -viE '^Release v[0-9]+\.[0-9]+\.[0-9]+$' | \
-            head -30 | \
-            awk '{print "- " $0}'
-    }
-
-    if [ -z "$prev_tag" ]; then
-        # No previous tag, get all merged PRs or commits up to the current tag
-        if git rev-parse "${current_tag}" >/dev/null 2>&1; then
-            changelog=$(extract_pr_titles "${current_tag}")
-            if [ -z "$changelog" ]; then
-                changelog=$(extract_commit_subjects "${current_tag}")
-            fi
-            echo "$changelog"
-        else
-            # Tag doesn't exist, get recent history on current branch
-            changelog=$(extract_pr_titles "")
-            if [ -z "$changelog" ]; then
-                changelog=$(extract_commit_subjects "")
-            fi
-            echo "$changelog"
-        fi
-    else
-        # Get changes between previous tag and current tag
-        changelog=$(extract_pr_titles "${prev_tag}..${current_tag}")
-        if [ -z "$changelog" ]; then
-            changelog=$(extract_commit_subjects "${prev_tag}..${current_tag}")
-        fi
-        echo "$changelog"
-    fi
-}
-
-CHANGELOG=$(get_changelog)
+# Simple changelog based on recent commits (excluding previous release tags)
+CHANGELOG=$(git log -n 20 --pretty=format:"- %s" 2>/dev/null | grep -viE "^Release v[0-9]+\.[0-9]+\.[0-9]+$" || true)
 if [ -z "$CHANGELOG" ] || [ ${#CHANGELOG} -lt 10 ]; then
     CHANGELOG="- Release v${VERSION}"
 fi
@@ -213,7 +145,7 @@ ${CHANGELOG}
 ## Installation
 
 1. Download \`${RELEASE_DIR}.zip\`
-2. Extract the contents to your CS2 server's \`game/csgo/\` directory
+2. Extract the contents to your CS2 server game/csgo/ directory
    - The zip contains the proper folder structure (\`addons/\` and \`cfg/\`)
 3. Restart your server
 
