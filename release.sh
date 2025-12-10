@@ -131,8 +131,19 @@ gh repo set-default "$REPO_URL" 2>/dev/null || true
 
 echo -e "\n${BLUE}📝 Generating changelog for GitHub release...${NC}"
 
-# Simple changelog based on recent commits (excluding previous release tags)
-CHANGELOG=$(git log -n 20 --pretty=format:"- %s" 2>/dev/null | grep -viE "^Release v[0-9]+\.[0-9]+\.[0-9]+$" || true)
+# Changelog based only on commits between the previous tag and this tag
+current_tag="v${VERSION}"
+prev_tag=$(git tag --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || echo "")
+
+log_range=""
+if [ -n "$prev_tag" ]; then
+    log_range="${prev_tag}..${current_tag}"
+else
+    # First tag in the repo – use commits reachable from the tag
+    log_range="${current_tag}"
+fi
+
+CHANGELOG=$(git log ${log_range} --pretty=format:"- %s" 2>/dev/null | grep -viE "^- Release v[0-9]+\.[0-9]+\.[0-9]+$" || true)
 if [ -z "$CHANGELOG" ] || [ ${#CHANGELOG} -lt 10 ]; then
     CHANGELOG="- Release v${VERSION}"
 fi
