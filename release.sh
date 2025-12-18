@@ -60,6 +60,22 @@ else
     echo -e "${GREEN}📦 Using current version: ${VERSION}${NC}"
 fi
 
+# Final confirmation before doing anything destructive
+echo -e "\n${YELLOW}You are about to run a release for version v${VERSION}.${NC}"
+echo -e "${YELLOW}This will clean builds, optionally update MatchZy.cs, commit, tag, push, and create a GitHub release.${NC}"
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown-branch")
+echo -e "${YELLOW}Current Git branch: ${CURRENT_BRANCH}${NC}"
+read -rp "$(echo -e "${YELLOW}Continue with release v${VERSION}? [y/N]: ${NC}")" CONFIRM_RELEASE
+case "$CONFIRM_RELEASE" in
+    y|Y|yes|YES)
+        echo -e "${GREEN}Proceeding with release v${VERSION}...${NC}"
+        ;;
+    *)
+        echo -e "${RED}Aborting release v${VERSION}. No changes were made.${NC}"
+        exit 0
+        ;;
+esac
+
 # Update version in MatchZy.cs if bumped
 if [ "$BUMP_TYPE" != "none" ]; then
     sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
