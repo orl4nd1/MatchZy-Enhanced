@@ -458,6 +458,14 @@ public class MatchZyTestEvent : MatchZyMatchEvent
     [JsonPropertyName("triggered_by")]
     public required string TriggeredBy { get; init; }
 
+    // Optional metadata to help external controllers attribute connectivity checks
+    // cleanly per server and per logical match slug.
+    [JsonPropertyName("server_id")]
+    public string? ServerId { get; init; }
+
+    [JsonPropertyName("match_slug")]
+    public string? MatchSlug { get; init; }
+
     public MatchZyTestEvent() : base("test_event")
     {
     }

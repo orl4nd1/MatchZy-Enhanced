@@ -36,6 +36,15 @@ namespace MatchZy
         public long liveMatchId = -1;
         public int autoStartMode = 1;
 
+        // Remote log lifecycle tracking
+        // - remoteLogUrlEverConfigured: has a non-empty RemoteLogURL been configured at least once
+        //   during this server session (via cvar or match JSON)?
+        // - remoteLogUrlMissingWarningLogged: have we already logged that events are being
+        //   skipped because RemoteLogURL is not configured? This prevents log spam while
+        //   an external controller is still wiring up webhooks.
+        private bool remoteLogUrlEverConfigured = false;
+        private bool remoteLogUrlMissingWarningLogged = false;
+
         public bool mapReloadRequired = false;
 
         // Pause Data

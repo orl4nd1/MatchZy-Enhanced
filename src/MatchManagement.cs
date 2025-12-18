@@ -295,16 +295,47 @@ namespace MatchZy
             matchzyTeam1.teamPlayers = team1["players"];
             matchzyTeam2.teamPlayers = team2["players"];
 
+            // Preserve any externally-configured remote log settings across match loads so that
+            // an outside controller (MatchZy Auto Tournament) does not need to constantly
+            // reapply them after every matchzy_loadmatch_url call.
+            string previousRemoteLogUrl = matchConfig.RemoteLogURL;
+            string previousRemoteLogHeaderKey = matchConfig.RemoteLogHeaderKey;
+            string previousRemoteLogHeaderValue = matchConfig.RemoteLogHeaderValue;
+
             matchConfig = new()
             {
                 MatchId = liveMatchId,
                 MapsPool = maplist.ToObject<List<string>>()!,
                 MapsLeftInVetoPool = maplist.ToObject<List<string>>()!,
                 NumMaps = jsonDataObject["num_maps"]!.Value<int>(),
-                MinPlayersToReady = minimumReadyRequired
+                MinPlayersToReady = minimumReadyRequired,
+                RemoteLogURL = previousRemoteLogUrl,
+                RemoteLogHeaderKey = previousRemoteLogHeaderKey,
+                RemoteLogHeaderValue = previousRemoteLogHeaderValue
             };
 
             GetOptionalMatchValues(jsonDataObject);
+
+            // If the JSON payload explicitly provides a remote_log_url and/or headers, treat
+            // that as an authoritative configuration as well.
+            if (jsonDataObject["remote_log_url"] != null)
+            {
+                string? remoteUrl = jsonDataObject["remote_log_url"]!.ToString();
+                if (!string.IsNullOrWhiteSpace(remoteUrl) && IsValidUrl(remoteUrl))
+                {
+                    matchConfig.RemoteLogURL = remoteUrl;
+                    remoteLogUrlEverConfigured = true;
+                    remoteLogUrlMissingWarningLogged = false;
+                }
+            }
+            if (jsonDataObject["remote_log_header_key"] != null)
+            {
+                matchConfig.RemoteLogHeaderKey = jsonDataObject["remote_log_header_key"]!.ToString();
+            }
+            if (jsonDataObject["remote_log_header_value"] != null)
+            {
+                matchConfig.RemoteLogHeaderValue = jsonDataObject["remote_log_header_value"]!.ToString();
+            }
 
             // Track whether this match should be run in bot-driven simulation mode.
             isSimulationMode = matchConfig.Simulation;

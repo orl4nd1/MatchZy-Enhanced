@@ -20,6 +20,11 @@ namespace MatchZy
             }
 
             matchConfig.RemoteLogURL = url;
+
+            // Mark that a remote log URL has been configured at least once this session so that
+            // we can stop treating missing URLs as a noisy but expected startup condition.
+            remoteLogUrlEverConfigured = true;
+            remoteLogUrlMissingWarningLogged = false;
         }
 
         [ConsoleCommand("get5_remote_log_header_key", "If defined, a custom HTTP header with this name is added to the HTTP requests for events")]

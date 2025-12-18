@@ -746,7 +746,9 @@ namespace MatchZy
                 MatchId = liveMatchId,
                 Message = "This is a test event from MatchZy",
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                TriggeredBy = player?.PlayerName ?? "Console"
+                TriggeredBy = player?.PlayerName ?? "Console",
+                ServerId = matchReportServerId.Value,
+                MatchSlug = tournamentMatch.Value
             };
 
             Task.Run(async () => {

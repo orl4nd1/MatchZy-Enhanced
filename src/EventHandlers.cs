@@ -95,7 +95,14 @@ public partial class MatchZy
             {
                 if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
                 {
-                    Log($"[EventPlayerConnectFull] Skipping player_connect event - RemoteLogURL not configured");
+                    // Before any remote log URL has ever been configured in this server session,
+                    // early connect/disconnect events are expected to be dropped while an external
+                    // controller is still wiring up webhooks. Log at most once to avoid spam.
+                    if (!remoteLogUrlEverConfigured && !remoteLogUrlMissingWarningLogged)
+                    {
+                        Log($"[EventPlayerConnectFull] Skipping player_connect event - RemoteLogURL not configured (no URL has been set yet)");
+                        remoteLogUrlMissingWarningLogged = true;
+                    }
                 }
                 else
                 {
@@ -185,7 +192,14 @@ public partial class MatchZy
             {
                 if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
                 {
-                    Log($"[EventPlayerDisconnect] Skipping player_disconnect event - RemoteLogURL not configured");
+                    // Avoid spamming disconnect warnings before any remote log URL has ever been
+                    // configured in this session. Once a URL has been set, we resume logging
+                    // normally so operational misconfigurations are visible.
+                    if (!remoteLogUrlEverConfigured && !remoteLogUrlMissingWarningLogged)
+                    {
+                        Log($"[EventPlayerDisconnect] Skipping player_disconnect event - RemoteLogURL not configured (no URL has been set yet)");
+                        remoteLogUrlMissingWarningLogged = true;
+                    }
                 }
                 else
                 {
