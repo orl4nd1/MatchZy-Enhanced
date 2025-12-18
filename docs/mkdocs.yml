@@ -135,6 +135,7 @@ nav:
       - Demo upload guide: DEMO_UPLOAD_GUIDE.md
       - Config loading behavior: CONFIG_LOADING_BEHAVIOR.md
       - Server allocation status: SERVER_ALLOCATION_STATUS.md
+      - Commands & ConVars: commands.md
   - Development:
       - Simulation mode internals: SIMULATION_MODE_TODO.md
       - Release process: RELEASE.md
