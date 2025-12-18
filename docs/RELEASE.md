@@ -14,6 +14,9 @@
 
 # Release current version without bumping
 ./release.sh
+
+# Release with an explicitly specified version (override)
+./release.sh 1.0.6
 ```
 
 ## What It Does
@@ -56,6 +59,7 @@ Users simply extract to their `csgo/` directory!
 - **patch** - Bug fixes: `0.8.15` → `0.8.16`
 - **minor** - New features: `0.8.15` → `0.9.0`
 - **major** - Breaking changes: `0.8.15` → `1.0.0`
+- **X.Y.Z** - Explicitly set version number (for example, `./release.sh 1.0.6`)
 
 ## Manual Build (Testing)
 

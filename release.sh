@@ -29,11 +29,16 @@ fi
 # Parse version components
 IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
-# Check for version bump argument
+# Check for version bump argument or explicit version
 BUMP_TYPE="${1:-none}"
 VERSION="$CURRENT_VERSION"
 
-if [ "$BUMP_TYPE" = "major" ]; then
+# If the first argument looks like X.Y.Z, treat it as an explicit version override
+if [[ "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    VERSION="$BUMP_TYPE"
+    BUMP_TYPE="explicit"
+    echo -e "${YELLOW}🔧 Using explicitly specified version: ${CURRENT_VERSION} → ${VERSION}${NC}"
+elif [ "$BUMP_TYPE" = "major" ]; then
     MAJOR=$((MAJOR + 1))
     MINOR=0
     PATCH=0
@@ -49,11 +54,12 @@ elif [ "$BUMP_TYPE" = "patch" ]; then
     VERSION="${MAJOR}.${MINOR}.${PATCH}"
     echo -e "${YELLOW}🔼 Bumping PATCH version: ${CURRENT_VERSION} → ${VERSION}${NC}"
 elif [ "$BUMP_TYPE" != "none" ]; then
-    echo -e "${RED}❌ Invalid bump type: ${BUMP_TYPE}${NC}"
-    echo "Usage: ./release.sh [major|minor|patch]"
+    echo -e "${RED}❌ Invalid bump type or version: ${BUMP_TYPE}${NC}"
+    echo "Usage: ./release.sh [major|minor|patch|X.Y.Z]"
     echo "  major: 0.8.15 → 1.0.0"
     echo "  minor: 0.8.15 → 0.9.0"
     echo "  patch: 0.8.15 → 0.8.16"
+    echo "  X.Y.Z: explicitly set version (e.g. 1.0.6)"
     echo "  (no arg): Use current version"
     exit 1
 else
