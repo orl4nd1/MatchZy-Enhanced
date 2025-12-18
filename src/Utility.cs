@@ -261,7 +261,13 @@ namespace MatchZy
             // For non-simulation (human) matches we optionally layer on additional bot
             // management from humans.cfg (e.g. bot_kick), but we *never* do this in
             // simulation mode so that our simulated bots are not wiped.
-            if (!isSimulationMode || !isMatchSetup)
+            //
+            // IMPORTANT:
+            // - We only check !isSimulationMode here. Previously this also checked
+            //   !isMatchSetup, which caused humans.cfg (and its bot_kick) to run once
+            //   during simulation match setup before isMatchSetup was flipped to true,
+            //   immediately kicking newly spawned simulation bots.
+            if (!isSimulationMode)
             {
                 if (File.Exists(humansFullPath))
                 {
