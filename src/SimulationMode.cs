@@ -119,10 +119,7 @@ public partial class MatchZy
             return;
         }
 
-        Log("[SimulationMode] Spawning simulation bots.");
-
-        // Clean up any existing bots and ensure server cvars won't interfere.
-        Server.ExecuteCommand("bot_kick");
+        Log("[SimulationMode] Spawning simulation bots (simulation mode active, no bot_kick pre-clean in this path).");
 
         // For simulation we want exactly one bot per configured player, and we don't want
         // the engine to immediately kick them again due to a zero bot_quota. Set a sane

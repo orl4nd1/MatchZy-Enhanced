@@ -675,6 +675,7 @@ namespace MatchZy
                         CsTeam team = GetPlayerTeam(player);
                         if (team == CsTeam.None && player.UserId.HasValue)
                         {
+                            Log($"[UpdatePlayersMap] Executing kickid for player '{player.PlayerName}' (UserId={(ushort)player.UserId.Value}) because team=None in match-only mode (isSimulationMode={isSimulationMode}, IsBot={player.IsBot}).");
                             Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
                             continue;
                         }
@@ -794,12 +795,30 @@ namespace MatchZy
 
             if (long.TryParse(mapName, out _))
             { // Check if mapName is a long for workshop map ids
-                Server.ExecuteCommand($"bot_kick");
+                if (!isSimulationMode)
+                {
+                    Log("[MapChange] Executing bot_kick before host_workshop_map (non-simulation match).");
+                    Server.ExecuteCommand("bot_kick");
+                }
+                else
+                {
+                    Log("[MapChange] Skipping bot_kick before host_workshop_map because simulation mode is active.");
+                }
+
                 Server.ExecuteCommand($"host_workshop_map \"{mapName}\"");
             }
             else if (Server.IsMapValid(mapName))
             {
-                Server.ExecuteCommand($"bot_kick");
+                if (!isSimulationMode)
+                {
+                    Log("[MapChange] Executing bot_kick before changelevel (non-simulation match).");
+                    Server.ExecuteCommand("bot_kick");
+                }
+                else
+                {
+                    Log("[MapChange] Skipping bot_kick before changelevel because simulation mode is active.");
+                }
+
                 Server.ExecuteCommand($"changelevel \"{mapName}\"");
             }
             else
@@ -1200,12 +1219,28 @@ namespace MatchZy
             {
                 if (long.TryParse(mapName, out _))
                 {
-                    Server.ExecuteCommand($"bot_kick");
+                    if (!isSimulationMode)
+                    {
+                        Log("[ChangeMap] Executing bot_kick before host_workshop_map (non-simulation match).");
+                        Server.ExecuteCommand("bot_kick");
+                    }
+                    else
+                    {
+                        Log("[ChangeMap] Skipping bot_kick before host_workshop_map because simulation mode is active.");
+                    }
                     Server.ExecuteCommand($"host_workshop_map \"{mapName}\"");
                 }
                 else if (Server.IsMapValid(mapName))
                 {
-                    Server.ExecuteCommand($"bot_kick");
+                    if (!isSimulationMode)
+                    {
+                        Log("[ChangeMap] Executing bot_kick before changelevel (non-simulation match).");
+                        Server.ExecuteCommand("bot_kick");
+                    }
+                    else
+                    {
+                        Log("[ChangeMap] Skipping bot_kick before changelevel because simulation mode is active.");
+                    }
                     Server.ExecuteCommand($"changelevel \"{mapName}\"");
                 }
             });
@@ -2165,11 +2200,15 @@ namespace MatchZy
             // In simulation mode, bots represent configured players and must not be removed
             // by generic MatchZy logic. For regular matches, bots can still be kicked.
             if (isSimulationMode && player.IsBot)
+            {
+                Log($"[KickPlayer] SKIP kick for bot '{player.PlayerName}' (UserId={player.UserId}) because simulation mode is active.");
                 return;
+            }
 
             if (!player.UserId.HasValue)
                 return;
 
+            Log($"[KickPlayer] Executing kickid for player '{player.PlayerName}' (UserId={(ushort)player.UserId.Value}, IsBot={player.IsBot}, isSimulationMode={isSimulationMode}).");
             Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
         }
 
@@ -2366,7 +2405,7 @@ namespace MatchZy
             {
                 if (!whiteList.Contains(steamId.ToString()))
                 {
-                    Log($"[EventPlayerConnectFull] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (Not whitelisted!)");
+                    Log($"[Whitelist] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (Not whitelisted!, IsBot={player.IsBot}, isSimulationMode={isSimulationMode})");
                     PrintToAllChat($"Kicking player {player.PlayerName} - Not whitelisted.");
                     KickPlayer(player);
                     return true;

@@ -84,7 +84,7 @@ namespace MatchZy
                         playerReadyStatus[player.UserId.Value] = true;
                         // player.PrintToChat($"{chatPrefix} {Localizer["matchzy.youareready"]}");
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedready"]);
-                        
+
                         // Send player_ready event
                         SendPlayerReadyEvent(player, true);
                     }
@@ -116,7 +116,7 @@ namespace MatchZy
                     {
                         playerReadyStatus[player.UserId.Value] = false;
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedunready"]);
-                        
+
                         // Send player_unready event
                         SendPlayerReadyEvent(player, false);
                     }
@@ -161,10 +161,14 @@ namespace MatchZy
         public void OnTCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || player.UserId == null) return;
-            if (isSideSelectionPhase && player.TeamNum == knifeWinner) {
-                if (player.Team == CsTeam.Terrorist) {
+            if (isSideSelectionPhase && player.TeamNum == knifeWinner)
+            {
+                if (player.Team == CsTeam.Terrorist)
+                {
                     OnTeamStay(player, command);
-                } else {
+                }
+                else
+                {
                     OnTeamSwitch(player, command);
                 }
             }
@@ -177,10 +181,14 @@ namespace MatchZy
         public void OnCTCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || player.UserId == null) return;
-            if (isSideSelectionPhase && player.TeamNum == knifeWinner) {
-                if (player.Team == CsTeam.CounterTerrorist) {
+            if (isSideSelectionPhase && player.TeamNum == knifeWinner)
+            {
+                if (player.Team == CsTeam.CounterTerrorist)
+                {
                     OnTeamStay(player, command);
-                } else {
+                }
+                else
+                {
                     OnTeamSwitch(player, command);
                 }
                 return;
@@ -262,9 +270,9 @@ namespace MatchZy
                 {
                     return;
                 }
-                
+
                 int teamsReady = ((bool)unpauseData["t"] ? 1 : 0) + ((bool)unpauseData["ct"] ? 1 : 0);
-                
+
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
@@ -279,14 +287,14 @@ namespace MatchZy
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamwantstounpause", unpauseTeamName, remainingUnpauseTeam]);
                     // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{unpauseTeamName}{ChatColors.Default} wants to unpause the match. {ChatColors.Green}{remainingUnpauseTeam}{ChatColors.Default}, please write !unpause to confirm.");
-                    
+
                     // Send unpause_requested event
                     Log($"[OnUnpauseCommand] Sending unpause_requested event - team {unpauseTeamName}");
-                    
-                    string requestingTeam = player?.TeamNum == 2 ? 
-                        (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : 
+
+                    string requestingTeam = player?.TeamNum == 2 ?
+                        (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") :
                         (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2");
-                    
+
                     var unpauseRequestedEvent = new MatchZyUnpauseRequestedEvent
                     {
                         MatchId = liveMatchId,
@@ -296,7 +304,8 @@ namespace MatchZy
                         TeamsNeeded = 2
                     };
 
-                    Task.Run(async () => {
+                    Task.Run(async () =>
+                    {
                         await SendEventAsync(unpauseRequestedEvent);
                     });
                 }
@@ -493,12 +502,28 @@ namespace MatchZy
             string currentMapName = Server.MapName;
             if (long.TryParse(currentMapName, out _))
             { // Check if mapName is a long for workshop map ids
-                Server.ExecuteCommand($"bot_kick");
+                if (!isSimulationMode)
+                {
+                    Log("[MapReload] Executing bot_kick before host_workshop_map (non-simulation match).");
+                    Server.ExecuteCommand("bot_kick");
+                }
+                else
+                {
+                    Log("[MapReload] Skipping bot_kick before host_workshop_map because simulation mode is active.");
+                }
                 Server.ExecuteCommand($"host_workshop_map \"{currentMapName}\"");
             }
             else if (Server.IsMapValid(currentMapName))
             {
-                Server.ExecuteCommand($"bot_kick");
+                if (!isSimulationMode)
+                {
+                    Log("[MapReload] Executing bot_kick before changelevel (non-simulation match).");
+                    Server.ExecuteCommand("bot_kick");
+                }
+                else
+                {
+                    Log("[MapReload] Skipping bot_kick before changelevel because simulation mode is active.");
+                }
                 Server.ExecuteCommand($"changelevel \"{currentMapName}\"");
             }
             else
@@ -683,20 +708,25 @@ namespace MatchZy
         }
 
         // Overrides noclip console command. Perform the changes on server side.
-        public HookResult OnConsoleNoClip(CCSPlayerController? player, CommandInfo? cmd) {
+        public HookResult OnConsoleNoClip(CCSPlayerController? player, CommandInfo? cmd)
+        {
             if (player == null || !player.PawnIsAlive || player.Team == CsTeam.Spectator || player.Team == CsTeam.None)
                 return HookResult.Stop;
             bool cheatsEnabled = ConVar.Find("sv_cheats")!.GetPrimitiveValue<bool>();
-            if (!cheatsEnabled) {
+            if (!cheatsEnabled)
+            {
                 return HookResult.Stop;
             }
 
             // inspired by cs2-noclip
-            if (player.PlayerPawn.Value!.MoveType == MoveType_t.MOVETYPE_NOCLIP) {
+            if (player.PlayerPawn.Value!.MoveType == MoveType_t.MOVETYPE_NOCLIP)
+            {
                 player.PlayerPawn.Value.MoveType = MoveType_t.MOVETYPE_WALK;
                 player.PlayerPawn.Value.ActualMoveType = MoveType_t.MOVETYPE_WALK;
                 Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseEntity", "m_MoveType");
-            } else {
+            }
+            else
+            {
                 player.PlayerPawn.Value.MoveType = MoveType_t.MOVETYPE_NOCLIP;
                 player.PlayerPawn.Value.ActualMoveType = MoveType_t.MOVETYPE_OBSERVER;
                 Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseEntity", "m_MoveType");
@@ -751,13 +781,15 @@ namespace MatchZy
                 MatchSlug = tournamentMatch.Value
             };
 
-            Task.Run(async () => {
+            Task.Run(async () =>
+            {
                 try
                 {
                     await SendEventAsync(testEvent);
-                    
+
                     // Notify admin of success
-                    Server.NextFrame(() => {
+                    Server.NextFrame(() =>
+                    {
                         if (player != null && player.IsValid)
                         {
                             ReplyToUserCommand(player, $"{ChatColors.Green}✓{ChatColors.Default} Test event sent successfully! Check your endpoint logs.");
@@ -771,7 +803,8 @@ namespace MatchZy
                 catch (Exception ex)
                 {
                     // Notify admin of failure
-                    Server.NextFrame(() => {
+                    Server.NextFrame(() =>
+                    {
                         if (player != null && player.IsValid)
                         {
                             ReplyToUserCommand(player, $"{ChatColors.Red}✗{ChatColors.Default} Failed to send test event: {ex.Message}");
