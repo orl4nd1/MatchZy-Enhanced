@@ -12,7 +12,14 @@ public partial class MatchZy
         {
             CCSPlayerController? player = @event.Userid;
 
-            if (!IsPlayerValid(player)) return HookResult.Continue;
+            // For connect events we only need a valid controller + UserId; the PlayerPawn
+            // may not yet be fully initialized at this stage (especially for bots), so
+            // using IsPlayerValid here can cause us to skip simulation mappings and
+            // player_connect events. Keep the check lightweight.
+            if (player == null || !player.IsValid || !player.UserId.HasValue)
+            {
+                return HookResult.Continue;
+            }
             Log($"[FULL CONNECT] Player ID: {player!.UserId}, Name: {player.PlayerName} has connected!");
 
             // Handling whitelisted players (skip for simulation bots)

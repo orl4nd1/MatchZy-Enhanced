@@ -247,6 +247,46 @@ public partial class MatchZy
         });
     }
 
+    /// <summary>
+    /// For simulation mode we want to start from a clean slate: clear any pre-existing
+    /// non-HLTV bots that may have been spawned by the base game configs before we
+    /// spawn one bot per configured player.
+    /// </summary>
+    private void ClearExistingBotsForSimulation()
+    {
+        var bots = new List<CCSPlayerController>();
+
+        foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
+        {
+            if (player == null) continue;
+            if (!player.IsValid || !player.IsBot || player.IsHLTV) continue;
+            if (!player.UserId.HasValue) continue;
+
+            bots.Add(player);
+        }
+
+        if (bots.Count == 0)
+        {
+            return;
+        }
+
+        Log($"[SimulationMode] Clearing {bots.Count} pre-existing bots before spawning simulation bots.");
+
+        foreach (var bot in bots)
+        {
+            try
+            {
+                ushort userId = (ushort)bot.UserId!.Value;
+                Log($"[SimulationMode] Kicking pre-existing bot '{bot.PlayerName}' (UserId={userId}) before simulation start.");
+                Server.ExecuteCommand($"kickid {userId}");
+            }
+            catch (Exception)
+            {
+                // Best-effort cleanup; ignore failures for individual bots.
+            }
+        }
+    }
+
     // Entry point for any simulation-only orchestration after a match is loaded.
     // This drives bot spawning and the simulated ready flow.
     private void MaybeStartSimulationFlow()
@@ -263,6 +303,10 @@ public partial class MatchZy
         // empty, which completely breaks fully simulated matches. For simulation
         // we always force this to 0.
         Server.ExecuteCommand("bot_join_after_player 0");
+
+        // Clear any generic bots that were spawned by base configs (e.g. gamemode_competitive)
+        // so that we can spawn exactly one bot per configured player.
+        ClearExistingBotsForSimulation();
 
         // Prepare the configured identities that bots will represent.
         BuildSimulationConfigPlayers();
