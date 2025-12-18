@@ -87,6 +87,11 @@ public partial class MatchZy
                 assignedSimulationSteamIds.Add(identity.ConfigSteamId);
                 simulationPlayersByUserId[userId] = identity;
                 Log($"[SimulationMode] Assigned bot {player.PlayerName} (UserId {userId}) to simulated player {identity.ConfigName} ({identity.ConfigSteamId}) on {identity.TeamSlot}");
+                // Now that we have at least one mapped simulation player, ensure the
+                // simulated ready flow is scheduled. This avoids starting the ready
+                // flow too early (before bots have connected) and falling back to a
+                // team-level auto-ready with zero players.
+                ScheduleSimulationReadyFlowIfNeeded();
                 return identity;
             }
         }
@@ -173,12 +178,10 @@ public partial class MatchZy
     /// </summary>
     private void StartSimulationReadyFlow()
     {
-        if (!isSimulationMode || simulationReadyFlowScheduled)
+        if (!isSimulationMode)
         {
             return;
         }
-
-        simulationReadyFlowScheduled = true;
 
         var userIds = new List<int>(simulationPlayersByUserId.Keys);
         if (userIds.Count == 0)
@@ -195,14 +198,11 @@ public partial class MatchZy
             }
 
             // Otherwise, we have valid configured players but no bot mappings yet. This can
-            // happen transiently if bots are still connecting. Fall back to a simple
-            // team-level auto-ready so the match can proceed end-to-end without human input,
-            // but do not treat this as a terminal error.
-            Log("[SimulationMode] No mapped simulation players found for ready flow; falling back to team-level auto-ready based on configured players.");
-
-            teamReadyOverride[CsTeam.CounterTerrorist] = true;
-            teamReadyOverride[CsTeam.Terrorist] = true;
-            CheckAndSendTeamReadyEvent();
+            // happen transiently if bots are still connecting. Reschedule the ready
+            // flow for a short time later instead of falling back immediately.
+            Log("[SimulationMode] No mapped simulation players found for ready flow; rescheduling StartSimulationReadyFlow().");
+            simulationReadyFlowScheduled = false;
+            AddTimer(2.0f, StartSimulationReadyFlow);
             return;
         }
 
@@ -245,6 +245,32 @@ public partial class MatchZy
 
             CheckAndSendTeamReadyEvent();
         });
+    }
+
+    /// <summary>
+    /// Schedules the simulated ready flow once at an appropriate time after we
+    /// have at least one mapped simulation player. This prevents us from running
+    /// the ready flow before bots have actually connected.
+    /// </summary>
+    private void ScheduleSimulationReadyFlowIfNeeded()
+    {
+        if (!isSimulationMode || simulationReadyFlowScheduled)
+        {
+            return;
+        }
+
+        int mappedCount = simulationPlayersByUserId.Count;
+        if (mappedCount == 0)
+        {
+            return;
+        }
+
+        // Give the server a bit of time for remaining bots to connect and be mapped.
+        float delaySeconds = Math.Max(2.0f, mappedCount * 0.5f);
+
+        simulationReadyFlowScheduled = true;
+        Log($"[SimulationMode] Scheduling simulated ready flow in {delaySeconds:0.00}s for {mappedCount} mapped players.");
+        AddTimer(delaySeconds, StartSimulationReadyFlow);
     }
 
     /// <summary>
@@ -311,13 +337,9 @@ public partial class MatchZy
         // Prepare the configured identities that bots will represent.
         BuildSimulationConfigPlayers();
 
-        // Spawn one bot per configured player and, after they connect,
-        // start the simulated ready flow.
+        // Spawn one bot per configured player. The simulated ready flow will be
+        // scheduled from AssignSimulationIdentityForBot once bots begin to connect.
         SpawnSimulationBots();
-
-        // Give bots a short time window to connect and be mapped, then drive ready flow.
-        // A slightly larger delay here makes it more robust when servers are under load.
-        AddTimer(4.0f, StartSimulationReadyFlow);
     }
 
     /// <summary>
