@@ -239,20 +239,15 @@ namespace MatchZy
         {
             var absolutePath = Path.Join(Server.GameDirectory + "/csgo/cfg", warmupCfgPath);
 
-            // In simulation mode, we do NOT want to kick bots when (re)starting warmup, since
-            // the bots themselves represent the configured players. Many default configs and
-            // the built-in fallback warmup behavior start with `bot_kick`, which would wipe
-            // out all simulation bots right as the match reaches warmup.
-            if (isSimulationMode && isMatchSetup)
-            {
-                Log("[StartWarmup] Simulation mode active - applying warmup cvars without kicking bots.");
-                // Apply sane warmup defaults, but avoid bot_kick / bot_quota so that existing
-                // simulation bots stay connected.
-                Server.ExecuteCommand("mp_autokick 0; mp_autoteambalance 0; mp_buy_anywhere 0; mp_buytime 15; mp_death_drop_gun 0; mp_free_armor 0; mp_ignore_round_win_conditions 0; mp_limitteams 0; mp_respawn_on_death_ct 0; mp_respawn_on_death_t 0; mp_solid_teammates 0; mp_spectators_max 20; mp_maxmoney 16000; mp_startmoney 16000; mp_timelimit 0; sv_alltalk 0; sv_auto_full_alltalk_during_warmup_half_end 0; sv_deadtalk 1; sv_full_alltalk 0; sv_grenade_trajectory 0; sv_hibernate_when_empty 0; mp_weapons_allow_typecount -1; sv_infinite_ammo 0; sv_showimpacts 0; sv_voiceenable 1; sm_cvar sv_mute_players_with_social_penalties 0; sv_mute_players_with_social_penalties 0; tv_relayvoice 1; sv_cheats 0; mp_ct_default_melee weapon_knife; mp_ct_default_secondary weapon_hkp2000; mp_ct_default_primary \"\"; mp_t_default_melee weapon_knife; mp_t_default_secondary weapon_glock; mp_t_default_primary; mp_maxrounds 24; mp_warmup_start; mp_warmup_pausetimer 1; mp_warmuptime 9999; cash_team_bonus_shorthanded 0;");
-                return;
-            }
+            string warmupFullPath = Path.Join(Server.GameDirectory + "/csgo/cfg", warmupCfgPath);
+            string humansCfgPath = "MatchZy/humans.cfg";
+            string humansFullPath = Path.Join(Server.GameDirectory + "/csgo/cfg", humansCfgPath);
 
-            if (File.Exists(Path.Join(Server.GameDirectory + "/csgo/cfg", warmupCfgPath)))
+            bool warmupExists = File.Exists(warmupFullPath);
+
+            // Always execute the generic warmup config first (if present). This should contain
+            // common warmup settings but no bot management.
+            if (warmupExists)
             {
                 Log($"[StartWarmup] Starting warmup! Executing Warmup CFG from {warmupCfgPath}");
                 Server.ExecuteCommand($"exec {warmupCfgPath}");
@@ -260,7 +255,19 @@ namespace MatchZy
             else
             {
                 Log($"[StartWarmup] Starting warmup! Warmup CFG not found in {absolutePath}, using default CFG!");
-                Server.ExecuteCommand("bot_kick;bot_quota 0;mp_autokick 0;mp_autoteambalance 0;mp_buy_anywhere 0;mp_buytime 15;mp_death_drop_gun 0;mp_free_armor 0;mp_ignore_round_win_conditions 0;mp_limitteams 0;mp_radar_showall 0;mp_respawn_on_death_ct 0;mp_respawn_on_death_t 0;mp_solid_teammates 0;mp_spectators_max 20;mp_maxmoney 16000;mp_startmoney 16000;mp_timelimit 0;sv_alltalk 0;sv_auto_full_alltalk_during_warmup_half_end 0;sv_deadtalk 1;sv_full_alltalk 0;sv_grenade_trajectory 0;sv_hibernate_when_empty 0;mp_weapons_allow_typecount -1;sv_infinite_ammo 0;sv_showimpacts 0;sv_voiceenable 1;sm_cvar sv_mute_players_with_social_penalties 0;sv_mute_players_with_social_penalties 0;tv_relayvoice 1;sv_cheats 0;mp_ct_default_melee weapon_knife;mp_ct_default_secondary weapon_hkp2000;mp_ct_default_primary \"\";mp_t_default_melee weapon_knife;mp_t_default_secondary weapon_glock;mp_t_default_primary;mp_maxrounds 24;mp_warmup_start;mp_warmup_pausetimer 1;mp_warmuptime 9999;cash_team_bonus_shorthanded 0;");
+                Server.ExecuteCommand("mp_autokick 0; mp_autoteambalance 0; mp_buy_anywhere 0; mp_buytime 15; mp_death_drop_gun 0; mp_free_armor 0; mp_ignore_round_win_conditions 0; mp_limitteams 0; mp_respawn_on_death_ct 0; mp_respawn_on_death_t 0; mp_solid_teammates 0; mp_spectators_max 20; mp_maxmoney 16000; mp_startmoney 16000; mp_timelimit 0; sv_alltalk 0; sv_auto_full_alltalk_during_warmup_half_end 0; sv_deadtalk 1; sv_full_alltalk 0; sv_grenade_trajectory 0; sv_hibernate_when_empty 0; mp_weapons_allow_typecount -1; sv_infinite_ammo 0; sv_showimpacts 0; sv_voiceenable 1; sm_cvar sv_mute_players_with_social_penalties 0; sv_mute_players_with_social_penalties 0; tv_relayvoice 1; sv_cheats 0; mp_ct_default_melee weapon_knife; mp_ct_default_secondary weapon_hkp2000; mp_ct_default_primary \"\"; mp_t_default_melee weapon_knife; mp_t_default_secondary weapon_glock; mp_t_default_primary; mp_maxrounds 24; mp_warmup_start; mp_warmup_pausetimer 1; mp_warmuptime 9999; cash_team_bonus_shorthanded 0;");
+            }
+
+            // For non-simulation (human) matches we optionally layer on additional bot
+            // management from humans.cfg (e.g. bot_kick), but we *never* do this in
+            // simulation mode so that our simulated bots are not wiped.
+            if (!isSimulationMode || !isMatchSetup)
+            {
+                if (File.Exists(humansFullPath))
+                {
+                    Log("[StartWarmup] Applying humans.cfg for non-simulation warmup (bot management, etc.)");
+                    Server.ExecuteCommand($"exec {humansCfgPath}");
+                }
             }
         }
 
