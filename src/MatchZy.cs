@@ -103,9 +103,10 @@ namespace MatchZy
 
         // SQLite/MySQL Database 
         private Database database = new();
-    
-        public override void Load(bool hotReload) {
-            
+
+        public override void Load(bool hotReload)
+        {
+
             LoadAdmins();
 
             database.InitializeDatabase(ModuleDirectory);
@@ -118,9 +119,12 @@ namespace MatchZy
             reverseTeamSides["CT"] = matchzyTeam1;
             reverseTeamSides["TERRORIST"] = matchzyTeam2;
 
-            if (!hotReload) {
+            if (!hotReload)
+            {
                 AutoStart();
-            } else {
+            }
+            else
+            {
                 // Pluign should not be reloaded while a match is live (this would messup with the match flags which were set)
                 // Only hot-reload the plugin if you are testing something and don't want to restart the server time and again.
                 UpdatePlayersMap();
@@ -235,17 +239,20 @@ namespace MatchZy
             RegisterEventHandler<EventRoundFreezeEnd>(EventRoundFreezeEndHandler);
             RegisterEventHandler<EventPlayerGivenC4>(EventPlayerGivenC4);
             RegisterEventHandler<EventPlayerDeath>(EventPlayerDeathPreHandler, hookMode: HookMode.Pre);
-            RegisterListener<Listeners.OnClientDisconnectPost>(playerSlot => { 
-               // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
-               // Update: Commenting the below function as it was being called multiple times on map change.
+            RegisterListener<Listeners.OnClientDisconnectPost>(playerSlot =>
+            {
+                // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
+                // Update: Commenting the below function as it was being called multiple times on map change.
                 // UpdatePlayersMap();
             });
             RegisterListener<Listeners.OnEntitySpawned>(OnEntitySpawnedHandler);
-            RegisterEventHandler<EventPlayerTeam>((@event, info) => {
+            RegisterEventHandler<EventPlayerTeam>((@event, info) =>
+            {
                 CCSPlayerController? player = @event.Userid;
                 if (!IsPlayerValid(player)) return HookResult.Continue;
 
-                if (matchzyTeam1.coach.Contains(player!) || matchzyTeam2.coach.Contains(player!)) {
+                if (matchzyTeam1.coach.Contains(player!) || matchzyTeam2.coach.Contains(player!))
+                {
                     @event.Silent = true;
                     return HookResult.Changed;
                 }
@@ -272,31 +279,37 @@ namespace MatchZy
                 return HookResult.Continue;
             });
 
-                AddCommandListener("jointeam", (player, info) =>
+            AddCommandListener("jointeam", (player, info) =>
+            {
+                if (isMatchSetup && player != null && player.IsValid)
                 {
-                    if (isMatchSetup && player != null && player.IsValid) {
-                        if (int.TryParse(info.ArgByIndex(1), out int joiningTeam)) {
-                            int playerTeam = (int)GetPlayerTeam(player);
-                            if (joiningTeam != playerTeam) {
-                                return HookResult.Stop;
-                            }
+                    if (int.TryParse(info.ArgByIndex(1), out int joiningTeam))
+                    {
+                        int playerTeam = (int)GetPlayerTeam(player);
+                        if (joiningTeam != playerTeam)
+                        {
+                            return HookResult.Stop;
                         }
                     }
-                    return HookResult.Continue;
-                });
+                }
+                return HookResult.Continue;
+            });
 
             AddCommandListener("noclip", OnConsoleNoClip); // Override noclip
 
-            RegisterEventHandler<EventRoundEnd>((@event, info) => 
+            RegisterEventHandler<EventRoundEnd>((@event, info) =>
             {
                 if (!isKnifeRound) return HookResult.Continue;
 
                 DetermineKnifeWinner();
                 @event.Winner = knifeWinner;
                 int finalEvent = 10;
-                if (knifeWinner == 3) {
+                if (knifeWinner == 3)
+                {
                     finalEvent = 8;
-                } else if (knifeWinner == 2) {
+                }
+                else if (knifeWinner == 2)
+                {
                     finalEvent = 9;
                 }
                 @event.Reason = finalEvent;
@@ -304,12 +317,12 @@ namespace MatchZy
                 isKnifeRound = false;
 
                 // Send knife_round_ended event
-                string winnerTeam = knifeWinner == 3 ? 
+                string winnerTeam = knifeWinner == 3 ?
                     (reverseTeamSides.ContainsKey("CT") ? (reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2") : "none") :
                     (reverseTeamSides.ContainsKey("TERRORIST") ? (reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2") : "none");
 
                 Log($"[EventRoundEnd] Knife round ended, sending knife_round_ended event - winner: {winnerTeam}");
-                
+
                 var knifeEndedEvent = new MatchZyKnifeRoundEndedEvent
                 {
                     MatchId = liveMatchId,
@@ -317,7 +330,8 @@ namespace MatchZy
                     Winner = winnerTeam
                 };
 
-                Task.Run(async () => {
+                Task.Run(async () =>
+                {
                     await SendEventAsync(knifeEndedEvent);
                 });
 
@@ -326,8 +340,9 @@ namespace MatchZy
                 return HookResult.Changed;
             }, HookMode.Pre);
 
-           RegisterEventHandler<EventRoundEnd>((@event, info) => {
-                try 
+            RegisterEventHandler<EventRoundEnd>((@event, info) =>
+            {
+                try
                 {
                     if (isDryRun)
                     {
@@ -353,8 +368,10 @@ namespace MatchZy
             //     return HookResult.Continue;
             // });
 
-            RegisterListener<Listeners.OnMapStart>(mapName => { 
-                AddTimer(1.0f, () => {
+            RegisterListener<Listeners.OnMapStart>(mapName =>
+            {
+                AddTimer(1.0f, () =>
+                {
                     if (!isMatchSetup)
                     {
                         AutoStart();
@@ -375,10 +392,13 @@ namespace MatchZy
                     // ensure bots are (re)spawned and the simulated ready flow
                     // is started again on each subsequent map.
                     //
-                    // We only do this when we're beyond the first map (CurrentMapNumber > 0)
-                    // to avoid double-initializing the very first map, which is already
-                    // handled in LoadMatchFromJSON via MaybeStartSimulationFlow().
-                    if (isSimulationMode && matchConfig != null && matchConfig.CurrentMapNumber > 0)
+                    // IMPORTANT:
+                    // - The first map in a series (CurrentMapNumber == 1) is already
+                    //   initialized in LoadMatchFromJSON via MaybeStartSimulationFlow().
+                    // - To avoid double-initializing simulation on the first map (which
+                    //   would spawn duplicate bots), we only run this block for maps
+                    //   beyond the first (CurrentMapNumber > 1).
+                    if (isSimulationMode && matchConfig != null && matchConfig.CurrentMapNumber > 1)
                     {
                         // Reset per-map simulation orchestration state so the ready flow
                         // can run again cleanly for the new map.
@@ -396,7 +416,8 @@ namespace MatchZy
             //     ResetMatch();
             // });
 
-            RegisterEventHandler<EventPlayerDeath>((@event, info) => {
+            RegisterEventHandler<EventPlayerDeath>((@event, info) =>
+            {
                 // Setting money back to 16000 when a player dies in warmup
                 var player = @event.Userid;
                 if (!isWarmup) return HookResult.Continue;
@@ -406,8 +427,8 @@ namespace MatchZy
             });
 
             RegisterEventHandler<EventPlayerHurt>((@event, info) =>
-			{
-				CCSPlayerController? attacker = @event.Attacker;
+            {
+                CCSPlayerController? attacker = @event.Attacker;
                 CCSPlayerController? victim = @event.Userid;
 
                 if (!IsPlayerValid(attacker) || !IsPlayerValid(victim)) return HookResult.Continue;
@@ -420,19 +441,20 @@ namespace MatchZy
                     return HookResult.Continue;
                 }
 
-				if (!attacker!.IsValid || attacker.IsBot && !(@event.DmgHealth > 0 || @event.DmgArmor > 0))
-					return HookResult.Continue;
-                if (matchStarted && victim!.TeamNum != attacker.TeamNum) 
+                if (!attacker!.IsValid || attacker.IsBot && !(@event.DmgHealth > 0 || @event.DmgArmor > 0))
+                    return HookResult.Continue;
+                if (matchStarted && victim!.TeamNum != attacker.TeamNum)
                 {
                     int targetId = (int)victim.UserId!;
                     UpdatePlayerDamageInfo(@event, targetId);
                     if (attacker != victim) playerHasTakenDamage = true;
                 }
 
-				return HookResult.Continue;
-			});
+                return HookResult.Continue;
+            });
 
-            RegisterEventHandler<EventPlayerChat>((@event, info) => {
+            RegisterEventHandler<EventPlayerChat>((@event, info) =>
+            {
 
                 int currentVersion = Api.GetVersion();
                 int index = @event.Userid + 1;
@@ -446,18 +468,21 @@ namespace MatchZy
                 var messageCommandArg = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : string.Empty;
 
                 CCSPlayerController? player = null;
-                if (playerData.TryGetValue(playerUserId, out CCSPlayerController? value)) {
+                if (playerData.TryGetValue(playerUserId, out CCSPlayerController? value))
+                {
                     player = value;
                 }
 
-                if (player == null) {
+                if (player == null)
+                {
                     // Somehow we did not had the player in playerData, hence updating the maps again before getting the player
                     UpdatePlayersMap();
                     player = playerData[playerUserId];
                 }
 
                 // Handling player commands
-                if (commandActions.ContainsKey(message)) {
+                if (commandActions.ContainsKey(message))
+                {
                     commandActions[message](player, null);
                 }
 
