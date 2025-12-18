@@ -258,6 +258,12 @@ public partial class MatchZy
 
         Log("[SimulationMode] Simulation mode enabled for this match. Initializing simulation state.");
 
+        // Ensure bots are allowed to exist without human players connected. When
+        // bot_join_after_player is 1, the game will kick bots if the server is
+        // empty, which completely breaks fully simulated matches. For simulation
+        // we always force this to 0.
+        Server.ExecuteCommand("bot_join_after_player 0");
+
         // Prepare the configured identities that bots will represent.
         BuildSimulationConfigPlayers();
 
