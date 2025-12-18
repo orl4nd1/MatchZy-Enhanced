@@ -123,7 +123,14 @@ public partial class MatchZy
 
         // Clean up any existing bots and ensure server cvars won't interfere.
         Server.ExecuteCommand("bot_kick");
-        Server.ExecuteCommand("mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota 0");
+
+        // For simulation we want exactly one bot per configured player, and we don't want
+        // the engine to immediately kick them again due to a zero bot_quota. Set a sane
+        // quota and disable auto-balance / auto-kick.
+        int desiredBotCount = simulationIdentityPool.Count;
+        if (desiredBotCount < 0) desiredBotCount = 0;
+
+        Server.ExecuteCommand($"mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota {desiredBotCount}");
 
         foreach (var identity in simulationIdentityPool)
         {
@@ -154,40 +161,40 @@ public partial class MatchZy
     /// <summary>
     /// Starts the simulated ready flow: bots gradually "ready up" and then the match goes live.
     /// </summary>
-        private void StartSimulationReadyFlow()
+    private void StartSimulationReadyFlow()
+    {
+        if (!isSimulationMode || simulationReadyFlowScheduled)
         {
-            if (!isSimulationMode || simulationReadyFlowScheduled)
+            return;
+        }
+
+        simulationReadyFlowScheduled = true;
+
+        var userIds = new List<int>(simulationPlayersByUserId.Keys);
+        if (userIds.Count == 0)
+        {
+            // If there are no configured simulation identities at all, this indicates a
+            // genuinely broken simulation configuration (no team/player info). Treat that
+            // as a hard error for visibility.
+            if (simulationIdentityPool.Count == 0)
             {
+                Log("[SimulationMode] ERROR: Simulation mode enabled but no configured players were found in team1/team2.");
+                UpdateTournamentStatus("error");
+                isSimulationMode = false;
                 return;
             }
 
-            simulationReadyFlowScheduled = true;
+            // Otherwise, we have valid configured players but no bot mappings yet. This can
+            // happen transiently if bots are still connecting. Fall back to a simple
+            // team-level auto-ready so the match can proceed end-to-end without human input,
+            // but do not treat this as a terminal error.
+            Log("[SimulationMode] No mapped simulation players found for ready flow; falling back to team-level auto-ready based on configured players.");
 
-            var userIds = new List<int>(simulationPlayersByUserId.Keys);
-            if (userIds.Count == 0)
-            {
-                // If there are no configured simulation identities at all, this indicates a
-                // genuinely broken simulation configuration (no team/player info). Treat that
-                // as a hard error for visibility.
-                if (simulationIdentityPool.Count == 0)
-                {
-                    Log("[SimulationMode] ERROR: Simulation mode enabled but no configured players were found in team1/team2.");
-                    UpdateTournamentStatus("error");
-                    isSimulationMode = false;
-                    return;
-                }
-
-                // Otherwise, we have valid configured players but no bot mappings yet. This can
-                // happen transiently if bots are still connecting. Fall back to a simple
-                // team-level auto-ready so the match can proceed end-to-end without human input,
-                // but do not treat this as a terminal error.
-                Log("[SimulationMode] No mapped simulation players found for ready flow; falling back to team-level auto-ready based on configured players.");
-
-                teamReadyOverride[CsTeam.CounterTerrorist] = true;
-                teamReadyOverride[CsTeam.Terrorist] = true;
-                CheckAndSendTeamReadyEvent();
-                return;
-            }
+            teamReadyOverride[CsTeam.CounterTerrorist] = true;
+            teamReadyOverride[CsTeam.Terrorist] = true;
+            CheckAndSendTeamReadyEvent();
+            return;
+        }
 
         if (userIds.Count < simulationIdentityPool.Count)
         {
@@ -232,26 +239,26 @@ public partial class MatchZy
 
     // Entry point for any simulation-only orchestration after a match is loaded.
     // This drives bot spawning and the simulated ready flow.
-        private void MaybeStartSimulationFlow()
+    private void MaybeStartSimulationFlow()
+    {
+        if (!isSimulationMode)
         {
-            if (!isSimulationMode)
-            {
-                return;
-            }
-
-            Log("[SimulationMode] Simulation mode enabled for this match. Initializing simulation state.");
-
-            // Prepare the configured identities that bots will represent.
-            BuildSimulationConfigPlayers();
-
-            // Spawn one bot per configured player and, after they connect,
-            // start the simulated ready flow.
-            SpawnSimulationBots();
-
-            // Give bots a short time window to connect and be mapped, then drive ready flow.
-            // A slightly larger delay here makes it more robust when servers are under load.
-            AddTimer(4.0f, StartSimulationReadyFlow);
+            return;
         }
+
+        Log("[SimulationMode] Simulation mode enabled for this match. Initializing simulation state.");
+
+        // Prepare the configured identities that bots will represent.
+        BuildSimulationConfigPlayers();
+
+        // Spawn one bot per configured player and, after they connect,
+        // start the simulated ready flow.
+        SpawnSimulationBots();
+
+        // Give bots a short time window to connect and be mapped, then drive ready flow.
+        // A slightly larger delay here makes it more robust when servers are under load.
+        AddTimer(4.0f, StartSimulationReadyFlow);
+    }
 
     /// <summary>
     /// After a simulated series concludes, gracefully disconnect bots.

@@ -139,12 +139,6 @@ public partial class MatchZy
             playerData.Remove(userId);
             playerConnectionTimes.Remove(player.SteamID);
 
-            // Clear simulation mapping for this player, if any.
-            if (isSimulationMode && simulationPlayersByUserId.Remove(userId))
-            {
-                Log($"[EventPlayerDisconnect] Cleared simulation mapping for UserId {userId}");
-            }
-
             if (matchzyTeam1.coach.Contains(player))
             {
                 matchzyTeam1.coach.Remove(player);
@@ -176,7 +170,18 @@ public partial class MatchZy
                     teamName = reverseTeamSides["TERRORIST"].teamName;
                 }
 
+                // Build the player info first so that, in simulation mode, we can still
+                // resolve the configured identity (SteamID + name) before clearing any
+                // internal simulation mapping for this bot.
                 var playerInfo = BuildPlayerInfo(player, teamName);
+
+                // Clear simulation mapping for this player, if any, *after* we have built
+                // the event payload. This ensures player_disconnect events for simulated
+                // matches report the configured player identity instead of the raw bot.
+                if (isSimulationMode && simulationPlayersByUserId.Remove(userId))
+                {
+                    Log($"[EventPlayerDisconnect] Cleared simulation mapping for UserId {userId}");
+                }
 
                 var playerDisconnectEvent = new MatchZyPlayerDisconnectedEvent
                 {
