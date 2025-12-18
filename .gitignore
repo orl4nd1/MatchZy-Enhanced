@@ -2,7 +2,6 @@ obj/
 bin/
 publish/
 build/
-MatchZy/
 /.vs
 MatchZy.sln
 MatchZy-*/

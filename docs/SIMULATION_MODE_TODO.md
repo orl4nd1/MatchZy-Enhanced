@@ -70,7 +70,7 @@ Requirement: replace the “wait for players to connect” step with automatic *
 
 - **Status / Implementation notes**
   - `SpawnSimulationBots()` (in `SimulationMode.cs`) now:
-    - Executes `bot_kick` and sets `mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota 0`.
+    - Executes `bot_kick` and sets `mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0;`.
     - Iterates the simulation identity pool and spawns one bot per configured player:
       - Chooses CT/T based on `teamSides[matchzyTeam1]` / `teamSides[matchzyTeam2]` and the identity’s `TeamSlot`.
       - Uses `bot_join_team CT/T` + `bot_add_ct` / `bot_add_t` for each identity.

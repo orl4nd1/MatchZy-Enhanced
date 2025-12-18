@@ -84,7 +84,7 @@ For each configured player, MatchZy:
 
 - Kicks any existing bots and relaxes team limits:
   - `bot_kick`
-  - `mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota 0`
+  - `mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0;`
 - Determines the **desired side** based on:
   - `TeamSlot` (`team1`/`team2`)
   - The current `teamSides` mapping (CT/T assignments for team1/team2)
@@ -160,12 +160,14 @@ As a result, MatchZy Auto Tournament and any other consumer:
 Simulation mode includes some basic safeguards:
 
 - **No configured players**
+
   - If `simulation: true` but both `team1.players` and `team2.players` are empty:
     - MatchZy logs an error.
     - Updates the tournament status to `"error"`.
     - Aborts loading the match.
 
 - **No bots mapped**
+
   - If after spawning bots, `simulationPlayersByUserId` is empty when starting the ready flow:
     - Logs a warning.
     - Updates tournament status to `"error"`.
@@ -200,5 +202,3 @@ If you want to treat simulated matches differently in the UI:
   - Rewrites events, reports and stats to use the **configured** SteamIDs and names.
   - Marks reports as `simulated: true`.
 - To the tournament platform, everything looks like a normal match, just without real players.
-
-

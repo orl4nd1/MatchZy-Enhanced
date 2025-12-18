@@ -132,6 +132,7 @@ public partial class MatchZy
 
         Server.ExecuteCommand($"mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota {desiredBotCount}");
 
+        int index = 0;
         foreach (var identity in simulationIdentityPool)
         {
             // Decide desired side based on team slot and current teamSides mapping.
@@ -145,16 +146,28 @@ public partial class MatchZy
                 desiredSide = teamSides.TryGetValue(matchzyTeam2, out var side) ? side : "TERRORIST";
             }
 
-            if (desiredSide == "CT")
+            float delaySeconds = index * 1.0f;
+            var desiredSideCopy = desiredSide;
+
+            // Spawn bots gradually so the server has time to settle between joins and any
+            // external config executions. This also produces a more human-like join pattern.
+            AddTimer(delaySeconds, () =>
             {
-                Server.ExecuteCommand("bot_join_team CT");
-                Server.ExecuteCommand("bot_add_ct");
-            }
-            else
-            {
-                Server.ExecuteCommand("bot_join_team T");
-                Server.ExecuteCommand("bot_add_t");
-            }
+                if (!isSimulationMode) return;
+
+                if (desiredSideCopy == "CT")
+                {
+                    Server.ExecuteCommand("bot_join_team CT");
+                    Server.ExecuteCommand("bot_add_ct");
+                }
+                else
+                {
+                    Server.ExecuteCommand("bot_join_team T");
+                    Server.ExecuteCommand("bot_add_t");
+                }
+            });
+
+            index++;
         }
     }
 
