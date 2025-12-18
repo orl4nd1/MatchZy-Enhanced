@@ -248,6 +248,19 @@ public partial class MatchZy
     {
         try
         {
+            // If we deferred the simulation flow because a changelevel was in progress,
+            // kick it off once the first real round starts on the target map.
+            if (isSimulationMode && simulationFlowDeferred)
+            {
+                string currentMap = Server.MapName;
+                if (string.IsNullOrEmpty(simulationTargetMap) || string.Equals(currentMap, simulationTargetMap, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log($"[EventRoundStart] Starting deferred simulation flow on map {currentMap}");
+                    simulationFlowDeferred = false;
+                    MaybeStartSimulationFlow();
+                }
+            }
+
             HandlePostRoundStartEvent(@event);
             return HookResult.Continue;
         }

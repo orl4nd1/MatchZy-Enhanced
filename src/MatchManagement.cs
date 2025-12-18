@@ -395,10 +395,21 @@ namespace MatchZy
             string currentMapName = Server.MapName;
             string mapName = matchConfig.Maplist[0];
 
-            if (IsMapReloadRequiredForGameMode(matchConfig.Wingman) || mapReloadRequired || currentMapName != mapName)
+            bool willChangeMap = IsMapReloadRequiredForGameMode(matchConfig.Wingman) || mapReloadRequired || currentMapName != mapName;
+
+            if (willChangeMap)
             {
                 SetCorrectGameMode();
                 ChangeMap(mapName, 0);
+
+                // In simulation mode we don't want to spawn bots on the *old* map right
+                // before a changelevel, as they will immediately be kicked. Instead we
+                // defer the simulation flow until after the new map is fully loaded.
+                if (isSimulationMode)
+                {
+                    simulationFlowDeferred = true;
+                    simulationTargetMap = mapName;
+                }
             }
 
             readyAvailable = true;
@@ -410,8 +421,10 @@ namespace MatchZy
 
             isMatchSetup = true;
 
-            // If this match is configured for simulation, kick off the simulation orchestration.
-            if (isSimulationMode)
+            // If this match is configured for simulation, kick off the simulation orchestration
+            // immediately only when we are *not* in the middle of a map change. When a
+            // changelevel is pending we instead defer to EventRoundStart on the new map.
+            if (isSimulationMode && !simulationFlowDeferred)
             {
                 MaybeStartSimulationFlow();
             }

@@ -45,6 +45,12 @@ namespace MatchZy
         private bool remoteLogUrlEverConfigured = false;
         private bool remoteLogUrlMissingWarningLogged = false;
 
+        // When true, the current series is in simulation mode but the initial map change
+        // is still in progress. In that case we defer spawning bots and starting the
+        // simulated ready flow until the first real round start on the target map.
+        private bool simulationFlowDeferred = false;
+        private string? simulationTargetMap = null;
+
         public bool mapReloadRequired = false;
 
         // Pause Data

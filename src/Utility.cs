@@ -633,9 +633,18 @@ namespace MatchZy
                 foreach (var player in playerEntities)
                 {
                     if (player == null) continue;
-                    if (!player.IsValid || player.IsBot || player.IsHLTV) continue;
+                    if (!player.IsValid || player.IsHLTV) continue;
 
-                    if (isMatchSetup || matchModeOnly)
+                    bool isSimulationBot = isSimulationMode && player.IsBot;
+
+                    // Outside of simulation mode, we still ignore bots in playerData – they are not
+                    // considered "real players" for the ready system or whitelist enforcement.
+                    if (!isSimulationBot && player.IsBot) continue;
+
+                    // In normal (non-simulation) matches, enforce that only configured players are
+                    // allowed to remain on the server when a match is setup / matchModeOnly is true.
+                    // Simulation bots are exempt from this so we do not immediately kick them.
+                    if ((isMatchSetup || matchModeOnly) && !isSimulationBot)
                     {
                         CsTeam team = GetPlayerTeam(player);
                         if (team == CsTeam.None && player.UserId.HasValue)
@@ -651,7 +660,6 @@ namespace MatchZy
 
                     if (player.UserId.HasValue)
                     {
-
                         // Updating playerData and playerReadyStatus
                         playerData[player.UserId.Value] = player;
 
