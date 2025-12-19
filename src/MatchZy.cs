@@ -131,6 +131,10 @@ namespace MatchZy
                 AutoStart();
             }
 
+            // Initialize the MatchZy-safe auto-updater (Steam UpToDateCheck) that will never
+            // restart the server while a MatchZy match is in progress.
+            InitializeMatchZySafeAutoUpdater();
+
             commandActions = new Dictionary<string, Action<CCSPlayerController?, CommandInfo?>> {
                 { ".ready", OnPlayerReady },
                 { ".r", OnPlayerReady },
