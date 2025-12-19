@@ -59,6 +59,12 @@ namespace MatchZy
         [JsonPropertyName("simulation")]
         public bool Simulation { get; set; } = false;
 
+        // Optional: when in simulation mode, controls the CS2 host_timescale value used to
+        // accelerate or slow down simulated matches. Defaults to 1.0 (normal speed).
+        // Only applied in simulation mode; human matches always run at timescale 1.
+        [JsonPropertyName("simulation_timescale")]
+        public float SimulationTimeScale { get; set; } = 1.0f;
+
         [JsonPropertyName("match_side_type")]
         public string MatchSideType { get; set; } = "standard";
 

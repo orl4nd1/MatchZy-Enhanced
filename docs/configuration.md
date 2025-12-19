@@ -166,6 +166,14 @@ When `"simulation": true`:
   - Drive a time‑based ready flow and simulated knife/side selection.
   - Mark match reports as `simulated: true`.
 
+- Optional: `simulation_timescale`  
+  - A numeric multiplier (e.g. `1.0`, `1.5`, `2.0`) that controls the CS2 `host_timescale` while the simulation is running.
+  - Only applied when `simulation: true`. Normal (human) matches always run with `host_timescale 1` and `sv_cheats 0`.
+  - Values are clamped between `0.1` and `4.0` internally to prevent extreme settings.
+  - When a simulated match starts, MatchZy will:
+    - Set `sv_cheats 1` and `host_timescale` to the configured `simulation_timescale`.
+    - Reset back to `host_timescale 1` and `sv_cheats 0` automatically when the simulated series ends, before the server returns to idle.
+
 - The JSON **must** provide players for at least one of `team1.players` or `team2.players`.  
   If both are missing/empty, MatchZy will log an error and refuse to start the match.
 

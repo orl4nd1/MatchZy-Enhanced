@@ -494,10 +494,18 @@ public partial class MatchZy
         Server.ExecuteCommand("bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
 
         // In simulation mode we can safely speed up the game using cheats and timescale
-        // so that simulated matches complete faster. This is never applied for normal
-        // (human) matches, and will be reset at series end.
-        Log("[SimulationMode] Enabling sv_cheats 1 and setting host_timescale 2 for accelerated simulation.");
-        Server.ExecuteCommand("sv_cheats 1; host_timescale 2");
+        // so that simulated matches complete faster. Respect the per-match configuration,
+        // defaulting to 1.0x if not provided. Human matches always run at 1.0x.
+        float ts = 1.0f;
+        if (matchConfig != null)
+        {
+            ts = matchConfig.SimulationTimeScale;
+            if (ts < 0.1f) ts = 0.1f;
+            if (ts > 4.0f) ts = 4.0f;
+        }
+
+        Log($"[SimulationMode] Enabling sv_cheats 1 and setting host_timescale {ts:0.##} for simulation.");
+        Server.ExecuteCommand($"sv_cheats 1; host_timescale {ts.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
 
         // Clear any generic bots that were spawned by base configs (e.g. gamemode_competitive)
         // so that we can spawn exactly one bot per configured player.

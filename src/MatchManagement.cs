@@ -554,6 +554,27 @@ namespace MatchZy
             {
                 matchConfig.Simulation = bool.Parse(jsonDataObject["simulation"]!.ToString());
             }
+            if (jsonDataObject["simulation_timescale"] != null)
+            {
+                // Allow either numeric or string; clamp to a safe range so we don't accidentally
+                // set something extreme like 0 or 100x speed.
+                try
+                {
+                    float ts = jsonDataObject["simulation_timescale"]!.Value<float>();
+                    if (float.IsNaN(ts) || float.IsInfinity(ts)) throw new Exception("NaN/Inf");
+
+                    // Clamp between 0.1x and 4x to avoid crazy values.
+                    if (ts < 0.1f) ts = 0.1f;
+                    if (ts > 4.0f) ts = 4.0f;
+
+                    matchConfig.SimulationTimeScale = ts;
+                }
+                catch (Exception)
+                {
+                    Log("[LOADMATCH] Invalid simulation_timescale value in JSON; falling back to default 1.0");
+                    matchConfig.SimulationTimeScale = 1.0f;
+                }
+            }
             if (jsonDataObject["veto_mode"] != null)
             {
                 matchConfig.MapBanOrder = jsonDataObject["veto_mode"]!.ToObject<List<string>>()!;
