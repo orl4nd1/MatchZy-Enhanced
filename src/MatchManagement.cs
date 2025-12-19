@@ -758,10 +758,13 @@ namespace MatchZy
             if (resetCvarsOnSeriesEnd) ResetChangedConvars();
             isMatchLive = false;
 
-            // In simulation mode, schedule bots to disconnect gradually after the series ends.
+            // In simulation mode, schedule bots to disconnect gradually after the series ends
+            // and restore normal server behavior (timescale/cheats) for subsequent human matches.
             if (isSimulationMode)
             {
                 ScheduleSimulationBotDisconnects();
+                Log("[SimulationMode] Series ended - resetting host_timescale to 1 and sv_cheats to 0.");
+                Server.ExecuteCommand("host_timescale 1; sv_cheats 0");
             }
 
             // Wait for demo upload to complete, then kick all players and reset match

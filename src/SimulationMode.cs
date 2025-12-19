@@ -493,6 +493,12 @@ public partial class MatchZy
         Log("[SimulationMode] Applying gameplay bot cvars: bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
         Server.ExecuteCommand("bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
 
+        // In simulation mode we can safely speed up the game using cheats and timescale
+        // so that simulated matches complete faster. This is never applied for normal
+        // (human) matches, and will be reset at series end.
+        Log("[SimulationMode] Enabling sv_cheats 1 and setting host_timescale 2 for accelerated simulation.");
+        Server.ExecuteCommand("sv_cheats 1; host_timescale 2");
+
         // Clear any generic bots that were spawned by base configs (e.g. gamemode_competitive)
         // so that we can spawn exactly one bot per configured player.
         ClearExistingBotsForSimulation();
