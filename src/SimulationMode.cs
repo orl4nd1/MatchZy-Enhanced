@@ -487,6 +487,12 @@ public partial class MatchZy
         // we always force this to 0.
         Server.ExecuteCommand("bot_join_after_player 0");
 
+        // Ensure bots are actually active and behaving like real players. These cvars
+        // disable common debug/freeze modes and make bots play out the match instead
+        // of standing still or ignoring opponents.
+        Log("[SimulationMode] Applying gameplay bot cvars: bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
+        Server.ExecuteCommand("bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
+
         // Clear any generic bots that were spawned by base configs (e.g. gamemode_competitive)
         // so that we can spawn exactly one bot per configured player.
         ClearExistingBotsForSimulation();
