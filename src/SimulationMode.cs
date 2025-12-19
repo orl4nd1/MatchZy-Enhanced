@@ -121,18 +121,25 @@ public partial class MatchZy
     {
         if (!isSimulationMode || simulationIdentityPool.Count == 0)
         {
+            Log($"[SimulationMode] SpawnSimulationBots called but aborted (isSimulationMode={isSimulationMode}, identityPoolCount={simulationIdentityPool.Count}).");
             return;
         }
 
-        Log("[SimulationMode] Spawning simulation bots (simulation mode active, no bot_kick pre-clean in this path).");
+        Log($"[SimulationMode] Spawning simulation bots (simulation mode active). identityPoolCount={simulationIdentityPool.Count}");
 
-        // For simulation we want exactly one bot per configured player, and we don't want
-        // the engine to immediately kick them again due to a zero bot_quota. Set a sane
-        // quota and disable auto-balance / auto-kick.
+        // For simulation we want exactly one bot per configured player. To avoid the
+        // engine auto-spawning *extra* bots, we drive bot creation purely by gradually
+        // increasing bot_quota from 0 -> desiredCount while setting bot_join_team for
+        // each step, instead of combining bot_quota with explicit bot_add_* calls.
         int desiredBotCount = simulationIdentityPool.Count;
         if (desiredBotCount < 0) desiredBotCount = 0;
+        Log($"[SimulationMode] Desired bot count for simulation = {desiredBotCount}");
 
-        Server.ExecuteCommand($"mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota {desiredBotCount}");
+        // Start from a clean slate: no bots, no auto-kick/auto-balance.
+        // At this point ClearExistingBotsForSimulation() has already removed any
+        // pre-existing bots, so setting bot_quota 0 will not kick our own simulation bots.
+        Log("[SimulationMode] Initializing bot cvars: mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota 0");
+        Server.ExecuteCommand("mp_autoteambalance 0; mp_limitteams 0; mp_autokick 0; bot_quota_mode normal; bot_quota 0");
 
         int index = 0;
         foreach (var identity in simulationIdentityPool)
@@ -148,6 +155,8 @@ public partial class MatchZy
                 desiredSide = teamSides.TryGetValue(matchzyTeam2, out var side) ? side : "TERRORIST";
             }
 
+            // Quota value we want to reach when this bot is spawned.
+            int quotaForThisStep = index + 1;
             float delaySeconds = index * 1.0f;
             var desiredSideCopy = desiredSide;
 
@@ -155,18 +164,29 @@ public partial class MatchZy
             // external config executions. This also produces a more human-like join pattern.
             AddTimer(delaySeconds, () =>
             {
-                if (!isSimulationMode) return;
+                if (!isSimulationMode)
+                {
+                    Log("[SimulationMode] SpawnSimulationBots timer fired but simulation mode is no longer active; skipping.");
+                    return;
+                }
 
                 if (desiredSideCopy == "CT")
                 {
+                    Log($"[SimulationMode] Requesting next bot on CT (targetQuota={quotaForThisStep}).");
                     Server.ExecuteCommand("bot_join_team CT");
-                    Server.ExecuteCommand("bot_add_ct");
                 }
                 else
                 {
+                    Log($"[SimulationMode] Requesting next bot on T (targetQuota={quotaForThisStep}).");
                     Server.ExecuteCommand("bot_join_team T");
-                    Server.ExecuteCommand("bot_add_t");
                 }
+
+                // Bump the quota up by one for this identity; the engine will spawn a new
+                // bot on the requested team. Because we only ever increase bot_quota from
+                // 0 -> desiredBotCount (never back down to 0), we avoid the previous issue
+                // where a late bot_quota 0 would kick all simulation bots.
+                Log($"[SimulationMode] Setting bot_quota to {quotaForThisStep}.");
+                Server.ExecuteCommand($"bot_quota {quotaForThisStep}");
             });
 
             index++;
@@ -213,7 +233,7 @@ public partial class MatchZy
 
         userIds.Sort();
 
-        Log($"[SimulationMode] Starting simulated ready flow for {userIds.Count} players.");
+        Log($"[SimulationMode] Starting simulated ready flow for {userIds.Count} mapped players.");
 
         float delayStep = 0.5f;
         for (int i = 0; i < userIds.Count; i++)
@@ -225,8 +245,15 @@ public partial class MatchZy
             {
                 if (!playerData.TryGetValue(userId, out var player) || !IsPlayerValid(player))
                 {
+                    Log($"[SimulationMode] Simulated ready: playerData missing or invalid for UserId={userId}.");
                     return;
                 }
+
+                SimulationPlayerIdentity? identity = null;
+                simulationPlayersByUserId.TryGetValue(userId, out identity);
+                string effectiveSteamId = identity?.ConfigSteamId ?? player.SteamID.ToString();
+                string effectiveName = identity?.ConfigName ?? player.PlayerName;
+                Log($"[SimulationMode] Simulating !ready for UserId={userId}, SteamId={effectiveSteamId}, Name={effectiveName}.");
 
                 // Mimic the !ready command, which will:
                 // - Mark the player as ready
@@ -243,6 +270,7 @@ public partial class MatchZy
             teamReadyOverride[CsTeam.CounterTerrorist] = true;
             teamReadyOverride[CsTeam.Terrorist] = true;
 
+            Log("[SimulationMode] Both teams marked ready via teamReadyOverride; invoking CheckAndSendTeamReadyEvent().");
             CheckAndSendTeamReadyEvent();
         });
     }
@@ -262,6 +290,7 @@ public partial class MatchZy
         int mappedCount = simulationPlayersByUserId.Count;
         if (mappedCount == 0)
         {
+            Log("[SimulationMode] ScheduleSimulationReadyFlowIfNeeded called but mappedCount=0; nothing to schedule yet.");
             return;
         }
 

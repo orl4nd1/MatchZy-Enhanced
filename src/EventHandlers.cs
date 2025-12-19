@@ -61,7 +61,11 @@ public partial class MatchZy
                 // In simulation mode, map this bot to a configured player identity.
                 if (isSimulationMode && player.IsBot)
                 {
-                    AssignSimulationIdentityForBot(player);
+                    var identity = AssignSimulationIdentityForBot(player);
+                    if (identity != null)
+                    {
+                        Log($"[EventPlayerConnectFull] Simulation bot mapped to config player SteamID={identity.ConfigSteamId}, Name={identity.ConfigName}, TeamSlot={identity.TeamSlot}");
+                    }
                 }
             }
             // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
@@ -87,6 +91,8 @@ public partial class MatchZy
                 // Team will be assigned later for connects; in simulation mode the identity
                 // may already be mapped to a configured player.
                 var playerInfo = BuildPlayerInfo(player, "none");
+
+                Log($"[EventPlayerConnectFull] player_connect payload: steamid={playerInfo.SteamId}, name={playerInfo.Name}, team={playerInfo.Team}");
 
                 var playerConnectEvent = new MatchZyPlayerConnectedEvent
                 {
@@ -267,9 +273,13 @@ public partial class MatchZy
                 string currentMap = Server.MapName;
                 if (string.IsNullOrEmpty(simulationTargetMap) || string.Equals(currentMap, simulationTargetMap, StringComparison.OrdinalIgnoreCase))
                 {
-                    Log($"[EventRoundStart] Starting deferred simulation flow on map {currentMap}");
+                    Log($"[EventRoundStart] Starting deferred simulation flow on map {currentMap} (simulationTargetMap={simulationTargetMap}).");
                     simulationFlowDeferred = false;
                     MaybeStartSimulationFlow();
+                }
+                else
+                {
+                    Log($"[EventRoundStart] Simulation flow still deferred; currentMap={currentMap}, targetMap={simulationTargetMap}.");
                 }
             }
 
