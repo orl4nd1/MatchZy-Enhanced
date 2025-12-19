@@ -58,6 +58,26 @@ The exact names and defaults are defined in `ConfigConvars.cs`, but these are th
   - `matchzy_demo_upload_header_key`, `matchzy_demo_upload_header_value`  
     Optional custom header for the demo upload API.
 
+- **Tournament status (used by the safe auto‑updater)**
+  - `matchzy_tournament_status`  
+    String status that MatchZy keeps up to date as the server runs:
+    - `idle`, `loading`, `warmup`, `knife`, `live`, `paused`, `halftime`, `postgame`, `error`.
+  - `matchzy_tournament_match`  
+    Slug/identifier for the active match (e.g. `r1m1`, `bo3_final_2`).
+  - `matchzy_tournament_updated`  
+    Unix timestamp (as a string) for when the tournament status was last changed.
+
+  These are primarily useful for **external automation** and for the built‑in safe auto‑updater:
+  - The updater **never checks for updates or restarts** while status is one of:
+    `loading`, `warmup`, `knife`, `live`, `paused`, `halftime`.
+  - Once the server is `idle`, `postgame` or `error`, it:
+    - Checks Steam’s `UpToDateCheck` API to see if a new CS2 build is required.
+    - Logs a marker when an update is available:  
+      `[MATCHZY_UPDATE_AVAILABLE] required_version=<number>`
+    - Later, when it is safe to restart, it kicks human players and logs:  
+      `[MATCHZY_UPDATE_SHUTDOWN] required_version=<number>`  
+      before executing `quit` so your process manager can restart the server.
+
 Consult the shipped `cfg/MatchZy/config.cfg` for the up‑to‑date list and defaults.
 
 ## JSON match config (from Auto Tournament)

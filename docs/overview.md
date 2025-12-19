@@ -50,6 +50,16 @@ In other words:
     - `Demo upload API` for exact headers and request details.
     - `Demo upload guide` for configuration and debugging tips.
 
+- **MatchZy‑aware CS2 auto‑update safety**
+  - A built‑in **auto‑update checker** polls Steam’s `UpToDateCheck` API.
+  - It will **never restart the server while a MatchZy match is in progress** (`loading`, `warmup`, `knife`, `live`, `paused`, `halftime`).
+  - When an update is available and the server is **idle/postgame/error**, it:
+    - Kicks human players with a short message about the update.
+    - Runs `quit` so your process manager / CS2 Server Manager can restart on the new version.
+  - It emits machine‑parseable log markers that external tools can watch for:
+    - `[MATCHZY_UPDATE_AVAILABLE] required_version=<number>`
+    - `[MATCHZY_UPDATE_SHUTDOWN] required_version=<number>`
+
 - **Simulation mode**
   - Configure `simulation: true` in your match JSON and MatchZy:
     - Spawns bots instead of requiring real players.
