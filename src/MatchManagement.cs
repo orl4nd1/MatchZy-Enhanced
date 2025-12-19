@@ -421,12 +421,12 @@ namespace MatchZy
 
             isMatchSetup = true;
 
-            // If this match is configured for simulation, kick off the simulation orchestration
-            // immediately only when we are *not* in the middle of a map change. When a
-            // changelevel is pending we instead defer to EventRoundStart on the new map.
+            // If this match is configured for simulation and we are *not* in the middle of a
+            // map change, schedule the simulation flow shortly after warmup is active so the
+            // server is fully ready to accept connections (just like in a human match).
             if (isSimulationMode && !simulationFlowDeferred)
             {
-                MaybeStartSimulationFlow();
+                ScheduleSimulationFlowStart(5.0f);
             }
 
             SetMapSides();

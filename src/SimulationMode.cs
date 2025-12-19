@@ -203,95 +203,95 @@ public partial class MatchZy
         AddTimer(mappingDelaySeconds, EnsureSimulationBotsMappedAndAnnounced);
     }
 
-        /// <summary>
-        /// After bot_quota-driven spawning has completed, walk the live bot list to:
-        /// - Confirm bots are connected and on a team.
-        /// - Map each bot to a configured simulation identity (if not already mapped).
-        /// - Announce a synthetic player_connect event for each mapped simulation bot.
-        /// - Kick off the simulated ready flow.
-        /// This compensates for the fact that EventPlayerConnectFull doesn't reliably
-        /// fire for CS2 bots.
-        /// </summary>
-        private void EnsureSimulationBotsMappedAndAnnounced()
+    /// <summary>
+    /// After bot_quota-driven spawning has completed, walk the live bot list to:
+    /// - Confirm bots are connected and on a team.
+    /// - Map each bot to a configured simulation identity (if not already mapped).
+    /// - Announce a synthetic player_connect event for each mapped simulation bot.
+    /// - Kick off the simulated ready flow.
+    /// This compensates for the fact that EventPlayerConnectFull doesn't reliably
+    /// fire for CS2 bots.
+    /// </summary>
+    private void EnsureSimulationBotsMappedAndAnnounced()
+    {
+        if (!isSimulationMode)
         {
-            if (!isSimulationMode)
-            {
-                Log("[SimulationMode] EnsureSimulationBotsMappedAndAnnounced called but simulation mode is no longer active; skipping.");
-                return;
-            }
-
-            var bots = new List<CCSPlayerController>();
-
-            foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
-            {
-                if (player == null) continue;
-                if (!player.IsValid || !player.IsBot || player.IsHLTV) continue;
-                if (!player.UserId.HasValue) continue;
-
-                bots.Add(player);
-            }
-
-            Log($"[SimulationMode] EnsureSimulationBotsMappedAndAnnounced: found {bots.Count} live bot controllers.");
-
-            foreach (var bot in bots)
-            {
-                if (!bot.UserId.HasValue) continue;
-                int userId = bot.UserId.Value;
-
-                Log($"[SimulationMode] Observed bot '{bot.PlayerName}' (UserId={userId}, TeamNum={bot.TeamNum}, Connected={bot.Connected}).");
-
-                // Make sure our core player tracking sees this bot.
-                if (!playerData.ContainsKey(userId))
-                {
-                    playerData[userId] = bot;
-
-                    if (readyAvailable && !matchStarted)
-                    {
-                        playerReadyStatus[userId] = false;
-                    }
-                    else
-                    {
-                        playerReadyStatus[userId] = true;
-                    }
-                }
-
-                // Ensure a simulation identity is assigned.
-                SimulationPlayerIdentity? identity;
-                if (!simulationPlayersByUserId.TryGetValue(userId, out identity))
-                {
-                    identity = AssignSimulationIdentityForBot(bot);
-                }
-
-                if (identity == null)
-                {
-                    Log($"[SimulationMode] No simulation identity available for bot '{bot.PlayerName}' (UserId={userId}); skipping synthetic connect.");
-                    continue;
-                }
-
-                // Send a synthetic player_connect event if remote logging is enabled and
-                // the match is setup. This mirrors EventPlayerConnectFullHandler but is
-                // explicitly targeted at simulation bots.
-                if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && isMatchSetup)
-                {
-                    var playerInfo = BuildPlayerInfo(bot, "none");
-                    Log($"[SimulationMode] Sending synthetic player_connect for sim bot UserId={userId}, steamid={playerInfo.SteamId}, name={playerInfo.Name}, team={playerInfo.Team}.");
-
-                    var playerConnectEvent = new MatchZyPlayerConnectedEvent
-                    {
-                        MatchId = liveMatchId,
-                        Player = playerInfo
-                    };
-
-                    Task.Run(async () =>
-                    {
-                        await SendEventAsync(playerConnectEvent);
-                    });
-                }
-            }
-
-            // Now that we have mappings, ensure the simulated ready flow is scheduled.
-            ScheduleSimulationReadyFlowIfNeeded();
+            Log("[SimulationMode] EnsureSimulationBotsMappedAndAnnounced called but simulation mode is no longer active; skipping.");
+            return;
         }
+
+        var bots = new List<CCSPlayerController>();
+
+        foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
+        {
+            if (player == null) continue;
+            if (!player.IsValid || !player.IsBot || player.IsHLTV) continue;
+            if (!player.UserId.HasValue) continue;
+
+            bots.Add(player);
+        }
+
+        Log($"[SimulationMode] EnsureSimulationBotsMappedAndAnnounced: found {bots.Count} live bot controllers.");
+
+        foreach (var bot in bots)
+        {
+            if (!bot.UserId.HasValue) continue;
+            int userId = bot.UserId.Value;
+
+            Log($"[SimulationMode] Observed bot '{bot.PlayerName}' (UserId={userId}, TeamNum={bot.TeamNum}, Connected={bot.Connected}).");
+
+            // Make sure our core player tracking sees this bot.
+            if (!playerData.ContainsKey(userId))
+            {
+                playerData[userId] = bot;
+
+                if (readyAvailable && !matchStarted)
+                {
+                    playerReadyStatus[userId] = false;
+                }
+                else
+                {
+                    playerReadyStatus[userId] = true;
+                }
+            }
+
+            // Ensure a simulation identity is assigned.
+            SimulationPlayerIdentity? identity;
+            if (!simulationPlayersByUserId.TryGetValue(userId, out identity))
+            {
+                identity = AssignSimulationIdentityForBot(bot);
+            }
+
+            if (identity == null)
+            {
+                Log($"[SimulationMode] No simulation identity available for bot '{bot.PlayerName}' (UserId={userId}); skipping synthetic connect.");
+                continue;
+            }
+
+            // Send a synthetic player_connect event if remote logging is enabled and
+            // the match is setup. This mirrors EventPlayerConnectFullHandler but is
+            // explicitly targeted at simulation bots.
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && isMatchSetup)
+            {
+                var playerInfo = BuildPlayerInfo(bot, "none");
+                Log($"[SimulationMode] Sending synthetic player_connect for sim bot UserId={userId}, steamid={playerInfo.SteamId}, name={playerInfo.Name}, team={playerInfo.Team}.");
+
+                var playerConnectEvent = new MatchZyPlayerConnectedEvent
+                {
+                    MatchId = liveMatchId,
+                    Player = playerInfo
+                };
+
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(playerConnectEvent);
+                });
+            }
+        }
+
+        // Now that we have mappings, ensure the simulated ready flow is scheduled.
+        ScheduleSimulationReadyFlowIfNeeded();
+    }
 
     /// <summary>
     /// Starts the simulated ready flow: bots gradually "ready up" and then the match goes live.
@@ -400,6 +400,34 @@ public partial class MatchZy
         simulationReadyFlowScheduled = true;
         Log($"[SimulationMode] Scheduling simulated ready flow in {delaySeconds:0.00}s for {mappedCount} mapped players.");
         AddTimer(delaySeconds, StartSimulationReadyFlow);
+    }
+
+    /// <summary>
+    /// Once the server is on the correct map and in warmup (i.e. ready to accept
+    /// player connections), schedule the start of the simulation flow after a
+    /// short delay. This ensures that all base game configs and warmup scripts
+    /// have fully settled before we begin spawning bots and sending events.
+    /// </summary>
+    private void ScheduleSimulationFlowStart(float delaySeconds)
+    {
+        if (!isSimulationMode)
+        {
+            Log("[SimulationMode] ScheduleSimulationFlowStart called but simulation mode is not active; skipping.");
+            return;
+        }
+
+        Log($"[SimulationMode] Scheduling simulation flow start in {delaySeconds:0.00}s (server warmup ready for connections).");
+
+        AddTimer(delaySeconds, () =>
+        {
+            if (!isSimulationMode)
+            {
+                Log("[SimulationMode] Simulation flow start timer fired but simulation mode is no longer active; skipping.");
+                return;
+            }
+
+            MaybeStartSimulationFlow();
+        });
     }
 
     /// <summary>
