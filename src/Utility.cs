@@ -1196,10 +1196,47 @@ namespace MatchZy
             AddTimer(restartDelay - 4, () =>
             {
                 if (!isMatchSetup) return;
+
+                // For simulation mode we need to fully reset per-map simulation state before
+                // moving to the next map so that:
+                // - The FE sees 0 connected / ready players at the start of the new map.
+                // - Bots are re-spawned, re-mapped to players and re-readied for each map.
+                if (isSimulationMode)
+                {
+                    Log($"[HandleMatchEnd] Preparing simulation state for next map {nextMap}.");
+
+                    // Clear simulation identity mappings and ready-flow scheduling.
+                    simulationPlayersByUserId.Clear();
+                    simulationIdentityPool.Clear();
+                    assignedSimulationSteamIds.Clear();
+                    simulationReadyFlowScheduled = false;
+
+                    // Clear per-player tracking so the heartbeat starts from a clean slate
+                    // on the next map; new bots will repopulate these dictionaries.
+                    playerReadyStatus.Clear();
+                    playerData.Clear();
+                    connectedPlayers = 0;
+                    playerConnectionTimes.Clear();
+
+                    // Defer the simulation flow to the new map. EventRoundStart on the
+                    // target map will schedule a fresh simulation flow (spawn bots, send
+                    // synthetic player_connect, simulate !ready, etc.).
+                    simulationFlowDeferred = true;
+                    simulationTargetMap = nextMap;
+                }
+
                 ChangeMap(nextMap, 3.0f);
                 matchStarted = false;
                 readyAvailable = true;
                 isPaused = false;
+
+                // Reset forced-ready overrides between maps so each map’s ready flow is
+                // independent. New player/bot connections on the next map will drive a
+                // fresh ready cycle and teamReadyOverride will only be set again when
+                // teams are actually (or simulated) ready for that map.
+                teamReadyOverride[CsTeam.Terrorist] = false;
+                teamReadyOverride[CsTeam.CounterTerrorist] = false;
+                teamReadyOverride[CsTeam.Spectator] = false;
 
                 isWarmup = true;
                 isKnifeRound = false;
