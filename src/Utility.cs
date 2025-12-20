@@ -1048,6 +1048,14 @@ namespace MatchZy
             int team1SeriesScore = matchzyTeam1.seriesScore;
             int team2SeriesScore = matchzyTeam2.seriesScore;
 
+            // High-signal checkpoint log so operators can see exactly what just happened
+            // on this map and how it affects the overall series before any branching
+            // logic (next map vs. series end) runs.
+            string mapLabel = (currentMapNumber >= 0 && currentMapNumber < matchConfig.Maplist.Count)
+                ? matchConfig.Maplist[currentMapNumber]
+                : "unknown_map";
+            Log($"[SeriesCheckpoint] Map {currentMapNumber} ({mapLabel}) finished. Map score: {matchzyTeam1.teamName} {t1score} – {matchzyTeam2.teamName} {t2score}. Series score now: {matchzyTeam1.teamName} {team1SeriesScore} – {matchzyTeam2.teamName} {team2SeriesScore}.");
+
             string statsPath = Server.GameDirectory + "/csgo/MatchZy_Stats/" + liveMatchId.ToString();
 
             var mapResultEvent = new MapResultEvent

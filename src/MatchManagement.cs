@@ -748,6 +748,7 @@ namespace MatchZy
         {
             long matchId = liveMatchId;
             (int team1Score, int team2Score) = (matchzyTeam1.seriesScore, matchzyTeam2.seriesScore);
+            Log($"[SeriesCheckpoint] SERIES END reached for match {matchId}. Final map score: {matchzyTeam1.teamName} {t1score} – {matchzyTeam2.teamName} {t2score}. Final series score: {matchzyTeam1.teamName} {team1Score} – {matchzyTeam2.teamName} {team2Score}.");
             if (winnerName == null)
             {
                 PrintToAllChat($"{ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} and {ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default} have tied the match");
