@@ -407,6 +407,7 @@ namespace MatchZy
                         // Reset per-map simulation orchestration state so the ready flow
                         // can run again cleanly for the new map.
                         simulationReadyFlowScheduled = false;
+                        simulationFlowStarted = false;
                         simulationPlayersByUserId.Clear();
                         assignedSimulationSteamIds.Clear();
 

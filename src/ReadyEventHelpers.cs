@@ -4,6 +4,72 @@ namespace MatchZy;
 
 public partial class MatchZy
 {
+    /// <summary>
+    /// Computes logical team1/team2 ready counts for event payloads.
+    /// In simulation mode this uses the simulated identity mapping so that
+    /// counts always reflect the configured match teams, independent of the
+    /// underlying CS2 CT/T distribution.
+    /// </summary>
+    private void GetLogicalReadyCountsForEvents(out int readyCountTeam1, out int readyCountTeam2, out int totalReady)
+    {
+        readyCountTeam1 = 0;
+        readyCountTeam2 = 0;
+
+        // Prefer simulation-aware counts when available.
+        if (isSimulationMode && simulationPlayersByUserId.Count > 0)
+        {
+            foreach (var kvp in simulationPlayersByUserId)
+            {
+                int userId = kvp.Key;
+                var identity = kvp.Value;
+
+                if (!playerReadyStatus.TryGetValue(userId, out bool isReady) || !isReady)
+                {
+                    continue;
+                }
+
+                if (identity.TeamSlot == "team1")
+                {
+                    readyCountTeam1++;
+                }
+                else if (identity.TeamSlot == "team2")
+                {
+                    readyCountTeam2++;
+                }
+            }
+
+            totalReady = readyCountTeam1 + readyCountTeam2;
+            return;
+        }
+
+        // Fallback: derive logical team counts from CT/T side counts and current side mapping.
+        (int ctPlayerCount, int ctReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
+        (int tPlayerCount, int tReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
+
+        if (reverseTeamSides.ContainsKey("CT"))
+        {
+            bool ctIsTeam1 = reverseTeamSides["CT"] == matchzyTeam1;
+            if (ctIsTeam1)
+            {
+                readyCountTeam1 = ctReadyCount;
+                readyCountTeam2 = tReadyCount;
+            }
+            else
+            {
+                readyCountTeam1 = tReadyCount;
+                readyCountTeam2 = ctReadyCount;
+            }
+        }
+        else
+        {
+            // If we somehow don't know which side team1 is on yet, treat CT as team1.
+            readyCountTeam1 = ctReadyCount;
+            readyCountTeam2 = tReadyCount;
+        }
+
+        totalReady = readyCountTeam1 + readyCountTeam2;
+    }
+
     private void SendPlayerReadyEvent(CCSPlayerController player, bool isReady)
     {
         Log($"[SendPlayerReadyEvent] Called - isMatchSetup: {isMatchSetup}, readyAvailable: {readyAvailable}, RemoteLogURL: {matchConfig.RemoteLogURL}, isReady: {isReady}");
@@ -32,10 +98,6 @@ public partial class MatchZy
             return;
         }
 
-        // Get ready counts
-        (int team1PlayerCount, int team1ReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
-        (int team2PlayerCount, int team2ReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
-
         // Expected total is players per team * 2
         int expectedTotal = matchConfig.PlayersPerTeam * 2;
 
@@ -52,6 +114,12 @@ public partial class MatchZy
 
         var playerInfo = BuildPlayerInfo(player, teamName);
 
+        // Compute logical ready counts for event payloads. In simulation mode this is
+        // based on the simulated team slots (team1/team2) rather than raw CS sides,
+        // so that the API always sees correct per-team readiness even if bots are
+        // temporarily unbalanced between CT/T.
+        GetLogicalReadyCountsForEvents(out int readyCountTeam1, out int readyCountTeam2, out int totalReady);
+
         if (isReady)
         {
             Log($"[SendPlayerReadyEvent] Creating player_ready event for {player.PlayerName}");
@@ -61,9 +129,9 @@ public partial class MatchZy
                 MatchId = liveMatchId,
                 Player = playerInfo,
                 Team = teamName,
-                ReadyCountTeam1 = reverseTeamSides.ContainsKey("CT") && reverseTeamSides["CT"] == matchzyTeam1 ? team1ReadyCount : team2ReadyCount,
-                ReadyCountTeam2 = reverseTeamSides.ContainsKey("CT") && reverseTeamSides["CT"] == matchzyTeam2 ? team1ReadyCount : team2ReadyCount,
-                TotalReady = team1ReadyCount + team2ReadyCount,
+                ReadyCountTeam1 = readyCountTeam1,
+                ReadyCountTeam2 = readyCountTeam2,
+                TotalReady = totalReady,
                 ExpectedTotal = expectedTotal
             };
 
@@ -84,9 +152,9 @@ public partial class MatchZy
                 MatchId = liveMatchId,
                 Player = playerInfo,
                 Team = teamName,
-                ReadyCountTeam1 = reverseTeamSides.ContainsKey("CT") && reverseTeamSides["CT"] == matchzyTeam1 ? team1ReadyCount : team2ReadyCount,
-                ReadyCountTeam2 = reverseTeamSides.ContainsKey("CT") && reverseTeamSides["CT"] == matchzyTeam2 ? team1ReadyCount : team2ReadyCount,
-                TotalReady = team1ReadyCount + team2ReadyCount,
+                ReadyCountTeam1 = readyCountTeam1,
+                ReadyCountTeam2 = readyCountTeam2,
+                TotalReady = totalReady,
                 ExpectedTotal = expectedTotal
             };
 
@@ -105,17 +173,20 @@ public partial class MatchZy
         
         if (!isMatchSetup || !readyAvailable || string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
 
-        bool team1Ready = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist);
-        bool team2Ready = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist);
+        bool ctTeamReady = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist);
+        bool tTeamReady = IsTeamReady((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist);
 
-        (int team1PlayerCount, int team1ReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
-        (int team2PlayerCount, int team2ReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
+        // Side-based counts are still used for internal gating logic, but for events we
+        // report logical team1/team2 counts (especially important in simulation mode).
+        (int ctPlayerCount, int ctReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
+        (int tPlayerCount, int tReadyCount) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
 
+        // Logical event-facing counts.
+        GetLogicalReadyCountsForEvents(out int readyCountTeam1, out int readyCountTeam2, out int totalReady);
         int expectedTotal = matchConfig.PlayersPerTeam * 2;
-        int totalReady = team1ReadyCount + team2ReadyCount;
 
         // Send team_ready event for CT team if ready
-        if (team1Ready && reverseTeamSides.ContainsKey("CT"))
+        if (ctTeamReady && reverseTeamSides.ContainsKey("CT"))
         {
             Log($"[CheckAndSendTeamReadyEvent] CT team is ready, sending team_ready event");
             
@@ -123,7 +194,7 @@ public partial class MatchZy
             {
                 MatchId = liveMatchId,
                 Team = reverseTeamSides["CT"] == matchzyTeam1 ? "team1" : "team2",
-                ReadyCount = team1ReadyCount,
+                ReadyCount = reverseTeamSides["CT"] == matchzyTeam1 ? readyCountTeam1 : readyCountTeam2,
                 TotalReady = totalReady,
                 ExpectedTotal = expectedTotal
             };
@@ -134,7 +205,7 @@ public partial class MatchZy
         }
 
         // Send team_ready event for T team if ready
-        if (team2Ready && reverseTeamSides.ContainsKey("TERRORIST"))
+        if (tTeamReady && reverseTeamSides.ContainsKey("TERRORIST"))
         {
             Log($"[CheckAndSendTeamReadyEvent] T team is ready, sending team_ready event");
             
@@ -142,7 +213,7 @@ public partial class MatchZy
             {
                 MatchId = liveMatchId,
                 Team = reverseTeamSides["TERRORIST"] == matchzyTeam1 ? "team1" : "team2",
-                ReadyCount = team2ReadyCount,
+                ReadyCount = reverseTeamSides["TERRORIST"] == matchzyTeam1 ? readyCountTeam1 : readyCountTeam2,
                 TotalReady = totalReady,
                 ExpectedTotal = expectedTotal
             };
@@ -153,15 +224,24 @@ public partial class MatchZy
         }
 
         // Send all_players_ready event if both teams are ready
-        if (team1Ready && team2Ready)
+        if (ctTeamReady && tTeamReady)
         {
+            // In simulation mode, require that all configured simulated players are
+            // ready before emitting all_players_ready, so the API/FE always sees
+            // a full 10/10 ready snapshot instead of just min_players_to_ready.
+            if (isSimulationMode && totalReady < expectedTotal)
+            {
+                Log($"[CheckAndSendTeamReadyEvent] Both sides flagged ready but only {totalReady}/{expectedTotal} simulated players ready; deferring all_players_ready.");
+                return;
+            }
+
             Log($"[CheckAndSendTeamReadyEvent] Both teams ready, sending all_players_ready event");
             
             var allPlayersReadyEvent = new MatchZyAllPlayersReadyEvent
             {
                 MatchId = liveMatchId,
-                ReadyCountTeam1 = team1ReadyCount,
-                ReadyCountTeam2 = team2ReadyCount,
+                ReadyCountTeam1 = readyCountTeam1,
+                ReadyCountTeam2 = readyCountTeam2,
                 TotalReady = totalReady,
                 CountdownStarted = true
             };

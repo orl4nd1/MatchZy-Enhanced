@@ -22,8 +22,14 @@ public partial class MatchZy
     // Tracks which configured SteamIDs have already been assigned to a bot.
     private readonly HashSet<string> assignedSimulationSteamIds = new();
 
-    // Ensure we only start the simulated ready flow once.
+    // Ensure we only start the simulated ready flow once per map.
     private bool simulationReadyFlowScheduled = false;
+
+    // Tracks whether the per-map simulation flow (bot spawning, mapping, ready flow
+    // scheduling) has already been started. This prevents double-initialization on
+    // maps where both the map-start hook and a deferred EventRoundStart path call
+    // MaybeStartSimulationFlow().
+    private bool simulationFlowStarted = false;
 
     private void ClearSimulationState()
     {
@@ -31,6 +37,7 @@ public partial class MatchZy
         simulationIdentityPool.Clear();
         assignedSimulationSteamIds.Clear();
         simulationReadyFlowScheduled = false;
+        simulationFlowStarted = false;
         isSimulationMode = false;
     }
 
@@ -372,6 +379,13 @@ public partial class MatchZy
 
             Log("[SimulationMode] Both teams marked ready via teamReadyOverride; invoking CheckAndSendTeamReadyEvent().");
             CheckAndSendTeamReadyEvent();
+
+            // In simulation mode the internal match start logic (CheckLiveRequired)
+            // is what actually transitions from warmup to live. When we mark both
+            // teams forced-ready here, we need to re-evaluate that gate so the
+            // match can start even if the CT/T player counts are not perfectly
+            // balanced (e.g. 1 CT + 9 T bots).
+            CheckLiveRequired();
         });
     }
 
@@ -478,6 +492,15 @@ public partial class MatchZy
         {
             return;
         }
+
+        // Guard against starting the simulation flow more than once per map. On multi-map
+        // series we explicitly reset simulationFlowStarted from the map lifecycle code.
+        if (simulationFlowStarted)
+        {
+            Log("[SimulationMode] MaybeStartSimulationFlow called but simulation flow has already started for this map; skipping.");
+            return;
+        }
+        simulationFlowStarted = true;
 
         Log("[SimulationMode] Simulation mode enabled for this match. Initializing simulation state.");
 
