@@ -397,12 +397,12 @@ namespace MatchZy
                     // is started again on each subsequent map.
                     //
                     // IMPORTANT:
-                    // - The first map in a series (CurrentMapNumber == 1) is already
-                    //   initialized in LoadMatchFromJSON via MaybeStartSimulationFlow().
+                    // - The first map in a series (CurrentMapNumber == 0) is initialized
+                    //   from LoadMatchFromJSON via the deferred EventRoundStart path.
                     // - To avoid double-initializing simulation on the first map (which
                     //   would spawn duplicate bots), we only run this block for maps
-                    //   beyond the first (CurrentMapNumber > 1).
-                    if (isSimulationMode && matchConfig != null && matchConfig.CurrentMapNumber > 1)
+                    //   beyond the first (CurrentMapNumber >= 1).
+                    if (isSimulationMode && matchConfig != null && matchConfig.CurrentMapNumber >= 1)
                     {
                         // Reset per-map simulation orchestration state so the ready flow
                         // can run again cleanly for the new map.
@@ -411,6 +411,7 @@ namespace MatchZy
                         simulationPlayersByUserId.Clear();
                         assignedSimulationSteamIds.Clear();
 
+                        Log($"[SimulationMode] OnMapStart detected multi-map simulation on map index {matchConfig.CurrentMapNumber} ({Server.MapName}). Starting per-map simulation flow.");
                         MaybeStartSimulationFlow();
                     }
                 });
