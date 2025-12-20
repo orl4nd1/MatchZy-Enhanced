@@ -22,6 +22,15 @@ public partial class MatchZy
             }
             Log($"[FULL CONNECT] Player ID: {player!.UserId}, Name: {player.PlayerName} has connected!");
 
+            // Do not include HLTV / SourceTV in any of the ready system or match player
+            // tracking. They are spectators only and should never block warmup going
+            // live or appear in "unready players" messages.
+            if (player.IsHLTV)
+            {
+                Log("[EventPlayerConnectFull] Detected HLTV/SourceTV controller; skipping ready tracking and match player mapping.");
+                return HookResult.Continue;
+            }
+
             // Handling whitelisted players (skip for simulation bots)
             bool isSimulationBot = isSimulationMode && player.IsBot;
             if (!isSimulationBot && (!player.IsBot || !player.IsHLTV))
