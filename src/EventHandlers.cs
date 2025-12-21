@@ -294,6 +294,20 @@ public partial class MatchZy
                 }
             }
 
+            // In simulation mode, aggressively enforce sv_cheats/host_timescale at the
+            // beginning of every round so that any external configs or manual commands
+            // cannot accidentally leave the server in a non-simulated state on later
+            // maps or rounds (e.g. map 3 in a BO3/BO5 series). For real (non-simulation,
+            // non-practice) matches we likewise enforce normal cheats/timescale settings.
+            if (isSimulationMode)
+            {
+                ApplySimulationTimescaleAndCheats();
+            }
+            else
+            {
+                ApplyNormalTimescaleAndCheatsForRealMatches();
+            }
+
             HandlePostRoundStartEvent(@event);
             return HookResult.Continue;
         }

@@ -116,6 +116,17 @@ Once bots have connected and been mapped:
 
 From the outside, this looks like each player typed `!ready` at slightly different times.
 
+### Cheats & timescale behavior
+
+- In simulation mode:
+  - MatchZy enables `sv_cheats 1` and sets `host_timescale` to the configured `simulation_timescale` (clamped between `0.1` and `4.0`).
+  - It **re‑applies** this configuration at the **start of every round** so map changes, cfg execution or manual commands cannot silently disable simulation speed on later maps (for example, map 3 in a BO3/BO5).
+  - When the simulated **series** ends, it resets back to `sv_cheats 0` and `host_timescale 1` before returning the server to idle.
+
+- In normal (non‑simulation, non‑practice) matches:
+  - Warmup startup and each round start explicitly enforce `sv_cheats 0` and `host_timescale 1`.
+  - This ensures cheats/timescale from earlier simulation or practice sessions never bleed into real matches.
+
 ### Knife and side selection
 
 In simulation mode, the plugin **does not actually play a knife round**:

@@ -417,6 +417,51 @@ public partial class MatchZy
     }
 
     /// <summary>
+    /// Applies sv_cheats and host_timescale for simulation mode using the configured
+    /// simulation_timescale value. This is safe to call repeatedly and is used both
+    /// when the per-map simulation flow starts and at the beginning of each round
+    /// to ensure external configs or commands cannot silently disable simulation
+    /// speedups.
+    /// </summary>
+    private void ApplySimulationTimescaleAndCheats()
+    {
+        if (!isSimulationMode)
+        {
+            return;
+        }
+
+        // In simulation mode we can safely speed up the game using cheats and timescale
+        // so that simulated matches complete faster. Respect the per-match configuration,
+        // defaulting to 1.0x if not provided. Human matches always run at 1.0x.
+        float ts = 1.0f;
+        if (matchConfig != null)
+        {
+            ts = matchConfig.SimulationTimeScale;
+            if (ts < 0.1f) ts = 0.1f;
+            if (ts > 4.0f) ts = 4.0f;
+        }
+
+        Log($"[SimulationMode] Enforcing sv_cheats 1 and host_timescale {ts:0.##} for simulation.");
+        Server.ExecuteCommand($"sv_cheats 1; host_timescale {ts.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+    }
+
+    /// <summary>
+    /// Ensures that non-simulation, non-practice matches run with normal cheats/timescale
+    /// settings. This is used as a safeguard at warmup/round boundaries so that any
+    /// previous simulation or practice configuration does not leak into real matches.
+    /// </summary>
+    private void ApplyNormalTimescaleAndCheatsForRealMatches()
+    {
+        if (isSimulationMode || isPractice)
+        {
+            return;
+        }
+
+        Log("[SimulationMode] Enforcing sv_cheats 0 and host_timescale 1 for non-simulation match.");
+        Server.ExecuteCommand("sv_cheats 0; host_timescale 1");
+    }
+
+    /// <summary>
     /// Once the server is on the correct map and in warmup (i.e. ready to accept
     /// player connections), schedule the start of the simulation flow after a
     /// short delay. This ensures that all base game configs and warmup scripts
@@ -516,19 +561,9 @@ public partial class MatchZy
         Log("[SimulationMode] Applying gameplay bot cvars: bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
         Server.ExecuteCommand("bot_stop 0; bot_freeze 0; bot_dont_shoot 0; bot_ignore_enemies 0; bot_defer_to_human 0");
 
-        // In simulation mode we can safely speed up the game using cheats and timescale
-        // so that simulated matches complete faster. Respect the per-match configuration,
-        // defaulting to 1.0x if not provided. Human matches always run at 1.0x.
-        float ts = 1.0f;
-        if (matchConfig != null)
-        {
-            ts = matchConfig.SimulationTimeScale;
-            if (ts < 0.1f) ts = 0.1f;
-            if (ts > 4.0f) ts = 4.0f;
-        }
-
-        Log($"[SimulationMode] Enabling sv_cheats 1 and setting host_timescale {ts:0.##} for simulation.");
-        Server.ExecuteCommand($"sv_cheats 1; host_timescale {ts.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+        // Ensure simulation cheats/timescale are enforced for this map. This is also
+        // re-applied at the start of each round from EventRoundStartHandler.
+        ApplySimulationTimescaleAndCheats();
 
         // Clear any generic bots that were spawned by base configs (e.g. gamemode_competitive)
         // so that we can spawn exactly one bot per configured player.

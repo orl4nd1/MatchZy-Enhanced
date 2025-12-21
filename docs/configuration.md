@@ -172,7 +172,12 @@ When `"simulation": true`:
   - Values are clamped between `0.1` and `4.0` internally to prevent extreme settings.
   - When a simulated match starts, MatchZy will:
     - Set `sv_cheats 1` and `host_timescale` to the configured `simulation_timescale`.
+    - Re‑enforce `sv_cheats 1` and the configured `host_timescale` at the **start of every round** so map changes or external configs cannot drop the match out of simulation speed.
     - Reset back to `host_timescale 1` and `sv_cheats 0` automatically when the simulated series ends, before the server returns to idle.
+
+- Normal (non‑simulation, non‑practice) matches:
+  - At the start of warmup and at the beginning of each round, MatchZy explicitly enforces `sv_cheats 0` and `host_timescale 1`.
+  - This guarantees that cheats/timescale from previous simulation or practice sessions do **not** leak into real matches (including multi‑map series like BO3/BO5).
 
 - The JSON **must** provide players for at least one of `team1.players` or `team2.players`.  
   If both are missing/empty, MatchZy will log an error and refuse to start the match.

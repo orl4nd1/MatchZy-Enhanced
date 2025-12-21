@@ -284,6 +284,10 @@ namespace MatchZy
             unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
             isWarmup = true;
             ExecWarmupCfg();
+            // For real (non-simulation, non-practice) matches, ensure we always return
+            // to normal cheats/timescale at the start of warmup so that any previous
+            // simulation or practice configuration does not leak into this match.
+            ApplyNormalTimescaleAndCheatsForRealMatches();
             UpdateTournamentStatus("warmup");
             TriggerMatchReportUpload("warmup_start");
         }
