@@ -17,6 +17,13 @@ namespace MatchZy
 
         public bool isMatchSetup = false;
 
+        // When a loadmatch_url request is issued while a match is still in postgame,
+        // we queue the next match here and auto-load it after ResetMatch() completes.
+        private bool isMatchQueued = false;
+        private string? queuedMatchUrl;
+        private string? queuedMatchHeaderName;
+        private string? queuedMatchHeaderValue;
+
         public bool matchModeOnly = false;
 
         public bool resetCvarsOnSeriesEnd = true;
@@ -93,17 +100,38 @@ namespace MatchZy
         public void LoadMatchFromURL(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
-            if (isMatchSetup)
-            {
-                // command.ReplyToCommand($"[LoadMatchDataCommand] A match is already setup with id: {liveMatchId}, cannot load a new match!");
-                ReplyToUserCommand(player, Localizer["matchzy.mm.get5matchisalreadysetup", liveMatchId]);
-                Log($"[LoadMatchDataCommand] A match is already setup with id: {liveMatchId}, cannot load a new match!");
-                return;
-            }
             string url = command.ArgByIndex(1);
 
             string headerName = command.ArgCount > 3 ? command.ArgByIndex(2) : "";
             string headerValue = command.ArgCount > 3 ? command.ArgByIndex(3) : "";
+
+            // If a match is already setup, allow queuing the next match only once the current
+            // series has reached the postgame phase. The queued match will be auto-loaded
+            // from ResetMatch() after demo upload and cleanup finishes.
+            if (isMatchSetup)
+            {
+                string currentStatus = tournamentStatus.Value ?? string.Empty;
+                if (string.Equals(currentStatus, "postgame", StringComparison.OrdinalIgnoreCase))
+                {
+                    queuedMatchUrl = url;
+                    queuedMatchHeaderName = headerName;
+                    queuedMatchHeaderValue = headerValue;
+                    isMatchQueued = true;
+
+                    Log($"[LoadMatchDataCommand] Current match {liveMatchId} is in postgame. Queuing next match from URL: {url} to load after reset.");
+                    ReplyToUserCommand(player, $"[LoadMatchDataCommand] Current match {liveMatchId} is finishing. Queued next match from URL: {url} to load after reset.");
+
+                    // Surface this state to the allocator / UI so it knows a new match is lined up.
+                    UpdateTournamentStatus("queued");
+                }
+                else
+                {
+                    // command.ReplyToCommand($"[LoadMatchDataCommand] A match is already setup with id: {liveMatchId}, cannot load a new match!");
+                    ReplyToUserCommand(player, Localizer["matchzy.mm.get5matchisalreadysetup", liveMatchId]);
+                    Log($"[LoadMatchDataCommand] A match is already setup with id: {liveMatchId}, cannot load a new match! (status={currentStatus})");
+                }
+                return;
+            }
 
             Log($"[LoadMatchDataCommand] Match setup request received with URL: {url} headerName: {headerName} and headerValue: {headerValue}");
 
@@ -151,6 +179,68 @@ namespace MatchZy
                 Log($"[LoadMatchFromURL - FATAL] An error occured: {e.Message}");
                 UpdateTournamentStatus("error");
                 return;
+            }
+        }
+
+        /// <summary>
+        /// If a match was queued while the previous series was still active (postgame),
+        /// load it now that ResetMatch() has completed and the server is idle again.
+        /// </summary>
+        private void TryLoadQueuedMatchAfterReset()
+        {
+            if (!isMatchQueued || string.IsNullOrWhiteSpace(queuedMatchUrl))
+            {
+                return;
+            }
+
+            string url = queuedMatchUrl!;
+            string? headerName = queuedMatchHeaderName;
+            string? headerValue = queuedMatchHeaderValue;
+
+            // Clear the queue state up-front so we don't accidentally loop if something fails.
+            isMatchQueued = false;
+            queuedMatchUrl = null;
+            queuedMatchHeaderName = null;
+            queuedMatchHeaderValue = null;
+
+            Log($"[MatchQueue] Attempting to auto-load queued match from URL after reset: {url}");
+
+            try
+            {
+                HttpClient httpClient = new();
+                if (!string.IsNullOrEmpty(headerName))
+                {
+                    httpClient.DefaultRequestHeaders.Add(headerName, headerValue);
+                }
+
+                HttpResponseMessage response = httpClient.GetAsync(url).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonData = response.Content.ReadAsStringAsync().Result;
+                    Log($"[LoadQueuedMatch] Received following data for queued match: {jsonData}");
+
+                    bool success = LoadMatchFromJSON(jsonData);
+                    if (!success)
+                    {
+                        Log("[LoadQueuedMatch] Queued match load failed. Keeping server in idle/error state.");
+                        UpdateTournamentStatus("error");
+                    }
+                    else
+                    {
+                        loadedConfigFile = url;
+                    }
+                }
+                else
+                {
+                    Log($"[LoadQueuedMatch] HTTP request for queued match failed with status code: {response.StatusCode}");
+                    UpdateTournamentStatus("error");
+                }
+            }
+            catch (Exception e)
+            {
+                Log($"[LoadQueuedMatch - FATAL] An error occured while loading queued match: {e.Message}");
+                UpdateTournamentStatus("error");
             }
         }
 

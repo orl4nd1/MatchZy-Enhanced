@@ -643,6 +643,10 @@ namespace MatchZy
                     unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
                 }
                 UpdateTournamentStatus("idle", "");
+
+                // If a new match was queued while the previous series was still active (postgame),
+                // automatically load it now that the server has been fully reset to idle.
+                TryLoadQueuedMatchAfterReset();
             }
             catch (Exception ex)
             {
