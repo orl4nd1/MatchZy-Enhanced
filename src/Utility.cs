@@ -637,7 +637,7 @@ namespace MatchZy
                 KillPhaseTimers();
                 UpdatePlayersMap();
 
-                 // Clear any queued next-match identifier when performing a full reset.
+                // Clear any queued next-match identifier when performing a full reset.
                 tournamentNextMatch.Value = "";
 
                 if (warmupCfgRequired)
@@ -1386,12 +1386,18 @@ namespace MatchZy
                 !string.IsNullOrWhiteSpace(matchConfig.OvertimeMode) &&
                 matchConfig.OvertimeMode.Equals("disabled", StringComparison.OrdinalIgnoreCase);
 
-            bool hasOvertimeSegments =
-                matchConfig.OvertimeSegments.HasValue &&
-                matchConfig.OvertimeSegments.Value >= 0;
+            int? overtimeSegments = matchConfig.OvertimeSegments;
 
-            bool disableOtNoDraw = overtimeDisabled && matchConfig.OvertimeSegments.HasValue && matchConfig.OvertimeSegments.Value == 0;
-            bool enabledWithCap = !overtimeDisabled && matchConfig.OvertimeSegments.HasValue && matchConfig.OvertimeSegments.Value > 0;
+            // Interpret a missing overtimeSegments value as 0 when overtime is
+            // explicitly disabled. This makes `"overtimeMode": "disabled"` alone
+            // mean "no OT, no draws" without requiring the platform to always send
+            // an explicit `overtimeSegments: 0`.
+            bool disableOtNoDraw = overtimeDisabled && (!overtimeSegments.HasValue || overtimeSegments.Value == 0);
+
+            // When overtime is enabled and overtimeSegments > 0, we treat any final
+            // tie as "no draws after OT" and resolve it via the performance-based
+            // tiebreak.
+            bool enabledWithCap = !overtimeDisabled && overtimeSegments.HasValue && overtimeSegments.Value > 0;
 
             bool performanceTiebreakRequested = disableOtNoDraw || enabledWithCap;
 

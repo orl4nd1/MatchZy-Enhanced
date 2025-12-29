@@ -146,7 +146,7 @@ The plugin validates the structure and then maps it into an internal `MatchConfi
   - `overtimeSegments` (number, optional)  
     - Parsed and stored on the match; we **do not** currently enforce a hard “max OT segments” cutoff (CS2 continues OT as normal).  
     - Used to control how **ties are resolved** at the end of a map:
-      - If `overtimeMode: "disabled"` and `overtimeSegments: 0`: no OT is played, and a tied final score is broken by comparing **total team damage** (winner = higher damage; if damage is also tied, the result is a true draw).
+      - If `overtimeMode: "disabled"` and `overtimeSegments` is **missing or 0**: no OT is played, and a tied final score is broken by comparing **total team damage** (winner = higher damage; if damage is also tied, the result is a true draw).
       - If `overtimeMode` is not `"disabled"` and `overtimeSegments > 0`: OT may still run as usual, but if the map ever ends tied, the same **damage-based tiebreak** is applied instead of reporting a draw.
       - In all other cases (no `overtimeSegments` provided, or negative), tied final scores are treated as **draws**.
 
