@@ -144,8 +144,11 @@ The plugin validates the structure and then maps it into an internal `MatchConfi
     - `"enabled"` → MatchZy sets `mp_overtime_enable 1`.  
     - `"disabled"` → MatchZy sets `mp_overtime_enable 0` (no overtime; regulation only).
   - `overtimeSegments` (number, optional)  
-    - Parsed and stored on the match, but **currently advisory only**.  
-    - In v1 we do **not** enforce a hard “max OT segments” cutoff; the server keeps playing overtime until CS2 ends the map as normal.
+    - Parsed and stored on the match; we **do not** currently enforce a hard “max OT segments” cutoff (CS2 continues OT as normal).  
+    - Used to control how **ties are resolved** at the end of a map:
+      - If `overtimeMode: "disabled"` and `overtimeSegments: 0`: no OT is played, and a tied final score is broken by comparing **total team damage** (winner = higher damage; if damage is also tied, the result is a true draw).
+      - If `overtimeMode` is not `"disabled"` and `overtimeSegments > 0`: OT may still run as usual, but if the map ever ends tied, the same **damage-based tiebreak** is applied instead of reporting a draw.
+      - In all other cases (no `overtimeSegments` provided, or negative), tied final scores are treated as **draws**.
 
 - `match_side_type`  
   Controls how sides are determined:

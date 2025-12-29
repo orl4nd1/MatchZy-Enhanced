@@ -1368,9 +1368,123 @@ namespace MatchZy
                 matchzyTeam2.seriesScore++;
                 return matchzyTeam2.teamName;
             }
-            else
+
+            // At this point the map is tied on score. Depending on the configured
+            // overtime behavior we either:
+            // - Treat this as a true draw (legacy behavior), or
+            // - Apply a performance-based tiebreaker to pick a winner.
+            //
+            // Current rule:
+            // - If the external config has explicitly disabled overtime and set
+            //   overtimeSegments = 0, we resolve ties by comparing aggregate team
+            //   performance instead of reporting a draw.
+            // - If overtime is enabled and overtimeSegments > 0, we also resolve
+            //   any final tie via the same performance-based tiebreaker. This lets
+            //   tournament flows express "no draws after OT" semantics while we
+            //   still rely on CS2 to run the OT rounds themselves.
+            bool overtimeDisabled =
+                !string.IsNullOrWhiteSpace(matchConfig.OvertimeMode) &&
+                matchConfig.OvertimeMode.Equals("disabled", StringComparison.OrdinalIgnoreCase);
+
+            bool hasOvertimeSegments =
+                matchConfig.OvertimeSegments.HasValue &&
+                matchConfig.OvertimeSegments.Value >= 0;
+
+            bool disableOtNoDraw = overtimeDisabled && matchConfig.OvertimeSegments.HasValue && matchConfig.OvertimeSegments.Value == 0;
+            bool enabledWithCap = !overtimeDisabled && matchConfig.OvertimeSegments.HasValue && matchConfig.OvertimeSegments.Value > 0;
+
+            bool performanceTiebreakRequested = disableOtNoDraw || enabledWithCap;
+
+            if (performanceTiebreakRequested)
             {
-                return "Draw";
+                string? tiebreakWinner = GetPerformanceTiebreakWinner();
+                if (!string.IsNullOrEmpty(tiebreakWinner))
+                {
+                    if (tiebreakWinner == matchzyTeam1.teamName)
+                    {
+                        matchzyTeam1.seriesScore++;
+                    }
+                    else if (tiebreakWinner == matchzyTeam2.teamName)
+                    {
+                        matchzyTeam2.seriesScore++;
+                    }
+
+                    Log($"[Tiebreak] Map ended tied on score (team1={t1score}, team2={t2score}). " +
+                        $"Overtime disabled with overtimeSegments=0, selecting '{tiebreakWinner}' as winner based on performance metrics.");
+
+                    return tiebreakWinner;
+                }
+
+                Log($"[Tiebreak] Map ended tied on score and performance metrics were also tied; " +
+                    $"falling back to a recorded draw.");
+            }
+
+            return "Draw";
+        }
+
+        /// <summary>
+        /// Computes a performance-based tiebreak winner using per-player stats for
+        /// the current map. Currently this aggregates total Damage dealt by each
+        /// team (as reported by ActionTrackingServices) and picks the team with the
+        /// higher total. If both teams have identical Damage, this returns null and
+        /// the caller should treat the result as a true draw.
+        /// </summary>
+        /// <returns>The winning team name, or null if still tied.</returns>
+        private string? GetPerformanceTiebreakWinner()
+        {
+            try
+            {
+                (Dictionary<ulong, Dictionary<string, object>> playerStatsDictionary, _, _) = GetPlayerStatsDict();
+
+                int team1DamageTotal = 0;
+                int team2DamageTotal = 0;
+
+                foreach (var kvp in playerStatsDictionary)
+                {
+                    var stats = kvp.Value;
+
+                    if (!stats.TryGetValue("TeamName", out var teamNameObj) ||
+                        !stats.TryGetValue("Damage", out var damageObj))
+                    {
+                        continue;
+                    }
+
+                    string teamName = teamNameObj.ToString() ?? string.Empty;
+                    if (!int.TryParse(damageObj.ToString(), out int damage))
+                    {
+                        continue;
+                    }
+
+                    if (teamName == matchzyTeam1.teamName)
+                    {
+                        team1DamageTotal += damage;
+                    }
+                    else if (teamName == matchzyTeam2.teamName)
+                    {
+                        team2DamageTotal += damage;
+                    }
+                }
+
+                Log($"[Tiebreak] Aggregate damage totals - {matchzyTeam1.teamName}: {team1DamageTotal}, {matchzyTeam2.teamName}: {team2DamageTotal}");
+
+                if (team1DamageTotal > team2DamageTotal)
+                {
+                    return matchzyTeam1.teamName;
+                }
+
+                if (team2DamageTotal > team1DamageTotal)
+                {
+                    return matchzyTeam2.teamName;
+                }
+
+                // Perfect tie on damage as well – extremely unlikely, but in this case
+                // we deliberately do NOT pick an arbitrary winner.
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log($"[Tiebreak FATAL] Failed to compute performance-based tiebreak winner: {ex.Message}");
+                return null;
             }
         }
 
