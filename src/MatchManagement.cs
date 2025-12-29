@@ -113,6 +113,26 @@ namespace MatchZy
                 string currentStatus = tournamentStatus.Value ?? string.Empty;
                 if (string.Equals(currentStatus, "postgame", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Heuristically derive a slug/identifier for the queued match from the URL, if possible.
+                    string nextMatchIdentifier = url;
+                    try
+                    {
+                        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                        {
+                            var path = uri.AbsolutePath.TrimEnd('/');
+                            var lastSegment = path.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+                            if (!string.IsNullOrEmpty(lastSegment))
+                            {
+                                nextMatchIdentifier = System.IO.Path.GetFileNameWithoutExtension(lastSegment);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback: keep the raw URL as identifier.
+                        nextMatchIdentifier = url;
+                    }
+
                     queuedMatchUrl = url;
                     queuedMatchHeaderName = headerName;
                     queuedMatchHeaderValue = headerValue;
@@ -123,6 +143,7 @@ namespace MatchZy
 
                     // Surface this state to the allocator / UI so it knows a new match is lined up.
                     UpdateTournamentStatus("queued");
+                    tournamentNextMatch.Value = nextMatchIdentifier;
                 }
                 else
                 {
@@ -202,6 +223,7 @@ namespace MatchZy
             queuedMatchUrl = null;
             queuedMatchHeaderName = null;
             queuedMatchHeaderValue = null;
+            tournamentNextMatch.Value = "";
 
             Log($"[MatchQueue] Attempting to auto-load queued match from URL after reset: {url}");
 

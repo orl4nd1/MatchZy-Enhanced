@@ -34,6 +34,7 @@ namespace MatchZy
         public FakeConVar<string> tournamentStatus = new("matchzy_tournament_status", "Current status of the server (idle/loading/warmup/knife/live/paused/halftime/postgame/error)", "idle");
         public FakeConVar<string> tournamentMatch = new("matchzy_tournament_match", "Match slug/identifier currently loaded on this server", "");
         public FakeConVar<string> tournamentUpdated = new("matchzy_tournament_updated", "Unix timestamp of last tournament status update", "0");
+        public FakeConVar<string> tournamentNextMatch = new("matchzy_tournament_next_match", "Next match slug/identifier queued for this server", "");
 
         // Match report upload
         public FakeConVar<string> matchReportEndpoint = new("matchzy_report_endpoint", "HTTP endpoint for match report uploads (https://host/api/events/report)", "");

@@ -631,6 +631,10 @@ namespace MatchZy
 
                 KillPhaseTimers();
                 UpdatePlayersMap();
+
+                 // Clear any queued next-match identifier when performing a full reset.
+                tournamentNextMatch.Value = "";
+
                 if (warmupCfgRequired)
                 {
                     StartWarmup();
