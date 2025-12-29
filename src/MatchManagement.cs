@@ -1030,14 +1030,26 @@ namespace MatchZy
                 string? matchCanClinch = GetConvarValueFromCFGFile(absoluteCfgPath, "mp_match_can_clinch");
                 Server.ExecuteCommand($"mp_match_can_clinch {matchCanClinch ?? "1"}");
 
-                // Only restore mp_overtime_enable from the base CFG when the match
-                // JSON has not explicitly specified an overtimeMode. This ensures
-                // that JSON-level overtimeMode (enabled/disabled) is the source of
-                // truth whenever it is provided, and prevents HandlePlayoutConfig
-                // from re-enabling overtime after ApplyOvertimeAndMaxRoundsFromConfig
-                // has just disabled it.
-                if (string.IsNullOrWhiteSpace(matchConfig.OvertimeMode))
+                // If the JSON explicitly specified an overtimeMode, that is the single
+                // source of truth here. Re-assert it after the live.cfg/base cfg has
+                // been applied so that nothing can silently re-enable overtime.
+                if (!string.IsNullOrWhiteSpace(matchConfig.OvertimeMode))
                 {
+                    string mode = matchConfig.OvertimeMode!.ToLowerInvariant();
+                    if (mode == "enabled")
+                    {
+                        Log("[OvertimeConfig] HandlePlayoutConfig confirming overtime enabled from match config.");
+                        Server.ExecuteCommand("mp_overtime_enable 1");
+                    }
+                    else if (mode == "disabled")
+                    {
+                        Log("[OvertimeConfig] HandlePlayoutConfig confirming overtime disabled from match config.");
+                        Server.ExecuteCommand("mp_overtime_enable 0");
+                    }
+                }
+                else
+                {
+                    // No JSON override – fall back to whatever the base cfg says.
                     string? overtimeEnabled = GetConvarValueFromCFGFile(absoluteCfgPath, "mp_overtime_enable");
                     Server.ExecuteCommand($"mp_overtime_enable {overtimeEnabled ?? "1"}");
                 }

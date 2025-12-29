@@ -702,6 +702,22 @@ namespace MatchZy
                         Log("[OvertimeConfig] Disabling overtime via match config (overtimeMode=disabled).");
                         Server.ExecuteCommand("mp_overtime_enable 0");
                     }
+
+                    // Log the effective value after issuing our commands so we can see if any
+                    // external config or plugin is fighting us.
+                    try
+                    {
+                        var otCvar = ConVar.Find("mp_overtime_enable");
+                        if (otCvar != null)
+                        {
+                            int current = otCvar.GetPrimitiveValue<int>();
+                            Log($"[OvertimeConfig] mp_overtime_enable is now '{current}' after ApplyOvertimeAndMaxRoundsFromConfig (mode={matchConfig.OvertimeMode}).");
+                        }
+                    }
+                    catch
+                    {
+                        // Best‑effort diagnostic; ignore failures here so we never break match start.
+                    }
                 }
             }
             catch (Exception ex)
