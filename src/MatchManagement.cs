@@ -1028,9 +1028,19 @@ namespace MatchZy
             {
                 var absoluteCfgPath = Path.Join(Server.GameDirectory + "/csgo/cfg", GetGameMode() == 1 ? liveCfgPath : liveWingmanCfgPath);
                 string? matchCanClinch = GetConvarValueFromCFGFile(absoluteCfgPath, "mp_match_can_clinch");
-                string? overtimeEnabled = GetConvarValueFromCFGFile(absoluteCfgPath, "mp_overtime_enable");
                 Server.ExecuteCommand($"mp_match_can_clinch {matchCanClinch ?? "1"}");
-                Server.ExecuteCommand($"mp_overtime_enable {overtimeEnabled ?? "1"}");
+
+                // Only restore mp_overtime_enable from the base CFG when the match
+                // JSON has not explicitly specified an overtimeMode. This ensures
+                // that JSON-level overtimeMode (enabled/disabled) is the source of
+                // truth whenever it is provided, and prevents HandlePlayoutConfig
+                // from re-enabling overtime after ApplyOvertimeAndMaxRoundsFromConfig
+                // has just disabled it.
+                if (string.IsNullOrWhiteSpace(matchConfig.OvertimeMode))
+                {
+                    string? overtimeEnabled = GetConvarValueFromCFGFile(absoluteCfgPath, "mp_overtime_enable");
+                    Server.ExecuteCommand($"mp_overtime_enable {overtimeEnabled ?? "1"}");
+                }
             }
         }
 
