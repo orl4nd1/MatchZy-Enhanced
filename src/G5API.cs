@@ -99,7 +99,9 @@ namespace MatchZy
             //       The missing attributes are:
             //       - "matchid"    - It is currently implemented to return long and correspunds to the "liveMatchId".
             //                        However, it does not return the correct values when in scrim or manual mode.
-            //       - "teamX.connected_clients" - This is not implemented. Feel free to help implement this. Currently it returns -1 to indicate that it is not implemented.
+            //       - "teamX.connected_clients" - Previously this was not implemented and returned -1. It is now
+            //         implemented using the current playerData / simulation identity mapping so that simulation
+            //         matches report realistic connected player counts as if bots were human players.
             //       - "teamX.ready" - This is not implemented. Feel free to help implement this. Currently it indicates if everyone (not just the team) is ready.
             //       - "round_time" - This is not implemented, as it is not currently tracked by the plugin. Currently it returns Null.
 
@@ -125,6 +127,50 @@ namespace MatchZy
             {
                 (int team1, int team2) = GetTeamsScore();
 
+                // Determine connected clients per team. For simulation matches we treat bots that are mapped
+                // to simulated player identities as real connected players. For normal matches we derive
+                // counts from the current playerData dictionary and team-side mapping.
+                int team1ConnectedClients = 0;
+                int team2ConnectedClients = 0;
+
+                if (isSimulationMode && simulationPlayersByUserId.Count > 0)
+                {
+                    foreach (var identity in simulationPlayersByUserId.Values)
+                    {
+                        if (identity.TeamSlot == "team1")
+                        {
+                            team1ConnectedClients++;
+                        }
+                        else if (identity.TeamSlot == "team2")
+                        {
+                            team2ConnectedClients++;
+                        }
+                    }
+                }
+                else
+                {
+                    // Non-simulation (human) matches: count non-bot players on each side, mapped back to
+                    // logical team1/team2 using the current teamSides / reverseTeamSides mapping.
+                    foreach (var kvp in playerData)
+                    {
+                        var p = kvp.Value;
+                        if (p == null || !p.IsValid || p.IsBot || !p.UserId.HasValue) continue;
+                        if (p.Connected != PlayerConnectedState.PlayerConnected) continue;
+
+                        CsTeam team = GetPlayerTeam(p);
+                        if (team == CsTeam.CounterTerrorist)
+                        {
+                            if (reverseTeamSides["CT"] == matchzyTeam1) team1ConnectedClients++;
+                            else if (reverseTeamSides["CT"] == matchzyTeam2) team2ConnectedClients++;
+                        }
+                        else if (team == CsTeam.Terrorist)
+                        {
+                            if (reverseTeamSides["TERRORIST"] == matchzyTeam1) team1ConnectedClients++;
+                            else if (reverseTeamSides["TERRORIST"] == matchzyTeam2) team2ConnectedClients++;
+                        }
+                    }
+                }
+
                 bool ready = true;
                 foreach (var key in playerReadyStatus.Keys)
                 {
@@ -140,7 +186,7 @@ namespace MatchZy
                     Name = matchzyTeam1.teamName,
                     SeriesScore = matchzyTeam1.seriesScore,
                     CurrentMapScore = team1,
-                    ConnectedClients = -1,
+                    ConnectedClients = team1ConnectedClients,
                     Ready = ready,
                     Side = teamSides[matchzyTeam1].ToLower()
                 };
@@ -150,7 +196,7 @@ namespace MatchZy
                     Name = matchzyTeam2.teamName,
                     SeriesScore = matchzyTeam2.seriesScore,
                     CurrentMapScore = team2,
-                    ConnectedClients = -1,
+                    ConnectedClients = team2ConnectedClients,
                     Ready = ready,
                     Side = teamSides[matchzyTeam2].ToLower()
                 };
