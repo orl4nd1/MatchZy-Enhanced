@@ -625,6 +625,7 @@ namespace MatchZy
 
         public void GetOptionalMatchValues(JObject jsonDataObject)
         {
+            // Map and roster/spectator configuration
             if (jsonDataObject["map_sides"] != null)
             {
                 matchConfig.MapSides = jsonDataObject["map_sides"]!.ToObject<List<string>>()!;
@@ -650,6 +651,8 @@ namespace MatchZy
                     matchConfig.Spectators = new JObject();
                 }
             }
+
+            // Series / flow toggles
             if (jsonDataObject["clinch_series"] != null)
             {
                 matchConfig.SeriesCanClinch = bool.Parse(jsonDataObject["clinch_series"]!.ToString());
@@ -662,6 +665,8 @@ namespace MatchZy
             {
                 matchConfig.Wingman = bool.Parse(jsonDataObject["wingman"]!.ToString());
             }
+
+            // Simulation / practice controls
             if (jsonDataObject["simulation"] != null)
             {
                 matchConfig.Simulation = bool.Parse(jsonDataObject["simulation"]!.ToString());
@@ -687,11 +692,54 @@ namespace MatchZy
                     matchConfig.SimulationTimeScale = 1.0f;
                 }
             }
+
+            // Veto / map selection mode
             if (jsonDataObject["veto_mode"] != null)
             {
                 matchConfig.MapBanOrder = jsonDataObject["veto_mode"]!.ToObject<List<string>>()!;
             }
 
+            // Tournament overtime / regulation configuration (shuffle tournaments, etc.).
+            // These are advisory match-level settings that we translate into the
+            // appropriate CS2 cvars when the match goes live.
+            if (jsonDataObject["maxRounds"] != null)
+            {
+                try
+                {
+                    matchConfig.MaxRounds = jsonDataObject["maxRounds"]!.Value<int>();
+                    Log($"[GetOptionalMatchValues] Parsed maxRounds={matchConfig.MaxRounds}");
+                }
+                catch (Exception e)
+                {
+                    Log($"[GetOptionalMatchValues] Failed to parse maxRounds: {e.Message}");
+                }
+            }
+
+            if (jsonDataObject["overtimeMode"] != null)
+            {
+                try
+                {
+                    matchConfig.OvertimeMode = jsonDataObject["overtimeMode"]!.ToString();
+                    Log($"[GetOptionalMatchValues] Parsed overtimeMode='{matchConfig.OvertimeMode}'");
+                }
+                catch (Exception e)
+                {
+                    Log($"[GetOptionalMatchValues] Failed to parse overtimeMode: {e.Message}");
+                }
+            }
+
+            if (jsonDataObject["overtimeSegments"] != null)
+            {
+                try
+                {
+                    matchConfig.OvertimeSegments = jsonDataObject["overtimeSegments"]!.Value<int>();
+                    Log($"[GetOptionalMatchValues] Parsed overtimeSegments={matchConfig.OvertimeSegments}");
+                }
+                catch (Exception e)
+                {
+                    Log($"[GetOptionalMatchValues] Failed to parse overtimeSegments: {e.Message}");
+                }
+            }
         }
 
         public void HandleTeamNameChangeCommand(CCSPlayerController? player, string teamName, int teamNum)

@@ -136,6 +136,17 @@ The plugin validates the structure and then maps it into an internal `MatchConfi
 - `simulation`  
   Boolean; when `true`, enables **simulation mode** (see the separate `Simulation mode` page).
 
+- `maxRounds` / `overtimeMode` / `overtimeSegments`  
+  High-level overtime / regulation configuration, typically provided by the tournament backend:
+  - `maxRounds` (number, optional)  
+    - When present and > 0, MatchZy maps this directly to `mp_maxrounds` when the match goes live.
+  - `overtimeMode` (`"enabled"` \| `"disabled"`, optional)  
+    - `"enabled"` → MatchZy sets `mp_overtime_enable 1`.  
+    - `"disabled"` → MatchZy sets `mp_overtime_enable 0` (no overtime; regulation only).
+  - `overtimeSegments` (number, optional)  
+    - Parsed and stored on the match, but **currently advisory only**.  
+    - In v1 we do **not** enforce a hard “max OT segments” cutoff; the server keeps playing overtime until CS2 ends the map as normal.
+
 - `match_side_type`  
   Controls how sides are determined:
   - `"standard"` / `"always_knife"` – sides decided via knife (or simulated knife in simulation mode).

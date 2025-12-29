@@ -444,6 +444,11 @@ namespace MatchZy
             SetLiveFlags();
             KillPhaseTimers();
             ExecLiveCFG();
+            // Apply any per-match overtime / regulation settings provided in the
+            // JSON match configuration (shuffle tournaments, etc.). This lets the
+            // external controller drive mp_maxrounds and mp_overtime_enable without
+            // relying on plugin-only convars.
+            ApplyOvertimeAndMaxRoundsFromConfig();
             // Adding timer here to make sure that CFG execution is completed till then
             AddTimer(1, () =>
             {
@@ -655,6 +660,53 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[ResetMatch - FATAL] [ERROR]: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Applies high-level overtime / regulation configuration from the loaded
+        /// MatchConfig to the underlying CS2 cvars. This is driven by JSON fields
+        /// like maxRounds and overtimeMode rather than plugin-only convars.
+        ///
+        /// - maxRounds (when present) maps directly to mp_maxrounds.
+        /// - overtimeMode (\"enabled\" / \"disabled\") controls mp_overtime_enable
+        ///   when present.
+        ///
+        /// NOTE: overtimeSegments is currently advisory only; we do not yet enforce
+        /// a hard cap on the number of OT segments, we just keep playing until CS2
+        /// ends the match as usual.
+        /// </summary>
+        private void ApplyOvertimeAndMaxRoundsFromConfig()
+        {
+            try
+            {
+                // Apply per-match regulation max rounds if provided.
+                if (matchConfig.MaxRounds.HasValue && matchConfig.MaxRounds.Value > 0)
+                {
+                    int value = matchConfig.MaxRounds.Value;
+                    Log($"[OvertimeConfig] Applying maxRounds={value} → mp_maxrounds");
+                    Server.ExecuteCommand($"mp_maxrounds {value}");
+                }
+
+                // Apply overtime enable/disable if provided.
+                if (!string.IsNullOrWhiteSpace(matchConfig.OvertimeMode))
+                {
+                    string mode = matchConfig.OvertimeMode!.ToLowerInvariant();
+                    if (mode == "enabled")
+                    {
+                        Log("[OvertimeConfig] Enabling overtime via match config (overtimeMode=enabled).");
+                        Server.ExecuteCommand("mp_overtime_enable 1");
+                    }
+                    else if (mode == "disabled")
+                    {
+                        Log("[OvertimeConfig] Disabling overtime via match config (overtimeMode=disabled).");
+                        Server.ExecuteCommand("mp_overtime_enable 0");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[OvertimeConfig FATAL] Error applying overtime/max rounds config: {ex.Message}");
             }
         }
 

@@ -7,6 +7,7 @@ namespace MatchZy
 
     public class MatchConfig
     {
+        // Tournament / match flow settings
         [JsonPropertyName("maplist")]
         public List<string> Maplist { get; set; } = new List<string>();
 
@@ -29,6 +30,30 @@ namespace MatchZy
 
         [JsonPropertyName("num_maps")]
         public int NumMaps { get; set; } = 1;
+
+        // For shuffle tournaments and other flows that specify regulation length
+        // and overtime behavior via top-level JSON fields rather than raw cvars.
+        //
+        // Example payload from the tournament backend:
+        // {
+        //   "maxRounds": 24,
+        //   "overtimeMode": "enabled",   // "enabled" | "disabled"
+        //   "overtimeSegments": 2        // optional, advisory only in v1
+        // }
+        //
+        // - MaxRounds maps to mp_maxrounds when present.
+        // - OvertimeMode controls mp_overtime_enable when present.
+        // - OvertimeSegments is currently informational only; we do not cap OT
+        //   segments yet, we simply expose it for logging/telemetry and future
+        //   behavior.
+        [JsonPropertyName("maxRounds")]
+        public int? MaxRounds { get; set; }
+
+        [JsonPropertyName("overtimeMode")]
+        public string? OvertimeMode { get; set; }
+
+        [JsonPropertyName("overtimeSegments")]
+        public int? OvertimeSegments { get; set; }
 
         [JsonPropertyName("players_per_team")]
         public int PlayersPerTeam { get; set; } = 5;
