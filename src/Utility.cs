@@ -2672,6 +2672,13 @@ namespace MatchZy
 
         public bool HandlePlayerWhitelist(CCSPlayerController player, string steamId)
         {
+            // Always allow admins to bypass the MatchZy whitelist; they may join to observe
+            // or administrate matches without needing a separate whitelist entry.
+            if (IsPlayerAdmin(player))
+            {
+                return false;
+            }
+
             string whitelistfileName = "MatchZy/whitelist.cfg";
             string whitelistPath = Path.Join(Server.GameDirectory + "/csgo/cfg", whitelistfileName);
             string? directoryPath = Path.GetDirectoryName(whitelistPath);

@@ -31,7 +31,9 @@ public partial class MatchZy
                 return HookResult.Continue;
             }
 
-            // Handling whitelisted players (skip for simulation bots)
+            // Handling whitelisted players (skip for simulation bots). Admins are allowed
+            // to bypass the MatchZy whitelist and may connect even if they are not on the
+            // per-server whitelist or in the match roster.
             bool isSimulationBot = isSimulationMode && player.IsBot;
             if (!isSimulationBot && (!player.IsBot || !player.IsHLTV))
             {
@@ -42,6 +44,13 @@ public partial class MatchZy
 
                 if (isMatchSetup || matchModeOnly)
                 {
+                    // Allow admins to connect even if they are not part of the current
+                    // match configuration; they may spectate or administer the server.
+                    if (IsPlayerAdmin(player))
+                    {
+                        return HookResult.Continue;
+                    }
+
                     CsTeam team = GetPlayerTeam(player);
                     if (team == CsTeam.None)
                     {
