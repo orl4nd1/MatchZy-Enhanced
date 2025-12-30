@@ -129,12 +129,40 @@ These are the **most important knobs** when using MatchZy with an external contr
 - `matchzy_demo_upload_header_key <name>`, `matchzy_demo_upload_header_value <value>`  
   Optional header (for example `X-MatchZy-Token`) used when uploading demos.
 
+### Remote backup upload
+
+- `matchzy_remote_backup_url <url>` / `get5_remote_backup_url <url>`  
+  Send periodic JSON backup files (match state snapshots) to this URL. Leave empty to disable.
+- `matchzy_remote_backup_header_key <name>`, `matchzy_remote_backup_header_value <value>`  
+  Optional custom HTTP header used when posting backup payloads (for example an auth token).
+
 ### Match loading (when not fully controlled by Auto Tournament)
 
 - `matchzy_loadmatch <file>`  
   Load a match from a local JSON file under the CS2 `csgo` directory.
 - `matchzy_loadmatch_url <url> [header_name] [header_value]` / `get5_loadmatch_url`  
   Load a match JSON from an HTTP endpoint (typically your tournament platform).
+
+### Roster management (advanced)
+
+- `matchzy_addplayer <steam64> <team1|team2|spec> "<name>"` / `get5_addplayer`  
+  Add a player or spectator to the in‑memory match config during match setup. Fails if the SteamID
+  is invalid, the player is already assigned, or you try to modify the roster during halftime.
+- `matchzy_removeplayer <steam64>` / `get5_removeplayer`  
+  Remove a player from all teams in the current match config (and kick them from the server if
+  they are connected). Only available while a match is set up and not in the halftime phase.
+
+### Status and health checks
+
+- `get5_status`  
+  Print a JSON blob describing the current match state, scores, map info and various Get5‑style
+  fields. Intended for external controllers and monitoring tools.
+- `get5_web_available`  
+  Return a small JSON object with the current game state as an integer, for legacy Get5 web
+  integrations checking whether the plugin is active.
+- `matchzy_check_for_updates`  
+  Ask the built‑in auto‑updater to query Steam and report whether this CS2 server is up to date.
+  This is informational only and does **not** trigger a restart by itself.
 
 ## Key MatchZy convars (`matchzy_...`)
 

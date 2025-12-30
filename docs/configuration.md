@@ -130,6 +130,11 @@ The plugin validates the structure and then maps it into an internal `MatchConfi
   - `players`: Object mapping `SteamID` → `name`.  
     This is especially important in **simulation mode**, where each player is represented by a bot.
 
+- (optional) `admins`  
+  Top‑level array of Steam64 IDs that should be treated as **match‑local admins**. These admins
+  are valid only for this match and are checked in addition to any global admins defined via
+  CSSharp or `cfg/MatchZy/admins.json`.
+
 - `wingman`  
   Boolean; if `true`, MatchZy sets up the match in wingman mode (2v2).
 

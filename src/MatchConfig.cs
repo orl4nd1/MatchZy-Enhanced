@@ -102,6 +102,12 @@ namespace MatchZy
         [JsonPropertyName("spectators")]
         public JToken Spectators { get; set; } = new JObject();
 
+        // Optional: per-match admin SteamIDs (Steam64). When provided, any player whose
+        // SteamID appears in this list is treated as an admin for the duration of this match,
+        // in addition to any global admins defined via CSSharp or MatchZy admins.json.
+        [JsonPropertyName("admins")]
+        public List<string> AdminSteamIds { get; set; } = new List<string>();
+
         [JsonPropertyName("remote_log_url")]
         public string RemoteLogURL { get; set; } = "";
 

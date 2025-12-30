@@ -652,6 +652,23 @@ namespace MatchZy
                 }
             }
 
+            // Optional: per-match admin SteamIDs. When present, these Steam64 IDs are treated
+            // as admins for the duration of this match in addition to any global admins from
+            // CSSharp or MatchZy admins.json.
+            if (jsonDataObject["admins"] != null)
+            {
+                try
+                {
+                    var adminIds = jsonDataObject["admins"]!.ToObject<List<string>>() ?? new List<string>();
+                    matchConfig.AdminSteamIds = adminIds;
+                }
+                catch (Exception)
+                {
+                    Log("[LOADMATCH] Invalid admins list in JSON; ignoring per-match admins.");
+                    matchConfig.AdminSteamIds = new List<string>();
+                }
+            }
+
             // Series / flow toggles
             if (jsonDataObject["clinch_series"] != null)
             {

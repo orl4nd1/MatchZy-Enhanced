@@ -123,15 +123,55 @@ namespace MatchZy
 
         private bool IsPlayerAdmin(CCSPlayerController? player, string command = "", params string[] permissions)
         {
-            if (everyoneIsAdmin.Value) return true; // Everyone is treated as admin if matchzy_everyone_is_admin is true.
+            // Global override: everyone is treated as admin if matchzy_everyone_is_admin is true.
+            if (everyoneIsAdmin.Value)
+            {
+                return true;
+            }
+
+            // Commands issued directly from the server console should always be allowed.
+            if (player == null)
+            {
+                return true;
+            }
+
+            // Per-match admins defined in the loaded match config (Steam64 IDs).
+            // This allows the tournament platform / API to mark specific users as
+            // admins for just this match without touching global admin files.
+            try
+            {
+                if (isMatchSetup && matchConfig.AdminSteamIds != null && matchConfig.AdminSteamIds.Count > 0)
+                {
+                    string steamId = player.SteamID.ToString();
+                    if (matchConfig.AdminSteamIds.Contains(steamId))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // If anything goes wrong reading matchConfig, fall through to the
+                // normal global admin checks instead of failing the command.
+            }
+
+            // CSSharp-style permission flags (addons/counterstrikesharp/configs/admins.json).
             string[] updatedPermissions = permissions.Concat(new[] { "@css/root" }).ToArray();
             RequiresPermissionsOr attr = new(updatedPermissions)
             {
                 Command = command
             };
-            if (attr.CanExecuteCommand(player)) return true; // Admin exists in admins.json of CSSharp
-            if (player == null) return true; // Sent via server, hence should be treated as an admin.
-            if (loadedAdmins.ContainsKey(player.SteamID.ToString())) return true; // Admin exists in admins.json of MatchZy
+            if (attr.CanExecuteCommand(player))
+            {
+                return true;
+            }
+
+            // Legacy MatchZy-specific admins.json (csgo/cfg/MatchZy/admins.json).
+            if (loadedAdmins.ContainsKey(player.SteamID.ToString()))
+            {
+                return true;
+            }
+
             return false;
         }
 
