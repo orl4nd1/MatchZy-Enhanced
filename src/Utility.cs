@@ -509,9 +509,9 @@ namespace MatchZy
             // This is to reload the map once it is over so that all flags are reset accordingly
             Server.ExecuteCommand("mp_match_end_restart true");
 
-            PrintToAllChat($"{ChatColors.Olive}LIVE!");
-            PrintToAllChat($"{ChatColors.Lime}LIVE!");
-            PrintToAllChat($"{ChatColors.Green}LIVE!");
+            // Professional LIVE announcement + short core command help for players
+            PrintToAllChat($"{ChatColors.Lime}MATCH LIVE{ChatColors.Default} — {ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} vs {ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default}. Good luck & have fun!");
+            PrintToAllChat($"{ChatColors.Grey}Pauses:{ChatColors.Default} your team can request a pause with {ChatColors.Red}.pause{ChatColors.Default} and resume with {ChatColors.Red}.unpause{ChatColors.Default}.");
 
             // Send warmup_ended event if not coming from knife round
             if (!isSideSelectionPhase)

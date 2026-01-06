@@ -26,14 +26,37 @@ For integration details (webhooks, demo upload, JSON config), see **Getting Star
 
 ### Pause & technical timeouts
 
-| Command                 | Who can use it                  | Description                                                                           |
-| ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `.tech`                 | Players / admins (configurable) | Request a **technical pause** using the plugin’s pause system.                        |
-| `.pause`, `.p`          | Players / admins (configurable) | Pause the match (exact behavior depends on `matchzy_use_pause_command_for_tactical`). |
-| `.unpause`, `.up`       | Players / admins                | Request to unpause the match. Both teams must confirm unless an admin unpauses.       |
-| `.tac`                  | Players on a team               | Start a **tactical timeout** using the built‑in CS2 timeout system.                   |
-| `.fp`, `.forcepause`    | Admins only                     | Force‑pause the match as an admin.                                                    |
-| `.fup`, `.forceunpause` | Admins only                     | Force‑unpause the match as an admin.                                                  |
+| Command                 | Who can use it                  | Description                                                                                                                                                 |
+| ----------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.tech`                 | Players / admins (configurable) | Request a **technical pause** via MatchZy’s pause system (for hardware/network/config issues). Does **not** consume a CS2 tactical timeout.                 |
+| `.pause`, `.p`          | Players / admins (configurable) | General MatchZy pause. Behaves as a normal pause or as a tactical pause depending on `matchzy_use_pause_command_for_tactical` and other match settings.     |
+| `.unpause`, `.up`       | Players / admins                | Request to unpause the match. Both teams must confirm unless an admin unpauses (via `.fp` / `.fup` or console), to prevent accidental or one‑sided resumes. |
+| `.tac`                  | Players on a team               | Start a **tactical timeout** using the **native CS2 timeout system** (shows as a tactical timeout in‑game, consumes that team’s tactical timeout budget).   |
+| `.fp`, `.forcepause`    | Admins only                     | Force‑pause the match as an admin, regardless of team votes.                                                                                                |
+| `.fup`, `.forceunpause` | Admins only                     | Force‑unpause the match as an admin, immediately resuming play.                                                                                             |
+
+#### When to use which pause
+
+- **Use `.pause`** when your team needs a **short, coordinated break** (e.g. quick bio break, brief reset between rounds) and you want MatchZy to manage the pause flow and unpause voting.
+- **Use `.tech`** when there is a **technical problem** (PC crash, network issues, config problems, HUD bugs, etc.) and you need time to fix it **without spending a CS2 tactical timeout**.
+- **Use `.tac`** when you want a **strategic timeout** that:
+  - uses the **game’s native tactical timeout system**,
+  - is subject to the game’s tactical timeout limits per team/map,
+  - and should clearly show up to viewers/players as a “tactical timeout” on the CS2 UI/scoreboard.
+
+#### How and when the game actually pauses
+
+- **MatchZy pauses (`.pause`, `.tech`, `.fp`)**
+
+  - Internally call `mp_pause_match`, which is handled by the CS2 server:
+    - If triggered **during a live round**, that round is allowed to **finish normally**, and the game pauses in the **next freezetime** at the start of the following round.
+    - If triggered **while already in freezetime/halftime**, the pause takes effect **immediately** and the round timer does not start until the pause is cleared.
+  - No pause command rewinds or freezes the current round mid‑fight; it always respects the engine’s “pause at a safe point” behavior.
+
+- **Tactical timeouts (`.tac`)**
+  - Use the native CS2 timeout commands: `timeout_terrorist_start` / `timeout_ct_start`.
+  - If triggered **during a live round**, the requested tactical timeout starts in the **next freezetime** (between rounds).
+  - If triggered **while already in freezetime**, the tactical timeout begins **immediately**, consuming one of that team’s available tactical timeouts and showing up in the CS2 UI.
 
 ### Knife and side selection
 
