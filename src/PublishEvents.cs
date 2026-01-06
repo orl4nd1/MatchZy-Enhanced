@@ -16,10 +16,13 @@ namespace MatchZy
 
                 Log($"[SendEventAsync] Sending Event: {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} on {matchConfig.RemoteLogURL}");
                 
-                // Print to server console AND chat for visibility
+                // Print to server console, and optionally to chat for visibility
                 Server.NextFrame(() => {
                     Server.PrintToConsole($"[MatchZy Events] Sending '{@event.EventName}' to {matchConfig.RemoteLogURL}");
-                    Server.PrintToChatAll($"{chatPrefix} {ChatColors.Grey}Event:{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} → {ChatColors.Grey}{GetShortUrl(matchConfig.RemoteLogURL)}");
+                    if (debugChatEnabled.Value)
+                    {
+                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Grey}Event:{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} → {ChatColors.Grey}{GetShortUrl(matchConfig.RemoteLogURL)}");
+                    }
                 });
 
                 using var httpClient = new HttpClient();
@@ -40,10 +43,13 @@ namespace MatchZy
                 {
                     Log($"[SendEventAsync] Sending {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} successful with status code: {httpResponseMessage.StatusCode}");
                     
-                    // Print success to console and chat
+                    // Print success to console, and optionally to chat
                     Server.NextFrame(() => {
                         Server.PrintToConsole($"[MatchZy Events] ✓ '{@event.EventName}' sent successfully ({httpResponseMessage.StatusCode})");
-                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}✓{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} sent");
+                        if (debugChatEnabled.Value)
+                        {
+                            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}✓{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} sent");
+                        }
                     });
                 }
                 else
@@ -51,11 +57,14 @@ namespace MatchZy
                     string errorContent = await httpResponseMessage.Content.ReadAsStringAsync();
                     Log($"[SendEventAsync] Sending {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} failed with status code: {httpResponseMessage.StatusCode}, ResponseContent: {errorContent}");
                     
-                    // Print error to console and chat
+                    // Print error to console, and optionally to chat
                     Server.NextFrame(() => {
                         Server.PrintToConsole($"[MatchZy Events] ✗ FAILED to send '{@event.EventName}' (HTTP {httpResponseMessage.StatusCode})");
                         Server.PrintToConsole($"[MatchZy Events] Error: {errorContent}");
-                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}FAILED{ChatColors.Default} ({httpResponseMessage.StatusCode})");
+                        if (debugChatEnabled.Value)
+                        {
+                            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}FAILED{ChatColors.Default} ({httpResponseMessage.StatusCode})");
+                        }
                     });
                 }
             }
@@ -63,10 +72,13 @@ namespace MatchZy
             {
                 Log($"[SendEventAsync FATAL] An error occurred: {e.Message}");
                 
-                // Print exception to console and chat
+                // Print exception to console, and optionally to chat
                 Server.NextFrame(() => {
                     Server.PrintToConsole($"[MatchZy Events] ✗ EXCEPTION sending '{@event.EventName}': {e.Message}");
-                    Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}ERROR:{ChatColors.Default} {e.Message}");
+                    if (debugChatEnabled.Value)
+                    {
+                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}ERROR:{ChatColors.Default} {e.Message}");
+                    }
                 });
             }
         }

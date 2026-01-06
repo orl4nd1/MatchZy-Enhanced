@@ -22,6 +22,8 @@ namespace MatchZy
 
         public FakeConVar<bool> showCreditsOnMatchStart = new("matchzy_show_credits_on_match_start", "Whether to show 'MatchZy Plugin by WD-' message on match start. Default: true", true);
 
+        public FakeConVar<bool> debugChatEnabled = new("matchzy_debug_chat", "Whether to show debug/event logs in in-game chat (e.g. event send status, warmup_end, player_connect). Default: false", false);
+
         public FakeConVar<string> hostnameFormat = new(
             "matchzy_hostname_format",
             "The server hostname to use. Set to \"\" to disable/use existing. Default: {TEAM1} vs {TEAM2}",
