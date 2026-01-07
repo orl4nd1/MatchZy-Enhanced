@@ -68,28 +68,43 @@ For integration details (webhooks, demo upload, JSON config), see **Getting Star
 
 ### Practice / tactics utilities
 
-| Command                                                 | Who can use it  | Description                                                 |
-| ------------------------------------------------------- | --------------- | ----------------------------------------------------------- |
-| `.prac`, `.tactics`                                     | Admins only     | Enter practice mode (lineup training, bots, utilities).     |
-| `.exitprac`                                             | Admins only     | Exit practice mode and return to match mode.                |
-| `.bot`, `.cbot`, `.crouchbot`, `.boost`, `.crouchboost` | Players in prac | Spawn various helper bots for practicing nades/boosts.      |
-| `.nobots`                                               | Players in prac | Remove practice bots.                                       |
-| `.impacts`, `.traj`, `.pip`                             | Players in prac | Enable grenade impact and trajectory visualization helpers. |
-| `.noflash`, `.noblind`                                  | Players in prac | Toggle “no flash” for yourself while practicing.            |
-| `.ff`, `.fastforward`                                   | Players in prac | Fast‑forward the round in practice mode.                    |
-| `.clear`                                                | Players in prac | Clear grenades / helpers in practice mode.                  |
+| Command                                                                                                                   | Who can use it  | Description                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------- |
+| `.prac`, `.tactics`                                                                                                       | Admins only     | Enter practice mode (lineup training, bots, utilities).                                              |
+| `.exitprac`                                                                                                               | Admins only     | Exit practice mode and return to match mode.                                                         |
+| `.bot`, `.cbot`, `.crouchbot`, `.boost`, `.crouchboost`                                                                   | Players in prac | Spawn helper bots (standing/crouched/boost) at your position for practicing nades and boosts.       |
+| `.nobots`                                                                                                                 | Players in prac | Remove all practice bots spawned by MatchZy.                                                         |
+| `.spawn`, `.ctspawn`, `.tspawn`                                                                                           | Players in prac | Teleport to a recorded spawn by round index for your team / CT / T spawns.                          |
+| `.bestspawn`, `.worstspawn`, `.bestctspawn`, `.worstctspawn`, `.besttspawn`, `.worsttspawn`                               | Players in prac | Teleport to the closest / furthest competitive spawn relative to your current position.             |
+| `.showspawns`, `.hidespawns`                                                                                              | Players in prac | Visualize all competitive spawns with beams (`.showspawns`) or hide them again (`.hidespawns`).     |
+| `.impacts`, `.traj`, `.pip`                                                                                               | Players in prac | Toggle CS2’s `sv_showimpacts` and `sv_grenade_trajectory_prac_pipreview` helpers.                    |
+| `.noflash`, `.noblind`                                                                                                    | Players in prac | Toggle “no flash” for yourself while practicing.                                                     |
+| `.ff`, `.fastforward`                                                                                                     | Players in prac | Fast‑forward the round in practice mode.                                                             |
+| `.clear`                                                                                                                  | Players in prac | Clear grenades / helpers in practice mode.                                                           |
+| `.savepos`, `.loadpos`                                                                                                    | Players in prac | Save your current position/angles and later teleport back to that saved position.                   |
+| `.last`, `.back`, `.throwindex`, `.lastindex`, `.delay`                                                                   | Players in prac | Navigate nade‑throw history: jump to last throw, go back by index, rethrow by index, add a delay.   |
+| `.throw`, `.rethrow`, `.throwsmoke`, `.rethrowsmoke`, `.throwflash`, `.rethrowflash`, `.throwgrenade`, `.rethrowgrenade`, `.throwmolotov`, `.rethrowmolotov`, `.throwdecoy`, `.rethrowdecoy` | Players in prac | Re‑execute your last grenade of the given type from the same position/angles.                        |
+| `.timer`                                                                                                                  | Players in prac | Start/stop a per‑player practice timer and show the result (e.g. for nade lineups or movement).     |
+| `.god`                                                                                                                    | Players in prac | Toggle “god” HP in practice (gives very high HP so you don’t die while testing lineups).            |
+| `.break`                                                                                                                  | Players in prac | Break all breakable entities (e.g. windows) on the map.                                              |
+| `.t`, `.ct`, `.spec`, `.fas`, `.watchme`                                                                                  | Players in prac | Switch to T/CT/spec, or move everyone else to spectator to watch your POV (`.fas` / `.watchme`).    |
 
 ### Miscellaneous
 
-| Command              | Who can use it  | Description                                                                  |
-| -------------------- | --------------- | ---------------------------------------------------------------------------- |
-| `.whitelist`         | Admins only     | Toggle the match whitelist (only configured players may stay on the server). |
-| `.globalnades`       | Admins only     | Toggle whether saved lineups are global or per‑player.                       |
-| `.settings`          | Admins only     | Show current match settings (knife, ready required, playout).                |
-| `.help`              | Anyone          | Show a help message listing common MatchZy commands.                         |
-| `.t`, `.ct`, `.spec` | Players in prac | Switch team (T, CT, spectator) in practice mode.                             |
-| `.asay`              | Admins only     | Say a message with the admin chat prefix.                                    |
-| `.match`             | Admins only     | Start match mode manually.                                                   |
+| Command                             | Who can use it  | Description                                                                  |
+| ----------------------------------- | --------------- | ---------------------------------------------------------------------------- |
+| `.whitelist`                        | Admins only     | Toggle the match whitelist (only configured players may stay on the server). |
+| `.globalnades`                      | Admins only     | Toggle whether saved lineups are global or per‑player.                       |
+| `.settings`                         | Admins only     | Show current match settings (knife, ready required, playout).                |
+| `.playout`                          | Admins only     | Toggle whether the match plays out all regulation rounds once clinched.      |
+| `.reloadmap`                        | Admins only     | Reload the current map via `changelevel` while keeping MatchZy state sane.   |
+| `.reload_admins`                    | Admins only     | Reload MatchZy’s admin list from disk.                                       |
+| `.help`                             | Anyone          | Show a help message listing common MatchZy commands.                         |
+| `.asay`                             | Admins only     | Say a message with the admin chat prefix.                                    |
+| `.match`                            | Admins only     | Start match mode manually.                                                   |
+| `.uncoach`                          | Coaches only    | Stop coaching and return to normal player state (match mode only).           |
+| `.version`, `.matchzyversion`       | Anyone          | Print the running MatchZy version in chat.                                   |
+| `.te`, `.testevent`                 | Admins only     | Send a `test_event` to the configured remote log URL for diagnostics.        |
 
 ## Server console commands (`css_...`)
 
@@ -187,20 +202,70 @@ These are the **most important knobs** when using MatchZy with an external contr
   Ask the built‑in auto‑updater to query Steam and report whether this CS2 server is up to date.
   This is informational only and does **not** trigger a restart by itself.
 
-## Key MatchZy convars (`matchzy_...`)
+## MatchZy convars (`matchzy_...`)
 
-For a complete list, see `cfg/MatchZy/config.cfg`. Some important ones:
+All MatchZy convars can be set in `cfg/MatchZy/config.cfg` and changed at runtime via RCON.
 
-- `matchzy_everyone_is_admin` – if `true`, treat all players as admins (useful for testing).
-- `matchzy_match_start_message` – custom message to broadcast when the match starts.
-- `matchzy_enable_damage_report` – enable post‑round damage reports.
-- `matchzy_kick_when_no_match_loaded` – if `true`, kick players when no match is loaded.
-- `matchzy_demo_recording_enabled` – automatically start demo recording when a match goes live.
-- `matchzy_demo_path`, `matchzy_demo_name_format` – control where demos are recorded and how they’re named.
-- `matchzy_minimum_ready_required` – global default for how many players must be ready per team.
-- `matchzy_playout_enabled_default` – control whether playout (play full number of rounds) is enabled by default.
+### Core behavior & quality‑of‑life
 
-These convars are read from `cfg/MatchZy/config.cfg` on startup and can be overridden at runtime via RCON.
+- `matchzy_smoke_color_enabled` – enable player‑specific smoke colors (mainly for practice/simulation).
+- `matchzy_enable_tech_pause` – master toggle for the `.tech` technical pause command.
+- `matchzy_tech_pause_flag` – CSSharp permission flag required to use `.tech` (empty = default permissions).
+- `matchzy_tech_pause_duration` – default technical pause duration in seconds.
+- `matchzy_max_tech_pauses_allowed` – how many technical pauses each team may use.
+- `matchzy_everyone_is_admin` – if `true`, treat all players as admins (useful for local testing only).
+- `matchzy_show_credits_on_match_start` – show a “MatchZy plugin by …” credit line when a match starts.
+- `matchzy_debug_chat` – if `true`, show debug/event logs (webhook success/failure etc.) in in‑game chat.
+- `matchzy_hostname_format` – template for the server hostname (e.g. `{TEAM1} vs {TEAM2}`).
+- `matchzy_enable_damage_report` – enable post‑round damage reports in chat.
+- `matchzy_stop_command_no_damage` – if `true`, disable `.stop` once any player has dealt damage that round.
+- `matchzy_match_start_message` – custom chat message to broadcast when the match goes live (`$$$` = newline).
+
+### Match defaults & safety
+
+- `matchzy_whitelist_enabled_default` – whether whitelist is enabled by default when the plugin starts.
+- `matchzy_knife_enabled_default` – whether a knife round is required by default.
+- `matchzy_playout_enabled_default` – whether “play full number of rounds” is enabled by default.
+- `matchzy_save_nades_as_global_enabled` – if `true`, saved lineups are global by default instead of per‑player.
+- `matchzy_kick_when_no_match_loaded` – if `true`, kick players when no match is loaded and block new joins.
+- `matchzy_reset_cvars_on_series_end` – restore cvars modified by the match config when the series ends.
+- `matchzy_minimum_ready_required` – default number of ready players required to start a match.
+- `matchzy_stop_command_available` – enable or disable `.stop` as a round‑restore tool.
+- `matchzy_use_pause_command_for_tactical_pause` – make `.pause` act as a tactical pause instead of a pure tech pause.
+- `matchzy_pause_after_restore` – automatically pause the match after a round restore completes.
+- `matchzy_autostart_mode` – what to start on map load: `0`=nothing, `1`=match mode, `2`=practice mode.
+- `matchzy_allow_force_ready` / `get5_allow_force_ready` – allow use of `.forceready` / `css_readyrequired` helpers.
+- `matchzy_max_saved_last_grenades` – per‑player history length for saved grenade throws (0 = disabled).
+
+### Demo recording & upload
+
+- `matchzy_demo_recording_enabled` – automatically start GOTV demo recording when a match goes live.
+- `matchzy_demo_path` – relative path (under `csgo/`) where demos should be stored (must end with `/`).
+- `matchzy_demo_name_format` – filename template for demos (supports tokens like date, match ID, teams).
+- `matchzy_demo_upload_url`, `get5_demo_upload_url` – HTTP endpoint to upload demos after each map.
+
+### Chat & UI
+
+- `matchzy_chat_prefix` – prefix for standard MatchZy chat messages (supports `{Green}`, `{Default}`, etc.).
+- `matchzy_admin_chat_prefix` – prefix for admin `.asay` messages.
+- `matchzy_chat_messages_timer_delay` – seconds between repeated reminder messages (unready, paused, etc.).
+
+### Backups, reports & automation
+
+- `matchzy_remote_backup_url`, `get5_remote_backup_url` – HTTP endpoint for periodic JSON backup uploads.
+- `matchzy_remote_backup_header_key`, `matchzy_remote_backup_header_value` – optional header name/value for backups.
+- `matchzy_report_endpoint` – HTTP endpoint to receive MatchZy match reports.
+- `matchzy_report_server_id` – server identifier attached to match report uploads.
+- `matchzy_report_token` – authentication token sent as an HTTP header for match report uploads.
+
+### Tournament status (read‑mostly)
+
+These are maintained by MatchZy / external controllers and are usually not edited by hand:
+
+- `matchzy_tournament_status` – current server state (`idle`, `loading`, `warmup`, `knife`, `live`, `paused`, `halftime`, `postgame`, `error`).
+- `matchzy_tournament_match` – match slug/identifier currently loaded on this server.
+- `matchzy_tournament_updated` – Unix timestamp of the last tournament status update.
+- `matchzy_tournament_next_match` – slug/identifier of the next match queued for this server.
 
 ## Where to go next
 
