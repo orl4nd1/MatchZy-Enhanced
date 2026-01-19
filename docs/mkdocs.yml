@@ -70,11 +70,10 @@ plugins:
       caption_position: bottom
   - exclude:
       glob:
-        - 'features/shuffle-tournament-*.md'
-        - 'features/elo-package-research.md'
-        - 'features/openskill-integration.md'
-        - 'features/team-balancing-research.md'
-        - 'manual-testing-veto.md'
+        - 'features/**'
+        - 'manual-testing-*.md'
+        - '**/.env*'
+        - '**/node_modules/**'
 
 extra:
   social:
@@ -125,22 +124,13 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-      - Overview: overview.md
       - Installation: installation.md
       - Configuration: configuration.md
-      - Simulation mode: simulation-mode.md
-      - Integration with MatchZy Auto Tournament: integration.md
-  - Plugin Docs:
-      - Demo upload API: API_ENDPOINT_SPECIFICATION.md
-      - Demo upload guide: DEMO_UPLOAD_GUIDE.md
-      - Config loading behavior: CONFIG_LOADING_BEHAVIOR.md
-      - Server allocation status: SERVER_ALLOCATION_STATUS.md
-      - Commands & ConVars: commands.md
-  - Development:
-      - Simulation mode internals: SIMULATION_MODE_TODO.md
-      - Release process: RELEASE.md
+      - Commands: commands.md
+  - Integration:
+      - Platform Integration: integration.md
+      - LLM Quick Reference: LLM_QUICK_REFERENCE.md
   - Changelog: CHANGELOG.md
-  - Related: related.md
 
 extra_css:
   - stylesheets/extra.css
