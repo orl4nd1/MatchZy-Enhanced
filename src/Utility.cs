@@ -2139,23 +2139,35 @@ namespace MatchZy
             
             PrintToAllChat(Localizer["matchzy.ffw.executed", missingTeamName, winningTeamName]);
             
-            // Award win to the team that stayed
-            var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-            if (gameRules != null)
+            // Award win to the team that stayed by setting scores
+            var teamEntities = Utilities.FindAllEntitiesByDesignerName<CCSTeam>("cs_team_manager");
+            foreach (var team in teamEntities)
             {
-                if (ffwTeamMissing == 2) // T forfeited
+                if (ffwTeamMissing == 2) // T forfeited, CT wins
                 {
-                    gameRules.CTScore = 16;
-                    gameRules.TerroristScore = 0;
+                    if (team.Teamname == "CT")
+                    {
+                        team.Score = 16;
+                    }
+                    else if (team.Teamname == "TERRORIST")
+                    {
+                        team.Score = 0;
+                    }
                 }
-                else // CT forfeited
+                else // CT forfeited, T wins
                 {
-                    gameRules.TerroristScore = 16;
-                    gameRules.CTScore = 0;
+                    if (team.Teamname == "TERRORIST")
+                    {
+                        team.Score = 16;
+                    }
+                    else if (team.Teamname == "CT")
+                    {
+                        team.Score = 0;
+                    }
                 }
-                
-                Server.ExecuteCommand("mp_gungame_endround 1");
             }
+            
+            Server.ExecuteCommand("mp_gungame_endround 1");
             
             // Clean up
             ffwTimer = null;

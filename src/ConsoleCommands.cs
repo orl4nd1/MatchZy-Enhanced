@@ -832,24 +832,35 @@ namespace MatchZy
             {
                 PrintToAllChat(Localizer["matchzy.gg.thresholdmet", teamName]);
                 
-                // Award win to opposing team
-                var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-                if (gameRules != null)
+                // Award win to opposing team by setting scores
+                var teamEntities = Utilities.FindAllEntitiesByDesignerName<CCSTeam>("cs_team_manager");
+                foreach (var team in teamEntities)
                 {
-                    // Set score to ensure opposing team wins
-                    if (player.TeamNum == 2) // T forfeited
+                    if (player.TeamNum == 2) // T forfeited, CT wins
                     {
-                        gameRules.CTScore = 16;
-                        gameRules.TerroristScore = 0;
+                        if (team.Teamname == "CT")
+                        {
+                            team.Score = 16;
+                        }
+                        else if (team.Teamname == "TERRORIST")
+                        {
+                            team.Score = 0;
+                        }
                     }
-                    else // CT forfeited
+                    else // CT forfeited, T wins
                     {
-                        gameRules.TerroristScore = 16;
-                        gameRules.CTScore = 0;
+                        if (team.Teamname == "TERRORIST")
+                        {
+                            team.Score = 16;
+                        }
+                        else if (team.Teamname == "CT")
+                        {
+                            team.Score = 0;
+                        }
                     }
-                    
-                    Server.ExecuteCommand("mp_gungame_endround 1");
                 }
+                
+                Server.ExecuteCommand("mp_gungame_endround 1");
             }
         }
 
