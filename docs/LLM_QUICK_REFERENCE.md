@@ -586,9 +586,22 @@ config = {
   "matchzy_gg_enabled": 0,
   "matchzy_gg_threshold": 0.8,
   "matchzy_ffw_enabled": 0,
-  "matchzy_ffw_time": 240
+  "matchzy_ffw_time": 240,
+  "matchzy_demo_recording_enabled": 1
 }
 ```
+
+### Demo Recording Performance
+
+**Match end restart times based on demo configuration:**
+
+| Config | Restart Delay | Use Case |
+|--------|---------------|----------|
+| `matchzy_demo_recording_enabled "0"` | ~10s | Fast simulations |
+| `matchzy_demo_recording_enabled "1"`<br>(no upload URL) | ~25-35s | Local demos only |
+| `matchzy_demo_recording_enabled "1"`<br>(upload URL set) | ~60-90s | Full upload |
+
+**Tip:** For automated tournaments with simulations or when demos aren't needed, disable recording for 6-9x faster match turnaround.
 
 ### Default Behavior Summary
 

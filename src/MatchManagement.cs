@@ -966,15 +966,47 @@ namespace MatchZy
                 Server.ExecuteCommand("host_timescale 1; sv_cheats 0");
             }
 
-            // Wait for demo upload to complete, then kick all players and reset match
-            // Demo upload starts 15 seconds after map end, so we wait restartDelay + 60 seconds to ensure upload completes
-            int kickDelay = restartDelay + 60; // Give extra time for demo upload to finish
+            // Calculate kick delay based on demo recording and upload configuration
+            bool hasUploadEndpoint = !string.IsNullOrEmpty(demoUploadURL);
+            int kickDelay;
+            
+            if (!isDemoRecordingEnabled)
+            {
+                // Demo recording disabled - very fast
+                kickDelay = restartDelay + 5;
+            }
+            else if (!hasUploadEndpoint)
+            {
+                // Demo recording enabled but no upload URL - don't wait for upload that won't happen
+                kickDelay = restartDelay + 10;
+            }
+            else
+            {
+                // Demo recording enabled with upload URL - wait for upload to complete
+                kickDelay = restartDelay + 60;
+            }
+            
+            Log($"[EndSeries] Demo recording: {isDemoRecordingEnabled}, Upload URL: {hasUploadEndpoint}, kickDelay: {kickDelay}s");
 
             int minutes = kickDelay / 60;
             int seconds = kickDelay % 60;
             string timeText = minutes > 0 ? $"{minutes} minute{(minutes > 1 ? "s" : "")} {seconds} second{(seconds > 1 ? "s" : "")}" : $"{seconds} second{(seconds > 1 ? "s" : "")}";
 
-            PrintToAllChat($"{ChatColors.Grey}Series ended. Server will reset in {ChatColors.Yellow}{timeText}{ChatColors.Default} after demo upload completes.");
+            string resetMessage;
+            if (!isDemoRecordingEnabled)
+            {
+                resetMessage = $"{ChatColors.Grey}Series ended. Server will reset in {ChatColors.Yellow}{timeText}{ChatColors.Default}.";
+            }
+            else if (!hasUploadEndpoint)
+            {
+                resetMessage = $"{ChatColors.Grey}Series ended. Server will reset in {ChatColors.Yellow}{timeText}{ChatColors.Default} after demo is saved.";
+            }
+            else
+            {
+                resetMessage = $"{ChatColors.Grey}Series ended. Server will reset in {ChatColors.Yellow}{timeText}{ChatColors.Default} after demo upload completes.";
+            }
+            
+            PrintToAllChat(resetMessage);
             PrintToAllChat($"{ChatColors.Grey}All players will be disconnected to prepare the server for the next match.{ChatColors.Default}");
 
             // Schedule countdown warnings before kick

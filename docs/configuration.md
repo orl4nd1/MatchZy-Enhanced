@@ -51,12 +51,21 @@ The exact names and defaults are defined in `ConfigConvars.cs`, but these are th
   - `matchzy_match_report_header_key`, `matchzy_match_report_header_value`  
     Optional custom header to secure the report endpoint.
 
-- **Demo upload**
+- **Demo recording & upload**
+  - `matchzy_demo_recording_enabled` (boolean, default: `true`)  
+    Enable/disable automatic GOTV demo recording. When disabled:
+    - No demo files are created
+    - Server restarts in ~10s after match ends (vs 60-90s)
+    - Significantly faster tournament turnaround
   - `matchzy_demo_upload_url`  
-    If set, MatchZy will upload `.dem` files here after each map.  
-    See `Demo upload API` and `Demo upload guide` for full details.
+    If set, MatchZy will upload `.dem` files here after each map.
   - `matchzy_demo_upload_header_key`, `matchzy_demo_upload_header_value`  
     Optional custom header for the demo upload API.
+  
+  **Performance tip:** Match end delays are smart based on configuration:
+  - Recording disabled: ~10s restart
+  - Recording enabled, no upload URL: ~25-35s restart (local only)
+  - Recording enabled with upload URL: ~60-90s restart (waits for upload)
 
 - **Tournament status (used by the safe auto‑updater)**
   - `matchzy_tournament_status`  

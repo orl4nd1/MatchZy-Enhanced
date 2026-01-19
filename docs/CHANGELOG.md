@@ -94,6 +94,10 @@ matchzy_ffw_time "240"  // Default: 4 minutes
 - Improved timer management with proper cleanup on match reset
 - Thread-safe operations for all new tracking systems
 - Comprehensive cleanup of all new timers and tracking in `ResetMatch()`
+- **Smart match end delays based on demo configuration:**
+  - Demo recording disabled: ~10s restart (was 60-90s)
+  - Demo recording enabled, no upload URL: ~25-35s restart (was 60-90s)
+  - Demo recording enabled with upload URL: ~60-90s restart (unchanged, waits for upload)
 
 ### 📖 Documentation
 

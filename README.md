@@ -152,9 +152,23 @@ matchzy_gg_threshold "0.8"  // 80% team consensus
 // FFW System
 matchzy_ffw_enabled "1"
 matchzy_ffw_time "240"  // 4 minutes
+
+// Demo Recording (optional - affects match end speed)
+matchzy_demo_recording_enabled "1"  // Default: enabled
+// When disabled: ~10s restart (vs 60-90s with demos)
+// Perfect for simulations or when demos aren't needed
 ```
 
 👉 **[Full Configuration Guide](docs/configuration.md)** • **[Commands Reference](docs/commands.md)**
+
+### ⚡ Performance Tip
+
+Match end delays are automatically optimized based on demo configuration:
+- **Demo recording disabled:** ~10s restart (10x faster)
+- **Demo recording enabled, no upload URL:** ~25-35s restart
+- **Demo recording enabled with upload URL:** ~60-90s restart
+
+Perfect for fast tournament turnaround when demos aren't needed!
 
 ---
 

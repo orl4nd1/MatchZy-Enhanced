@@ -1202,22 +1202,54 @@ namespace MatchZy
             // Ref: Get5
             int restartDelay = ConVar.Find("mp_match_restart_delay")!.GetPrimitiveValue<int>();
             int tvDelay = GetTvDelay();
-            int requiredDelay = tvDelay + 15;
-            int tvFlushDelay = requiredDelay;
-            if (tvDelay > 0.0)
+            int tvFlushDelay;
+            bool hasUploadEndpoint = !string.IsNullOrEmpty(demoUploadURL);
+            
+            // Smart delay calculation based on demo recording and upload configuration
+            if (!isDemoRecordingEnabled)
             {
-                requiredDelay += 10;
+                // Demo recording disabled - very fast restart
+                restartDelay = 10;
+                tvFlushDelay = 0;
+                Log($"[HandleMatchEnd] Demo recording disabled - using fast restart delay of {restartDelay}s");
             }
-            if (requiredDelay > restartDelay)
+            else if (!hasUploadEndpoint)
             {
-                Log($"Extended mp_match_restart_delay from {restartDelay} to {requiredDelay} to ensure GOTV broadcast can finish.");
-                ConVar.Find("mp_match_restart_delay")!.SetValue(requiredDelay);
+                // Demo recording enabled but no upload URL - only wait for GOTV flush (no upload)
+                int requiredDelay = tvDelay + 15;
+                tvFlushDelay = requiredDelay;
+                if (tvDelay > 0.0)
+                {
+                    requiredDelay += 10;
+                }
                 restartDelay = requiredDelay;
+                Log($"[HandleMatchEnd] Demo recording enabled, no upload URL - using GOTV flush delay of {restartDelay}s (no upload wait)");
             }
+            else
+            {
+                // Demo recording enabled with upload URL - wait for full GOTV flush and upload
+                int requiredDelay = tvDelay + 15;
+                tvFlushDelay = requiredDelay;
+                if (tvDelay > 0.0)
+                {
+                    requiredDelay += 10;
+                }
+                if (requiredDelay > restartDelay)
+                {
+                    Log($"Extended mp_match_restart_delay from {restartDelay} to {requiredDelay} to ensure GOTV broadcast can finish.");
+                    ConVar.Find("mp_match_restart_delay")!.SetValue(requiredDelay);
+                    restartDelay = requiredDelay;
+                }
+                Log($"[HandleMatchEnd] Demo recording enabled with upload URL - using full delay for upload");
+            }
+            
             int currentMapNumber = matchConfig.CurrentMapNumber;
-            Log($"[HandleMatchEnd] MAP ENDED, isMatchSetup: {isMatchSetup} matchid: {liveMatchId} currentMapNumber: {currentMapNumber} tvFlushDelay: {tvFlushDelay}");
+            Log($"[HandleMatchEnd] MAP ENDED, isMatchSetup: {isMatchSetup} matchid: {liveMatchId} currentMapNumber: {currentMapNumber} tvFlushDelay: {tvFlushDelay} demoRecording: {isDemoRecordingEnabled} uploadURL: {hasUploadEndpoint}");
 
-            StopDemoRecording(tvFlushDelay - 0.5f, activeDemoFile, liveMatchId, currentMapNumber);
+            if (isDemoRecordingEnabled)
+            {
+                StopDemoRecording(tvFlushDelay - 0.5f, activeDemoFile, liveMatchId, currentMapNumber);
+            }
 
             string winnerName = GetMatchWinnerName();
             (int t1score, int t2score) = GetTeamsScore();

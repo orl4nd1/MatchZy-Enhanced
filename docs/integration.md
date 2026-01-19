@@ -201,6 +201,24 @@ From the platform’s point of view:
 
 ### Demo Upload Endpoint
 
+**Configuration:**
+```cfg
+matchzy_demo_recording_enabled "1"    // Default: 1 (enabled)
+matchzy_demo_upload_url "https://your-api/demos/upload"
+```
+
+**Smart Restart Delays:**
+| Configuration | Match End Delay | Use Case |
+|---------------|-----------------|----------|
+| Recording **disabled** | ~10s | Fast tournaments, simulations |
+| Recording enabled, **no upload URL** | ~25-35s | Local demos only, no upload wait |
+| Recording enabled, **upload URL set** | ~60-90s | Full upload, maximum compatibility |
+
+**Benefits:**
+- No wasted time waiting for uploads that won't happen
+- Fast turnaround when you only need local demo files
+- Full compatibility when upload endpoint is configured
+
 **Method:** `POST`  
 **Content-Type:** `application/octet-stream`  
 **Body:** Raw binary demo file (`.dem`)
