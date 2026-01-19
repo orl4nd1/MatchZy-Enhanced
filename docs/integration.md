@@ -195,4 +195,106 @@ From the platform’s point of view:
 5. Let MatchZy run the match; Auto Tournament reacts to events, reports and demos.
 6. Use simulation mode for automated testing and demo matches without real players.
 
+---
+
+## API Endpoints Reference
+
+### Demo Upload Endpoint
+
+**Method:** `POST`  
+**Content-Type:** `application/octet-stream`  
+**Body:** Raw binary demo file (`.dem`)
+
+**Headers:**
+```
+MatchZy-FileName: {demo_filename}.dem
+MatchZy-MatchId: {match_id}
+MatchZy-MapNumber: {map_number}     // Zero-indexed (0, 1, 2...)
+MatchZy-RoundNumber: {total_rounds}
+```
+
+**Timing:** Uploaded 15 seconds after map ends, one per map in series.
+
+**Example Express.js Handler:**
+```javascript
+app.post("/api/demos/upload", express.raw({ type: "application/octet-stream", limit: "500mb" }), (req, res) => {
+  const filename = req.headers["matchzy-filename"];
+  const matchId = req.headers["matchzy-matchid"];
+  const mapNumber = req.headers["matchzy-mapnumber"];
+  
+  fs.writeFile(`./demos/${filename}`, req.body, (err) => {
+    if (err) return res.status(500).send("Upload failed");
+    res.status(200).send("Upload successful");
+  });
+});
+```
+
+### Match Report Endpoint
+
+**Method:** `POST`  
+**Content-Type:** `application/json`
+
+**Body Structure:**
+```json
+{
+  "matchId": "12345",
+  "mapNumber": 0,
+  "team1": {
+    "name": "Team A",
+    "score": 16,
+    "players": [...]
+  },
+  "team2": {
+    "name": "Team B",
+    "score": 14,
+    "players": [...]
+  },
+  "simulated": false
+}
+```
+
+### Event Webhooks
+
+MatchZy sends real-time events to `remote_log_url`:
+
+**Key Events:**
+- `match_started` - Match begins
+- `map_result` - Map completed
+- `series_result` - Series completed
+- `player_connect` / `player_disconnect`
+- `player_ready` / `player_unready`
+- `round_started` / `round_ended`
+- `demo_upload_ended`
+
+---
+
+## Simulation Mode
+
+Set `"simulation": true` in match JSON to run fully automated bot matches:
+
+**Features:**
+- 10 bots spawned per team (5v5)
+- Bots mapped to configured player Steam IDs
+- Identical events and reports as real matches
+- Faster execution with `simulation_timescale` (1.0-10.0x speed)
+- No human players required
+
+**Use Cases:**
+- Tournament bracket simulation
+- Match outcome forecasting
+- Integration testing
+- Stress testing
+
+**Configuration:**
+```json
+{
+  "simulation": true,
+  "simulation_timescale": 5.0,  // 5x speed
+  "team1": {
+    "players": { "STEAM_1:1:111": "Bot Player 1", ... }
+  },
+  ...
+}
+```
+
 

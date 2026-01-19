@@ -367,6 +367,57 @@ When `"simulation": true`:
 
 See **Simulation mode** for a full walkthrough and examples.
 
+---
+
+## Example Configurations
+
+Quick configuration templates for common use cases:
+
+### Tournament: Fast-Paced Online
+```cfg
+matchzy_autoready_enabled "1"
+matchzy_max_pauses_per_team "2"
+matchzy_pause_duration "300"
+matchzy_side_selection_time "45"
+matchzy_gg_enabled "0"
+matchzy_ffw_enabled "1"
+matchzy_ffw_time "180"
+```
+
+### Tournament: Professional League
+```cfg
+matchzy_autoready_enabled "0"
+matchzy_max_pauses_per_team "3"
+matchzy_pause_duration "0"
+matchzy_side_selection_time "90"
+matchzy_gg_enabled "0"
+matchzy_ffw_enabled "1"
+matchzy_ffw_time "300"
+```
+
+### Practice: Casual Scrims
+```cfg
+matchzy_autoready_enabled "1"
+matchzy_both_teams_unpause_required "0"
+matchzy_max_pauses_per_team "0"
+matchzy_pause_duration "0"
+matchzy_gg_enabled "1"
+matchzy_gg_threshold "0.8"
+matchzy_ffw_enabled "0"
+```
+
+### Ranked: Matchmaking
+```cfg
+matchzy_autoready_enabled "0"
+matchzy_max_pauses_per_team "1"
+matchzy_pause_duration "180"
+matchzy_gg_enabled "0"
+matchzy_ffw_enabled "1"
+matchzy_ffw_time "240"
+```
+
+---
+
 ## Summary
 
 - Use `cfg/MatchZy/config.cfg` to tune plugin‑level options and integration URLs.
