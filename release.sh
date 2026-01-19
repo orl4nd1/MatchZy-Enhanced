@@ -84,7 +84,12 @@ esac
 
 # Update version in MatchZy.cs if bumped
 if [ "$BUMP_TYPE" != "none" ]; then
-    sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    # Use different sed syntax for Linux vs macOS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    else
+        sed -i "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    fi
     echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
 fi
 
