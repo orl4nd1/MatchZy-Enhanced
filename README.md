@@ -44,7 +44,7 @@ Built for **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-
 - 🔄 **Thread-safe operations** for reliable automation
 - 🤖 **Simulation mode** for testing and demos
 
-### v1.3.0 Player Features
+### Player Features
 - 🚀 **Auto-ready system** — Instant match starts (optional)
 - ⏸️ **Enhanced pauses** — Team limits, timeouts, dual unpause
 - ⏱️ **Side selection timer** — Auto-decide after knife round
