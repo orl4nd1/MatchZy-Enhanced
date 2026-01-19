@@ -80,6 +80,170 @@ The exact names and defaults are defined in `ConfigConvars.cs`, but these are th
 
 Consult the shipped `cfg/MatchZy/config.cfg` for the up‑to‑date list and defaults.
 
+## Enhanced features configuration
+
+MatchZy Enhanced includes several new features to improve player experience and match flow. All features are disabled by default for safety and must be explicitly enabled.
+
+### Auto-Ready System
+
+Automatically marks players as ready when they join the match.
+
+- **`matchzy_autoready_enabled`** (`0`/`1`, default: `0`)  
+  Enable/disable automatic ready marking on player join.  
+  Players can still use `.unready` to opt-out.  
+  Match starts when all required players are ready.
+  
+  **Use case:** Fast-paced tournaments where players are expected to be ready immediately.
+  
+  **Example:**
+  ```cfg
+  matchzy_autoready_enabled "1"
+  ```
+
+### Enhanced Pause System
+
+Improved pause controls with limits and coordination requirements.
+
+- **`matchzy_both_teams_unpause_required`** (`0`/`1`, default: `1`)  
+  Require both teams to type `.unpause` to resume (non-admin pauses only).  
+  If `0`, any team can unpause immediately.
+  
+  **Use case:** Competitive matches where both teams should agree to resume.
+  
+- **`matchzy_max_pauses_per_team`** (integer, default: `0`)  
+  Maximum number of pauses allowed per team.  
+  `0` = unlimited pauses.  
+  Does not apply to admin/tactical pauses.
+  
+  **Use case:** Set to `2` or `3` for competitive leagues to prevent pause abuse.
+  
+- **`matchzy_pause_duration`** (seconds, default: `0`)  
+  Maximum pause duration before automatic unpause.  
+  `0` = no time limit.  
+  Does not apply to admin pauses.
+  
+  **Use case:** Set to `300` (5 minutes) for fast-paced tournaments.
+
+  **Example:**
+  ```cfg
+  matchzy_both_teams_unpause_required "1"
+  matchzy_max_pauses_per_team "2"
+  matchzy_pause_duration "300"
+  ```
+
+**New command aliases:**
+- `.p` → `.pause`
+- `.up` → `.unpause`
+
+### Side Selection Timer
+
+Configurable timer for side selection after knife round.
+
+- **`matchzy_side_selection_enabled`** (`0`/`1`, default: `1`)  
+  Enable/disable side selection timer.  
+  If disabled, players have unlimited time to choose.
+  
+- **`matchzy_side_selection_time`** (seconds, default: `60`)  
+  Time allowed for side selection after winning knife.  
+  If timer expires without choice, random side is selected.
+  
+  **Use case:** Set to `90`-`120` for high-stakes tournament matches.
+
+  **Example:**
+  ```cfg
+  matchzy_side_selection_enabled "1"
+  matchzy_side_selection_time "60"
+  ```
+
+**Commands:** `.ct`, `.t`, `.stay`, `.swap`
+
+### Early Match Termination (`.gg` Command)
+
+Allows teams to forfeit matches with team consensus.
+
+- **`matchzy_gg_enabled`** (`0`/`1`, default: `0`)  
+  Enable/disable the `.gg` forfeit command.  
+  When enough players type `.gg`, opposing team wins automatically.
+  
+  **Use case:** Enable for scrims/practice matches where quick forfeits are acceptable.
+  
+- **`matchzy_gg_threshold`** (float `0.0`-`1.0`, default: `0.8`)  
+  Percentage of team required to vote for forfeit.  
+  `0.8` = 80% (e.g., 4 out of 5 players in 5v5).  
+  Votes reset each round.
+  
+  **Use case:** Set to `1.0` (100%) for ranked/competitive matches.
+
+  **Example:**
+  ```cfg
+  matchzy_gg_enabled "1"
+  matchzy_gg_threshold "0.8"
+  ```
+
+**Command:** `.gg`
+
+### FFW (Forfeit/Walkover) System
+
+Automatic forfeit when entire team leaves the server.
+
+- **`matchzy_ffw_enabled`** (`0`/`1`, default: `0`)  
+  Enable/disable automatic forfeit system.  
+  When all players from a team disconnect, a timer starts.  
+  If no one returns before timer expires, opposing team wins by forfeit.
+  
+  **Use case:** Enable for online tournaments to handle disconnections fairly.
+  
+- **`matchzy_ffw_time`** (seconds, default: `240`)  
+  Time before forfeit is declared (4 minutes default).  
+  Players are warned every minute.  
+  Timer cancels automatically if anyone rejoins.
+  
+  **Use case:** Adjust based on expected reconnection time in your tournaments.
+
+  **Example:**
+  ```cfg
+  matchzy_ffw_enabled "1"
+  matchzy_ffw_time "240"  // 4 minutes
+  ```
+
+### Configuration templates
+
+**Fast-paced tournament:**
+```cfg
+matchzy_autoready_enabled "1"
+matchzy_both_teams_unpause_required "1"
+matchzy_max_pauses_per_team "2"
+matchzy_pause_duration "300"
+matchzy_side_selection_time "45"
+matchzy_gg_enabled "0"
+matchzy_ffw_enabled "1"
+matchzy_ffw_time "180"  // 3 minutes
+```
+
+**Competitive league:**
+```cfg
+matchzy_autoready_enabled "0"
+matchzy_both_teams_unpause_required "1"
+matchzy_max_pauses_per_team "3"
+matchzy_pause_duration "0"  // No limit
+matchzy_side_selection_time "90"
+matchzy_gg_enabled "0"
+matchzy_ffw_enabled "1"
+matchzy_ffw_time "300"  // 5 minutes
+```
+
+**Casual scrims:**
+```cfg
+matchzy_autoready_enabled "1"
+matchzy_both_teams_unpause_required "0"
+matchzy_max_pauses_per_team "0"  // Unlimited
+matchzy_pause_duration "0"
+matchzy_side_selection_time "60"
+matchzy_gg_enabled "1"
+matchzy_gg_threshold "0.8"
+matchzy_ffw_enabled "0"
+```
+
 ## JSON match config (from Auto Tournament)
 
 When used with MatchZy Auto Tournament, MatchZy expects to load matches from a JSON document that looks roughly like:

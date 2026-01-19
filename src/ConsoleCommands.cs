@@ -133,6 +133,13 @@ namespace MatchZy
             Log($"[!stay command] {player.UserId}, TeamNum: {player.TeamNum}, knifeWinner: {knifeWinner}, isSideSelectionPhase: {isSideSelectionPhase}");
             if (player.TeamNum == knifeWinner)
             {
+                // Cancel side selection timer
+                if (sideSelectionTimer != null)
+                {
+                    sideSelectionTimer.Kill();
+                    sideSelectionTimer = null;
+                }
+                
                 PrintToAllChat(Localizer["matchzy.knife.decidedtostay", knifeWinnerName]);
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} has decided to stay!");
                 StartLive();
@@ -149,6 +156,13 @@ namespace MatchZy
 
             if (player.TeamNum == knifeWinner)
             {
+                // Cancel side selection timer
+                if (sideSelectionTimer != null)
+                {
+                    sideSelectionTimer.Kill();
+                    sideSelectionTimer = null;
+                }
+                
                 Server.ExecuteCommand("mp_swapteams;");
                 SwapSidesInTeamData(true);
                 PrintToAllChat(Localizer["matchzy.knife.decidedtoswitch", knifeWinnerName]);
@@ -273,6 +287,9 @@ namespace MatchZy
 
                 int teamsReady = ((bool)unpauseData["t"] ? 1 : 0) + ((bool)unpauseData["ct"] ? 1 : 0);
 
+                // Check if both teams unpause is required
+                bool requireBothTeams = bothTeamsUnpauseRequired.Value;
+
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
@@ -281,6 +298,12 @@ namespace MatchZy
                 else if (unpauseTeamName == "Admin")
                 {
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
+                    UnpauseMatch();
+                }
+                else if (!requireBothTeams)
+                {
+                    // If both teams unpause not required, unpause immediately
+                    PrintToAllChat(Localizer["matchzy.pause.teamunpausedthematch", unpauseTeamName]);
                     UnpauseMatch();
                 }
                 else
@@ -751,6 +774,85 @@ namespace MatchZy
                 PrintToPlayerChat(player, message);
             }
         }
+        [ConsoleCommand("css_gg", "Vote to end the match early (requires team consensus)")]
+        public void OnGGCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (player == null || !player.IsValid || !player.UserId.HasValue) return;
+            
+            if (!ggEnabled.Value)
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.gg.disabled"]);
+                return;
+            }
+            
+            if (!isMatchLive)
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.gg.matchnotlive"]);
+                return;
+            }
+            
+            if (player.TeamNum != 2 && player.TeamNum != 3)
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.gg.mustbeonteam"]);
+                return;
+            }
+            
+            HashSet<ulong> votes = player.TeamNum == 2 ? ggVotesT : ggVotesCT;
+            Team playerTeam = player.TeamNum == 2 ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
+            Team opposingTeam = player.TeamNum == 2 ? reverseTeamSides["CT"] : reverseTeamSides["TERRORIST"];
+            string teamName = playerTeam.teamName;
+            
+            // Check if player already voted
+            if (votes.Contains(player.SteamID))
+            {
+                PrintToPlayerChat(player, Localizer["matchzy.gg.alreadyvoted"]);
+                return;
+            }
+            
+            votes.Add(player.SteamID);
+            
+            // Count players on the team
+            int teamPlayerCount = 0;
+            foreach (var kvp in playerData)
+            {
+                var p = kvp.Value;
+                if (p != null && p.IsValid && !p.IsBot && !p.IsHLTV && p.TeamNum == player.TeamNum)
+                {
+                    teamPlayerCount++;
+                }
+            }
+            
+            int votesNeeded = (int)Math.Ceiling(teamPlayerCount * ggThreshold.Value);
+            int currentVotes = votes.Count;
+            
+            PrintToAllChat(Localizer["matchzy.gg.playervoted", player.PlayerName, teamName, currentVotes, votesNeeded]);
+            
+            // Check if threshold is met
+            if (currentVotes >= votesNeeded && votesNeeded > 0)
+            {
+                PrintToAllChat(Localizer["matchzy.gg.thresholdmet", teamName]);
+                
+                // Award win to opposing team
+                var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+                if (gameRules != null)
+                {
+                    // Set score to ensure opposing team wins
+                    if (player.TeamNum == 2) // T forfeited
+                    {
+                        gameRules.CTScore = 16;
+                        gameRules.TerroristScore = 0;
+                    }
+                    else // CT forfeited
+                    {
+                        gameRules.TerroristScore = 16;
+                        gameRules.CTScore = 0;
+                    }
+                    
+                    Server.ExecuteCommand("mp_gungame_endround 1");
+                }
+            }
+        }
+
         [ConsoleCommand("css_te", "Sends a test event to the remote log URL")]
         [ConsoleCommand("css_testevent", "Sends a test event to the remote log URL")]
         public void OnTestEventCommand(CCSPlayerController? player, CommandInfo? command)

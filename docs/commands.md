@@ -12,17 +12,30 @@ This page is a **quick reference** for the most important MatchZy commands and c
 
 For integration details (webhooks, demo upload, JSON config), see **Getting Started → Configuration**.
 
+## ✨ New in v1.3.0: Enhanced Features
+
+MatchZy Enhanced introduces several new commands and improvements for better match management:
+
+- **Auto-Ready System**: Players can be automatically marked as ready on join (`matchzy_autoready_enabled`)
+- **Enhanced Pause Controls**: New `.p` and `.up` aliases, pause limits, timeout controls
+- **Side Selection Timer**: Time-limited side selection after knife round
+- **`.gg` Command**: Team forfeit voting system
+- **FFW System**: Automatic forfeit handling when teams disconnect
+
+See sections below for command details and configuration options.
+
 ## Player chat commands (`.xxx`)
 
 ### Ready system & match lifecycle
 
-| Command                           | Who can use it    | Description                                                                  |
-| --------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
-| `.ready`, `.r`                    | Players on a team | Mark yourself ready before the match starts. Triggers `player_ready` events. |
-| `.unready`, `.notready`, `.ur`    | Players on a team | Mark yourself **not ready** again. Triggers `player_unready` events.         |
-| `.start`, `.force`, `.forcestart` | Admins only       | Force‑start the match immediately (skips waiting for all players to ready).  |
-| `.restart`, `.rr`                 | Admins only       | Fully restart the current match/series.                                      |
-| `.endmatch`, `.forceend`          | Admins only       | Force‑end and reset the current match.                                       |
+| Command                           | Who can use it    | Description                                                                                                                                    |
+| --------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.ready`, `.r`                    | Players on a team | Mark yourself ready before the match starts. Triggers `player_ready` events. **Note:** With `matchzy_autoready_enabled`, players start ready. |
+| `.unready`, `.notready`, `.ur`    | Players on a team | Mark yourself **not ready** again. Triggers `player_unready` events. Works even with auto-ready enabled.                                      |
+| `.start`, `.force`, `.forcestart` | Admins only       | Force‑start the match immediately (skips waiting for all players to ready).                                                                   |
+| `.restart`, `.rr`                 | Admins only       | Fully restart the current match/series.                                                                                                       |
+| `.endmatch`, `.forceend`          | Admins only       | Force‑end and reset the current match.                                                                                                        |
+| `.gg`                             | Players on a team | Vote to forfeit the match. Requires team consensus (default 80%). Opposing team wins. **New in v1.3.0**                                       |
 
 ### Pause & technical timeouts
 
@@ -60,11 +73,13 @@ For integration details (webhooks, demo upload, JSON config), see **Getting Star
 
 ### Knife and side selection
 
-| Command              | Who can use it          | Description                                                   |
-| -------------------- | ----------------------- | ------------------------------------------------------------- |
-| `.roundknife`, `.rk` | Admins only             | Toggle whether a knife round is required for this match.      |
-| `.stay`              | Knife‑round winner team | After winning knife, choose to **stay** on your current side. |
-| `.switch`, `.swap`   | Knife‑round winner team | After winning knife, **swap sides** with the other team.      |
+| Command              | Who can use it          | Description                                                                                                                    |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `.roundknife`, `.rk` | Admins only             | Toggle whether a knife round is required for this match.                                                                       |
+| `.stay`              | Knife‑round winner team | After winning knife, choose to **stay** on your current side. **Timer:** With `matchzy_side_selection_enabled`, time limited. |
+| `.switch`, `.swap`   | Knife‑round winner team | After winning knife, **swap sides** with the other team. **Timer:** With `matchzy_side_selection_enabled`, time limited.      |
+| `.ct`                | Knife‑round winner team | After winning knife, choose to play as **CT**. Equivalent to `.stay` if already CT, `.switch` otherwise.                      |
+| `.t`                 | Knife‑round winner team | After winning knife, choose to play as **T**. Equivalent to `.stay` if already T, `.switch` otherwise.                        |
 
 ### Practice / tactics utilities
 

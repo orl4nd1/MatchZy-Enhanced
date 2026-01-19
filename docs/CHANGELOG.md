@@ -1,4 +1,643 @@
-# MatchZy Changelog
+# MatchZy Enhanced Changelog
+
+> **Note:** Versions 1.0.0+ are MatchZy Enhanced - a fork optimized for tournament automation.
+> Original MatchZy versions (0.8.x and earlier) are included below for reference.
+
+---
+
+# 1.3.0
+
+#### January 19, 2026
+
+**🎉 Major Feature Release: Player Experience Enhancements**
+
+This release introduces a comprehensive suite of new features designed to improve player experience, tournament management, and match flow control. All new features are configurable and disabled by default for safety.
+
+### ✨ New Features
+
+#### Auto-Ready System
+- Players are automatically marked as ready when they join the match (configurable)
+- Players can still use `.unready` to opt-out if they're not ready
+- Match starts automatically when all required players are ready
+- Configurable via `matchzy_autoready_enabled` (default: `false`)
+- Perfect for fast-paced tournaments where players are expected to be ready
+
+#### Enhanced Pause System
+- **Both-team unpause requirement**: Both teams must now type `.unpause` to resume (configurable via `matchzy_both_teams_unpause_required`)
+- **Per-team pause limits**: Limit number of pauses per team (e.g., 2 pauses per team) via `matchzy_max_pauses_per_team`
+- **Pause duration limits**: Set maximum pause duration with automatic timeout via `matchzy_pause_duration`
+- New command aliases: `.p` for `.pause`, `.up` for `.unpause`
+- Pause tracking and remaining pauses shown in chat
+
+#### Side Selection Timer
+- Configurable timer for side selection after knife round (default: 60 seconds)
+- Commands: `.ct`, `.t`, `.stay`, `.swap` all work with timer
+- Random side selection if timer expires without player choice
+- Configurable via `matchzy_side_selection_enabled` and `matchzy_side_selection_time`
+- Prevents indefinite waiting after knife rounds
+
+#### Early Match Termination (`.gg` Command)
+- New `.gg` command allows teams to forfeit the match
+- Requires 80% team consensus (configurable)
+- Vote tracking per round (votes reset each round)
+- Opposing team automatically wins when threshold reached
+- Configurable via `matchzy_gg_enabled` (default: `false`) and `matchzy_gg_threshold` (default: `0.8`)
+- Perfect for scrims and practice matches
+
+#### FFW (Forfeit/Walkover) System
+- Automatic forfeit system when entire team leaves the server
+- 4-minute timer starts when all players from a team disconnect
+- Minute-by-minute warnings in chat
+- Automatically cancels if any team member returns
+- Opposing team wins by forfeit if timer expires
+- Configurable via `matchzy_ffw_enabled` (default: `false`) and `matchzy_ffw_time` (default: `240`)
+- Fair handling of connection issues in online tournaments
+
+### 🎮 New Commands
+
+- `.gg` - Vote to end match early (requires team consensus)
+- `.up` - Alias for `.unpause`
+- `.p` - Alias for `.pause`
+
+### ⚙️ New Configuration Variables
+
+```cfg
+// Auto-Ready System
+matchzy_autoready_enabled "0"  // Default: disabled
+
+// Enhanced Pause System
+matchzy_both_teams_unpause_required "1"  // Default: enabled
+matchzy_max_pauses_per_team "0"  // Default: unlimited
+matchzy_pause_duration "0"  // Default: no limit
+
+// Side Selection Timer
+matchzy_side_selection_enabled "1"  // Default: enabled
+matchzy_side_selection_time "60"  // Default: 60 seconds
+
+// Early Match Termination
+matchzy_gg_enabled "0"  // Default: disabled
+matchzy_gg_threshold "0.8"  // Default: 80%
+
+// FFW System
+matchzy_ffw_enabled "0"  // Default: disabled
+matchzy_ffw_time "240"  // Default: 4 minutes
+```
+
+### 🌍 Localization
+
+- Added English localization for all new features
+- New strings ready for community translations in other languages
+
+### 🔧 Technical Changes
+
+- Enhanced event handlers for player connect/disconnect to support new features
+- Improved timer management with proper cleanup on match reset
+- Thread-safe operations for all new tracking systems
+- Comprehensive cleanup of all new timers and tracking in `ResetMatch()`
+
+### 📖 Documentation
+
+- Updated `README.md` with new features overview
+- Updated `cfg/MatchZy/config.cfg` with comprehensive documentation
+- Added detailed comments and use cases for all new convars
+
+---
+
+# 1.2.2
+
+#### January 6, 2026
+
+- Enhanced command documentation and player communication
+- Improved practice utilities documentation
+- Updated MatchZy convars reference
+
+# 1.2.1
+
+#### December 30, 2025
+
+- Enhanced player whitelist handling to allow admin bypass
+- Admins can now connect even if not on whitelist
+- Improved match configuration flexibility
+
+# 1.2.0
+
+#### December 30, 2025
+
+**🔄 Remote Backup & Admin Management Release**
+
+This release introduces remote backup upload functionality and per-match admin configuration, enabling better integration with tournament platforms and match management systems.
+
+### ✨ New Features
+
+#### Remote Backup Upload
+- Upload match backups to remote HTTP/HTTPS endpoints
+- Configurable via `matchzy_remote_backup_url` convar
+- Custom authentication headers support via `matchzy_remote_backup_header_key` and `matchzy_remote_backup_header_value`
+- Automatic upload after each backup round
+- Perfect for centralized backup storage and disaster recovery
+
+#### Per-Match Admin Configuration
+- Define admins directly in match JSON configuration
+- Override server-level admin settings per match
+- Support for `"admins": ["STEAM_ID_1", "STEAM_ID_2"]` in match config
+- Simplified tournament admin management
+- No need to modify server files for each match
+
+### 🔧 Technical Changes
+
+- Enhanced backup management with HTTP client integration
+- Improved admin validation logic
+- Better error handling for remote operations
+
+### 📖 Documentation
+
+- Updated configuration guide with remote backup examples
+- Added admin configuration documentation
+
+# 1.1.5
+
+#### December 29, 2025
+
+- Enhanced overtime configuration handling
+- Improved match management for extended play
+- Better overtime round tracking
+
+# 1.1.4
+
+#### December 29, 2025
+
+- Refined overtime handling in match management
+- Improved overtime segment tracking
+- Better OT phase detection
+
+# 1.1.3
+
+#### December 29, 2025
+
+- Refined overtime segments handling
+- Enhanced documentation for overtime configuration
+- Improved overtime logic
+
+# 1.1.2
+
+#### December 29, 2025
+
+- Enhanced overtime tie resolution logic
+- Improved overtime documentation
+- Better handling of OT scenarios
+
+# 1.1.1
+
+#### December 29, 2025
+
+- Added tournament overtime and regulation configuration
+- Support for `maxRounds`, `overtimeMode`, and `overtimeSegments` in JSON config
+- Enhanced flexibility for tournament organizers
+
+# 1.1.0
+
+#### December 29, 2025
+
+**🎯 Match Queuing & Tournament Automation Release**
+
+This release introduces intelligent match queuing capabilities, allowing servers to automatically transition between matches without manual intervention. Perfect for tournament brackets and continuous match series.
+
+### ✨ New Features
+
+#### Match Queuing System
+- New `tournamentNextMatch` field in match JSON configuration
+- Automatic detection and loading of queued matches after series end
+- Seamless transition between matches without downtime
+- Support for tournament bracket automation
+- Queue state tracking and validation
+
+#### Overtime Configuration Enhancements
+- Support for `maxRounds` in match configuration
+- Configurable `overtimeMode` (standard, tournament)
+- `overtimeSegments` configuration for multi-OT scenarios
+- Better tie resolution logic
+- Enhanced overtime round tracking
+
+### 🔧 Technical Changes
+
+- Improved match reset flow to check for queued matches
+- Enhanced overtime handling in match management
+- Better state management for continuous matches
+- Refined OT segment tracking and phase detection
+
+### 📖 Documentation
+
+- Added match queuing examples
+- Updated overtime configuration guide
+- Enhanced tournament workflow documentation
+
+# 1.0.26
+
+#### December 29, 2025
+
+- Added missing using directive for Utils module
+- Fixed compilation issues in G5API.cs
+
+# 1.0.25
+
+#### December 21, 2025
+
+- Implemented connected clients tracking for simulation and normal matches
+- Enhanced player state management
+- Improved match flow control
+
+# 1.0.24
+
+#### December 20, 2025
+
+- Enhanced simulation and normal match settings enforcement
+- Improved timescale and cheats management
+- Better simulation mode reliability
+
+# 1.0.23
+
+#### December 20, 2025
+
+- Implemented HLTV/SourceTV exclusion from readiness tracking
+- Fixed issues with spectator bots affecting ready system
+- Improved match start logic
+
+# 1.0.22
+
+#### December 20, 2025
+
+- Updated simulation initialization logic for first map in series
+- Fixed simulation flow for BO3/BO5 matches
+- Enhanced multi-map simulation support
+
+# 1.0.21
+
+#### December 20, 2025
+
+- Enhanced simulation mode readiness logic and event handling
+- Improved bot ready flow
+- Better simulation match lifecycle
+
+# 1.0.20
+
+#### December 19, 2025
+
+- Enhanced logging for series and map checkpoints
+- Improved debugging capabilities
+- Better match state tracking
+
+# 1.0.19
+
+#### December 19, 2025
+
+- Added simulation timescale configuration
+- Support for `simulation_timescale` in match JSON
+- Enhanced match control for testing
+
+# 1.0.18
+
+#### December 19, 2025
+
+- Enhanced simulation mode behavior and logging
+- Refactored MatchZy configuration
+- Improved simulation state management
+
+# 1.0.17
+
+#### December 19, 2025
+
+**🔄 MatchZy-Safe Auto-Updater Release**
+
+Introduces intelligent auto-update detection that prevents server restarts during active matches, critical for unattended tournament servers.
+
+### ✨ New Features
+
+#### MatchZy-Safe Auto-Updater
+- Monitors Steam UpToDateCheck API for CS2 server updates
+- Only updates when `matchzy_tournament_status` is "idle"
+- Writes update markers to disk for external monitoring
+- Prevents disruptive mid-match restarts
+- Configurable check interval
+
+### 📖 Documentation
+
+- Added auto-updater configuration guide
+- Updated tournament server deployment docs
+
+# 1.0.16
+
+#### December 19, 2025
+
+- Enhanced bot behavior in simulation mode
+- Improved bot command execution
+- Better simulation reliability
+
+# 1.0.15
+
+#### December 19, 2025
+
+- Refactored simulation flow management
+- Improved readiness handling for bots
+- Enhanced simulation initialization
+
+# 1.0.14
+
+#### December 18, 2025
+
+- Enhanced bot management and simulation flow
+- Improved logging and debugging
+- Refactored Load method and event handling
+
+# 1.0.13
+
+#### December 18, 2025
+
+- Enhanced simulation ready flow management
+- Improved player connection handling
+- Better bot management in simulation mode
+
+# 1.0.12
+
+#### December 18, 2025
+
+- Ensured bots remain active in simulation mode
+- Fixed `bot_join_after_player` command enforcement
+- Supports fully simulated matches without humans
+
+# 1.0.11
+
+#### December 18, 2025
+
+- Refactored bot management and simulation handling
+- Improved code organization
+- Enhanced simulation reliability
+
+# 1.0.10
+
+#### December 18, 2025
+
+- Refactored bot management logic in Utility.cs
+- Cleaned up bot spawn/kick functionality
+- Improved code maintainability
+
+# 1.0.9
+
+#### December 18, 2025
+
+- Updated configuration files
+- Cleaned up bot management code
+- Enhanced simulation configuration
+
+# 1.0.8
+
+#### December 18, 2025
+
+- Refactored simulation handling in MatchZy
+- Improved code structure
+- Better separation of concerns
+
+# 1.0.7
+
+#### December 18, 2025
+
+- Refactored warmup configuration handling
+- Improved simulation warmup logic
+- Better configuration management
+
+# 1.0.6
+
+#### December 18, 2025
+
+- Implemented warmup configuration adjustments for simulation mode
+- Enhanced simulation warmup flow
+- Improved player spawn handling
+
+# 1.0.5
+
+#### December 18, 2025
+
+- Implemented simulation flow handling during map changes
+- Fixed simulation initialization on map transitions
+- Enhanced multi-map simulation support
+
+# 1.0.4
+
+#### December 18, 2025
+
+- Enhanced remote logging configuration and event handling
+- Improved webhook integration
+- Better event delivery reliability
+
+# 1.0.3
+
+#### December 10, 2025
+
+- Updated changelog generation in release script
+- Improved release automation
+- Better GitHub release notes
+
+# 1.0.2
+
+#### December 10, 2025
+
+- Bug fixes and stability improvements
+- Enhanced simulation mode handling
+
+# 1.0.1
+
+#### December 10, 2025
+
+- Enhanced simulation mode handling
+- Added simulation bot disconnection after series end
+- Improved cleanup logic
+
+# 1.0.0
+
+#### December 9, 2025
+
+**🎉 Initial Release: MatchZy Enhanced Fork**
+
+This marks the first official release of the **MatchZy Enhanced** fork, a specialized version optimized for tournament automation, simulation testing, and seamless integration with the MatchZy Auto Tournament platform. Built on the foundation of the excellent original MatchZy by WD-, this fork adds powerful automation capabilities while maintaining full compatibility with the core plugin.
+
+### ✨ New Features
+
+#### Simulation Mode
+Complete bot-driven match simulation for testing and automation:
+- Configure via `"simulation": true` in match JSON
+- Adjustable timescale via `simulation_timescale` for faster testing (1.0 to 10.0x speed)
+- Automatic bot spawn and management (10 bots per team)
+- Bots remain active even without human players
+- Full match lifecycle simulation (warmup, knife, live, overtime, series)
+- Complete event logging for automated match processing
+- Perfect for tournament bracket pre-computation and stress testing
+
+#### Enhanced Event System
+Comprehensive webhook-based event logging for external integrations:
+- **Player Events**: Connect, disconnect, ready, unready
+- **Match State Events**: Match loaded, started, paused, resumed, ended
+- **Round Events**: Round start, end, MVP, bomb plant/defuse
+- **Backup Events**: Backup created, loaded
+- All events sent to `remote_log_url` as JSON payloads
+- Custom authentication header support
+- Enables real-time tournament platform integration
+
+#### Tournament Status ConVars
+Real-time match state tracking accessible to external tools:
+- `matchzy_tournament_status`: Current match phase (idle/loading/warmup/knife/live/paused/halftime/postgame/error)
+- `matchzy_tournament_match`: Active match identifier (e.g., "match_12345")
+- `matchzy_tournament_updated`: Unix timestamp of last status update
+- Perfect for tournament dashboards and server orchestration
+
+#### Match Report API
+Automated JSON reports for completed matches:
+- Automatic upload to configured endpoint after series end
+- Comprehensive match statistics and outcomes
+- Server identification for multi-server tournaments
+- Authentication header support for secure APIs
+- Structured data for database ingestion
+
+#### MatchZy-Safe Auto-Updater
+Intelligent update system that never interrupts active matches:
+- Monitors Steam UpToDateCheck API for CS2 updates
+- Only updates when `matchzy_tournament_status` is "idle"
+- Logs update availability to disk for external monitoring
+- Prevents mid-match server restarts
+- Critical for unattended tournament servers
+
+### 🔧 Technical Changes
+
+- Added `SimulationMode.cs` with complete bot management system
+- Enhanced `SynchronizationContextManagement.cs` for thread safety
+- Implemented `PublishEvents.cs` for webhook event delivery
+- Added `MatchReportCommand.cs` for automated reporting
+- Created `MatchZySafeAutoUpdater.cs` with update detection
+- Improved state management across all match phases
+- Better error handling and logging throughout
+
+### 📖 Documentation
+
+Complete documentation rewrite for tournament automation use cases:
+- **API Endpoint Specification**: Full webhook event reference
+- **Configuration Loading Behavior**: Priority and override rules
+- **Simulation Mode Guide**: Complete simulation workflow documentation
+- **Integration Documentation**: External platform integration examples
+- **Server Allocation Status**: Multi-server management guide
+
+### 🔄 Migration Notes
+
+#### Compatibility
+- ✅ Fully compatible with existing MatchZy configurations
+- ✅ All original features and commands preserved
+- ✅ Existing match JSON configurations work unchanged
+- ✅ Drop-in replacement for standard MatchZy
+
+#### New Requirements
+- Simulation mode requires `"simulation": true` in match config
+- Event delivery requires `remote_log_url` configuration
+- Tournament status convars are always active (no opt-out)
+
+#### Breaking Changes
+None for standard usage. Simulation features are opt-in via match configuration.
+
+### 🙏 Credits
+
+This fork is maintained by **[sivert-io](https://github.com/sivert-io)** for the **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-tournament)** platform.
+
+Built on the excellent foundation of **[Original MatchZy](https://github.com/shobhit-pathak/MatchZy)** by **WD-** (shobhit-pathak).
+
+### 🎯 Target Use Cases
+
+- **Tournament Platforms**: Automated match orchestration across multiple servers
+- **Bracket Pre-computation**: Simulate tournament outcomes at high speed
+- **Integration Testing**: Fast validation of tournament platform integrations
+- **Server Management**: Coordinated updates across tournament server fleets
+- **Analytics**: Rich event streams for match statistics and player tracking
+
+---
+
+## Original MatchZy Versions (0.8.x and earlier)
+
+The following versions are from the original MatchZy plugin by WD- before the Enhanced fork.
+
+---
+
+# 0.8.27
+
+#### November 27, 2025
+
+- Demo recording improvements
+- Auto-kick players after series end
+- Enhanced server cleanup
+
+# 0.8.26
+
+#### November 27, 2025
+
+- Enhanced demo upload with debug logging
+- Added chat notifications for demo upload
+- Improved demo upload reliability
+
+# 0.8.25
+
+#### November 20, 2025
+
+- Refactored match report command for improved async handling
+- Better error handling in match reports
+
+# 0.8.24
+
+#### November 15, 2025
+
+- Bug fixes and stability improvements
+
+# 0.8.23
+
+#### November 15, 2025
+
+- Bug fixes and stability improvements
+
+# 0.8.22
+
+#### November 15, 2025
+
+- Enhanced match report upload functionality
+
+# 0.8.20
+
+#### November 15, 2025
+
+- Added match report upload functionality
+
+# 0.8.19
+
+#### November 15, 2025
+
+- Implemented match report command
+- Enhanced player connection tracking
+
+# 0.8.18
+
+#### November 14, 2025
+
+- Added version display commands
+- Updated dependencies
+
+# 0.8.17
+
+#### November 9, 2025
+
+- Added tournament status ConVars
+- Automated release system
+- Enhanced release process
+
+# 0.8.16
+
+#### October 26, 2025
+
+- Added event logging improvements
+- Enhanced backup management logging
+
+---
 
 # 0.8.15
 

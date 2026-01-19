@@ -462,7 +462,39 @@ namespace MatchZy
             ExecWarmupCfg();
             knifeWinnerName = knifeWinner == 3 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
             ShowDamageInfo();
-            PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
+            
+            int sideSelectionSeconds = sideSelectionTime.Value;
+            if (sideSelectionEnabled.Value && sideSelectionSeconds > 0)
+            {
+                PrintToAllChat(Localizer["matchzy.knife.sidedecisionpendingwithtimer", knifeWinnerName, sideSelectionSeconds]);
+                
+                // Start countdown timer for side selection
+                sideSelectionTimer = AddTimer(sideSelectionSeconds, () =>
+                {
+                    if (isSideSelectionPhase)
+                    {
+                        // Time expired, pick random side
+                        bool shouldSwitch = new Random().Next(0, 2) == 1;
+                        
+                        if (shouldSwitch)
+                        {
+                            Server.ExecuteCommand("mp_swapteams;");
+                            SwapSidesInTeamData(true);
+                            PrintToAllChat(Localizer["matchzy.knife.timerexpiredrandomswap", knifeWinnerName]);
+                        }
+                        else
+                        {
+                            PrintToAllChat(Localizer["matchzy.knife.timerexpiredrandomstay", knifeWinnerName]);
+                        }
+                        
+                        StartLive();
+                    }
+                });
+            }
+            else
+            {
+                PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
+            }
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} Won the knife. Waiting for them to type {ChatColors.Green}.stay{ChatColors.Default} or {ChatColors.Green}.switch{ChatColors.Default}");
             sideSelectionMessageTimer ??= AddTimer(chatTimerDelay, SendSideSelectionMessage, TimerFlags.REPEAT);
             TriggerMatchReportUpload("post_knife_warmup");
@@ -594,6 +626,30 @@ namespace MatchZy
                 isPractice = false;
                 isDryRun = false;
                 ClearSimulationState();
+                
+                // Reset enhanced features tracking
+                pausesUsed.Clear();
+                ggVotesCT.Clear();
+                ggVotesT.Clear();
+                
+                // Kill active timers
+                if (pauseTimeoutTimer != null)
+                {
+                    pauseTimeoutTimer.Kill();
+                    pauseTimeoutTimer = null;
+                }
+                if (sideSelectionTimer != null)
+                {
+                    sideSelectionTimer.Kill();
+                    sideSelectionTimer = null;
+                }
+                if (ffwTimer != null)
+                {
+                    ffwTimer.Kill();
+                    ffwTimer = null;
+                }
+                ffwTeamMissing = 0;
+                ffwRemainingSeconds = 0;
 
                 lastBackupFileName = "";
                 lastMatchZyBackupFileName = "";
@@ -1585,6 +1641,10 @@ namespace MatchZy
             CreateMatchZyRoundDataBackup();
             InitPlayerDamageInfo();
             UpdateHostname();
+            
+            // Reset .gg votes at the start of each round
+            ggVotesCT.Clear();
+            ggVotesT.Clear();
 
             // Send round_started event
             if (isMatchLive)
@@ -1763,25 +1823,63 @@ namespace MatchZy
                 string pauseTeamName = "Admin";
                 unpauseData["pauseTeam"] = "Admin";
                 bool isAdmin = false;
+                Team? pausingTeam = null;
+                
                 if (player?.TeamNum == 2)
                 {
-
                     pauseTeamName = reverseTeamSides["TERRORIST"].teamName;
                     unpauseData["pauseTeam"] = reverseTeamSides["TERRORIST"].teamName;
+                    pausingTeam = reverseTeamSides["TERRORIST"];
                 }
                 else if (player?.TeamNum == 3)
                 {
                     pauseTeamName = reverseTeamSides["CT"].teamName;
                     unpauseData["pauseTeam"] = reverseTeamSides["CT"].teamName;
+                    pausingTeam = reverseTeamSides["CT"];
                 }
                 else
                 {
                     isAdmin = true;
                 }
-                PrintToAllChat(Localizer["matchzy.pause.pausedthematch", pauseTeamName]);
+                
+                // Check pause limit for non-admin pauses
+                if (!isAdmin && pausingTeam != null && maxPausesPerTeam.Value > 0)
+                {
+                    if (!pausesUsed.ContainsKey(pausingTeam))
+                    {
+                        pausesUsed[pausingTeam] = 0;
+                    }
+                    
+                    if (pausesUsed[pausingTeam] >= maxPausesPerTeam.Value)
+                    {
+                        PrintToPlayerChat(player!, Localizer["matchzy.pause.nopausesleft", pauseTeamName, maxPausesPerTeam.Value]);
+                        return;
+                    }
+                    
+                    pausesUsed[pausingTeam]++;
+                    int remaining = maxPausesPerTeam.Value - pausesUsed[pausingTeam];
+                    PrintToAllChat(Localizer["matchzy.pause.pausedthematchwithlimit", pauseTeamName, remaining]);
+                }
+                else
+                {
+                    PrintToAllChat(Localizer["matchzy.pause.pausedthematch", pauseTeamName]);
+                }
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{pauseTeamName}{ChatColors.Default} has paused the match. Type .unpause to unpause the match");
 
                 SetMatchPausedFlags();
+                
+                // Start pause timeout timer if configured
+                if (pauseDuration.Value > 0 && !isAdmin)
+                {
+                    pauseTimeoutTimer = AddTimer(pauseDuration.Value, () =>
+                    {
+                        if (isPaused)
+                        {
+                            PrintToAllChat(Localizer["matchzy.pause.timeoutexpired"]);
+                            UnpauseMatch();
+                        }
+                    });
+                }
 
                 // Send match_paused event
                 if (player != null && player.UserId.HasValue)
@@ -1918,6 +2016,13 @@ namespace MatchZy
                 pausedStateTimer.Kill();
                 pausedStateTimer = null;
             }
+            
+            // Kill pause timeout timer if active
+            if (pauseTimeoutTimer != null)
+            {
+                pauseTimeoutTimer.Kill();
+                pauseTimeoutTimer = null;
+            }
 
             // Send match_unpaused event
             Log($"[UnpauseMatch] Sending match_unpaused event - pause duration: {pauseDuration}s");
@@ -1947,6 +2052,115 @@ namespace MatchZy
 
             pausedStateTimer ??= AddTimer(chatTimerDelay, SendPausedStateMessage, TimerFlags.REPEAT);
             UpdateTournamentStatus("paused");
+        }
+        
+        private bool IsTeamFullyMissing(int teamNum)
+        {
+            if (teamNum != 2 && teamNum != 3) return false;
+            
+            int teamPlayerCount = 0;
+            foreach (var kvp in playerData)
+            {
+                var p = kvp.Value;
+                if (p != null && p.IsValid && !p.IsBot && !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.TeamNum == teamNum)
+                {
+                    teamPlayerCount++;
+                }
+            }
+            
+            return teamPlayerCount == 0;
+        }
+        
+        private void CheckAndStartFFW()
+        {
+            if (!ffwEnabled.Value || !isMatchLive) return;
+            if (ffwTimer != null) return; // Already running
+            
+            bool tMissing = IsTeamFullyMissing(2);
+            bool ctMissing = IsTeamFullyMissing(3);
+            
+            if (tMissing && !ctMissing)
+            {
+                StartFFWTimer(2);
+            }
+            else if (ctMissing && !tMissing)
+            {
+                StartFFWTimer(3);
+            }
+        }
+        
+        private void StartFFWTimer(int teamNum)
+        {
+            if (ffwTimer != null) return;
+            
+            ffwTeamMissing = teamNum;
+            ffwRemainingSeconds = ffwTime.Value;
+            
+            string teamName = teamNum == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
+            PrintToAllChat(Localizer["matchzy.ffw.started", teamName, ffwRemainingSeconds / 60]);
+            
+            // Create timer that fires every minute
+            ffwTimer = AddTimer(60.0f, () =>
+            {
+                ffwRemainingSeconds -= 60;
+                
+                if (ffwRemainingSeconds <= 0)
+                {
+                    // FFW time expired, forfeit the match
+                    ExecuteFFW();
+                }
+                else
+                {
+                    int minutes = ffwRemainingSeconds / 60;
+                    PrintToAllChat(Localizer["matchzy.ffw.warning", teamName, minutes]);
+                }
+            }, TimerFlags.REPEAT);
+        }
+        
+        private void CancelFFWTimer()
+        {
+            if (ffwTimer == null) return;
+            
+            string teamName = ffwTeamMissing == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
+            PrintToAllChat(Localizer["matchzy.ffw.cancelled", teamName]);
+            
+            ffwTimer.Kill();
+            ffwTimer = null;
+            ffwTeamMissing = 0;
+            ffwRemainingSeconds = 0;
+        }
+        
+        private void ExecuteFFW()
+        {
+            if (ffwTeamMissing == 0) return;
+            
+            string missingTeamName = ffwTeamMissing == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
+            string winningTeamName = ffwTeamMissing == 2 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
+            
+            PrintToAllChat(Localizer["matchzy.ffw.executed", missingTeamName, winningTeamName]);
+            
+            // Award win to the team that stayed
+            var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+            if (gameRules != null)
+            {
+                if (ffwTeamMissing == 2) // T forfeited
+                {
+                    gameRules.CTScore = 16;
+                    gameRules.TerroristScore = 0;
+                }
+                else // CT forfeited
+                {
+                    gameRules.TerroristScore = 16;
+                    gameRules.CTScore = 0;
+                }
+                
+                Server.ExecuteCommand("mp_gungame_endround 1");
+            }
+            
+            // Clean up
+            ffwTimer = null;
+            ffwTeamMissing = 0;
+            ffwRemainingSeconds = 0;
         }
 
         private void StartMatchMode()

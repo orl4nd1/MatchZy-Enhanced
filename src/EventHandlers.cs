@@ -68,7 +68,18 @@ public partial class MatchZy
                 connectedPlayers++;
                 if (readyAvailable && !matchStarted)
                 {
-                    playerReadyStatus[player.UserId.Value] = false;
+                    // Auto-ready system: if enabled, mark player as ready on join
+                    playerReadyStatus[player.UserId.Value] = autoReadyEnabled.Value;
+                    
+                    if (autoReadyEnabled.Value)
+                    {
+                        PrintToPlayerChat(player, Localizer["matchzy.autoready.markedready"]);
+                        SendPlayerReadyEvent(player, true);
+                        
+                        // Check if match can start now that this player is ready
+                        CheckLiveRequired();
+                        HandleClanTags();
+                    }
                 }
                 else
                 {
@@ -142,6 +153,16 @@ public partial class MatchZy
             }
 
             TriggerMatchReportUpload("player_connect");
+            
+            // Check if FFW should be cancelled (player from missing team rejoined)
+            if (ffwEnabled.Value && ffwTimer != null && player.UserId.HasValue)
+            {
+                if (player.TeamNum == ffwTeamMissing)
+                {
+                    CancelFFWTimer();
+                }
+            }
+            
             return HookResult.Continue;
 
         }
@@ -244,6 +265,13 @@ public partial class MatchZy
             }
 
             TriggerMatchReportUpload("player_disconnect");
+            
+            // Check if FFW should be started (entire team left)
+            if (ffwEnabled.Value && isMatchLive && !isSimulationMode)
+            {
+                CheckAndStartFFW();
+            }
+            
             return HookResult.Continue;
         }
         catch (Exception e)

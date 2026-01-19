@@ -63,6 +63,19 @@ namespace MatchZy
         };
 
         bool isPauseCommandForTactical = false;
+        
+        // Enhanced pause system tracking
+        public Dictionary<Team, int> pausesUsed = new();
+        public CounterStrikeSharp.API.Modules.Timers.Timer? pauseTimeoutTimer = null;
+        
+        // Early match termination (.gg) tracking
+        public HashSet<ulong> ggVotesCT = new();
+        public HashSet<ulong> ggVotesT = new();
+        
+        // FFW (Forfeit/Walkover) tracking
+        public CounterStrikeSharp.API.Modules.Timers.Timer? ffwTimer = null;
+        public int ffwTeamMissing = 0; // 0 = none, 2 = T, 3 = CT
+        public int ffwRemainingSeconds = 0;
 
         // Knife Data
         public int knifeWinner = 0;
@@ -83,6 +96,7 @@ namespace MatchZy
         public CounterStrikeSharp.API.Modules.Timers.Timer? unreadyPlayerMessageTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionMessageTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? pausedStateTimer = null;
+        public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionTimer = null;
 
         // Each message is kept in chat display for ~13 seconds, hence setting default chat timer to 13 seconds.
         // Configurable using matchzy_chat_messages_timer_delay <seconds>
@@ -232,7 +246,8 @@ namespace MatchZy
                 { ".version", OnMatchZyVersionCommand},
                 { ".matchzyversion", OnMatchZyVersionCommand},
                 { ".te", OnTestEventCommand},
-                { ".testevent", OnTestEventCommand}
+                { ".testevent", OnTestEventCommand},
+                { ".gg", OnGGCommand}
             };
 
             RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFullHandler);

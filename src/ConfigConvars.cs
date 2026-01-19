@@ -34,6 +34,26 @@ namespace MatchZy
 
         public FakeConVar<bool> stopCommandNoDamage = new("matchzy_stop_command_no_damage", "Whether the stop command becomes unavailable if a player damages a player from the opposing team.", false);
 
+        // Auto-Ready System
+        public FakeConVar<bool> autoReadyEnabled = new("matchzy_autoready_enabled", "Whether players are automatically marked as ready when they join. Default: false", false);
+
+        // Enhanced Pause System
+        public FakeConVar<bool> bothTeamsUnpauseRequired = new("matchzy_both_teams_unpause_required", "Whether both teams must type .unpause to resume (only for non-admin pauses). Default: true", true);
+        public FakeConVar<int> maxPausesPerTeam = new("matchzy_max_pauses_per_team", "Maximum number of pauses allowed per team. Set to 0 for unlimited. Default: 0", 0);
+        public FakeConVar<int> pauseDuration = new("matchzy_pause_duration", "Maximum pause duration in seconds. Set to 0 for unlimited. Default: 0", 0);
+
+        // Side Selection System
+        public FakeConVar<bool> sideSelectionEnabled = new("matchzy_side_selection_enabled", "Whether side selection commands (.ct/.t/.stay/.swap) are enabled after knife round. Default: true", true);
+        public FakeConVar<int> sideSelectionTime = new("matchzy_side_selection_time", "Time in seconds for side selection after knife round. Default: 60", 60);
+
+        // Early Match Termination (.gg)
+        public FakeConVar<bool> ggEnabled = new("matchzy_gg_enabled", "Whether .gg command for early match termination is enabled. Default: false", false);
+        public FakeConVar<float> ggThreshold = new("matchzy_gg_threshold", "Percentage (0.0-1.0) of team required to type .gg for match to end. Default: 0.8 (80%)", 0.8f);
+
+        // FFW (Forfeit/Walkover) System
+        public FakeConVar<bool> ffwEnabled = new("matchzy_ffw_enabled", "Whether automatic forfeit system is enabled when a team leaves. Default: false", false);
+        public FakeConVar<int> ffwTime = new("matchzy_ffw_time", "Time in seconds before forfeit is declared when a team is missing. Default: 240 (4 minutes)", 240);
+
         public FakeConVar<string> matchStartMessage = new("matchzy_match_start_message", "Message to show when the match starts. Use $$$ to break message into multiple lines. Set to \"\" to disable.", "");
 
         // Tournament Status ConVars
