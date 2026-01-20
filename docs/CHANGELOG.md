@@ -5,16 +5,30 @@
 
 ---
 
+# 1.3.5
+
+#### January 20, 2026
+
+- Introduced **`matchzy_debug_console`** (default: `1`) to control verbose server‑console logging and hooked it into the internal `Log(...)` helper.
+- Expanded console‑side debug logs around the **ready/auto‑ready flow**, **match start decisions**, **pause/tactical timeout handling**, **`.gg` votes** and **FFW timers**, to make user‑submitted logs much more useful for debugging.
+- Documented both `matchzy_debug_console` and `matchzy_debug_chat` in `configuration.md` / `commands.md` under a dedicated **Debugging & logging** section.
+
 # 1.3.4
 
 #### January 20, 2026
 
-- Added example configuration for **plugin‑managed pauses** vs native tactical timeouts in `configuration.md` (showing how to use `matchzy_use_pause_command_for_tactical_pause 0` together with `matchzy_max_pauses_per_team`, and how it interacts with `mp_team_timeout_max`).
-- Documented the new **`matchzy_gg_min_score_diff`** convar and clarified `.gg` behavior in `commands.md` and `configuration.md`.
-- Added a **reload config** command (`.reload_config` / `matchzy_reload_config`) to re‑exec `cfg/MatchZy/config.cfg` safely between matches.
-- Restructured `commands.md` to include **linkable per‑command sections** (e.g. `#gg`, `#pause--p`, `#reload_config`) to make sharing specific commands easier.
-- Introduced **`matchzy_debug_console`** (default: `1`) to control verbose server‑console logging, and wired it into the internal `Log(...)` helper.
-- Expanded console debug logs around the ready system, match start decisions, pause/tactical timeout handling, `.gg` flow and FFW, making it easier to diagnose issues from user‑submitted logs.
+- Added an example configuration for **plugin‑managed pauses** vs native tactical timeouts in `configuration.md` (showing how to use `matchzy_use_pause_command_for_tactical_pause 0` together with `matchzy_max_pauses_per_team`, and how it should align with `mp_team_timeout_max` when using `.tac`).
+- Documented the new **`matchzy_gg_min_score_diff`** convar and clarified `.gg` behavior in both `commands.md` and `configuration.md`.
+- Added a **reload config** command (`.reload_config` / `matchzy_reload_config`) that safely re‑executes `cfg/MatchZy/config.cfg` when no match is live.
+- Restructured `commands.md` to include **linkable per‑command sections** (e.g. `#gg`, `#pause--p`, `#reload_config`) so individual commands can be shared with direct URLs.
+
+# 1.3.3
+
+#### January 20, 2026
+
+- Hardened the **release script** with clean‑tree pre‑checks and safer version handling before tagging/publishing.
+- Refactored internal score / readiness logic for clarity and maintainability in the enhanced match‑management features.
+- Updated commands and configuration documentation, `README.md`, and `mkdocs.yml` to better reflect the 1.3.x feature set and to streamline the published docs.
 
 # 1.3.0
 
