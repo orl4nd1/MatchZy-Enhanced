@@ -43,6 +43,9 @@ Built for **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-
 - 🔧 **Match report API** with structured JSON state
 - 🔄 **Thread-safe operations** for reliable automation
 - 🤖 **Simulation mode** for testing and demos
+- 🔁 **Event retry system** with automatic queue and recovery
+- 📊 **Server tracking** with health monitoring and status events
+- 💾 **Pull API** for direct match stats retrieval
 
 ### Player Features
 - 🚀 **Auto-ready system** — Instant match starts (optional)

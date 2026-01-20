@@ -18,6 +18,8 @@ Designed to work hand-in-hand with:
 
 - **In-server match automation**: Warmup, knife/live, pauses, side swaps, BO1/BO3 series, and clean match resets.
 - **Tournament integration**: Stable HTTP events and match reports for external tools like MatchZy Auto Tournament.
+- **Event reliability**: Automatic retry queue ensures no match data is lost during API downtime or network issues.
+- **Server tracking**: Health monitoring and status events for tournament platform dashboards.
 - **Demo upload pipeline**: Automatically captures GOTV demos and uploads `.dem` files to your API.
 - **Simulation mode**: Bot-driven, fully automated matches mapped to real player identities.
 

@@ -44,6 +44,19 @@ At a high level:
    - Optionally uploads **demo files** to your API.
    - Optionally uploads a **match report JSON** after maps/series.
 
+## Event reliability
+
+MatchZy includes an automatic event retry system that ensures no match data is lost:
+
+- **Automatic queueing**: Failed event POSTs are saved to the local database
+- **Background retry**: Events are retried every 30 seconds with exponential backoff
+- **Server tracking**: A `server_configured` event is sent when the webhook URL is set, allowing your API to track active servers
+- **Pull API**: Your API can query `matchzy_get_match_stats <matchId>` to retrieve match data directly from the server
+
+This means your tournament platform doesn't need to worry about temporary API downtime or network issues. Events will be delivered automatically when connectivity is restored.
+
+For implementation details, see `API_INTEGRATION_INSTRUCTIONS.md`.
+
 ## Required MatchZy configuration
 
 In `cfg/MatchZy/config.cfg`, the key convars for Auto Tournament are:
