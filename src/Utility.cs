@@ -2718,6 +2718,22 @@ namespace MatchZy
                     Log($"[LoadPersistentConfig] Loaded matchzy_remote_log_url: {remoteLogUrl}");
                 }
                 
+                // Load remote log header key
+                var remoteLogHeaderKey = database.LoadConfigValue("matchzy_remote_log_header_key");
+                if (!string.IsNullOrEmpty(remoteLogHeaderKey))
+                {
+                    matchConfig.RemoteLogHeaderKey = remoteLogHeaderKey;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_remote_log_header_key: {remoteLogHeaderKey}");
+                }
+                
+                // Load remote log header value
+                var remoteLogHeaderValue = database.LoadConfigValue("matchzy_remote_log_header_value");
+                if (!string.IsNullOrEmpty(remoteLogHeaderValue))
+                {
+                    matchConfig.RemoteLogHeaderValue = remoteLogHeaderValue;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_remote_log_header_value (hidden for security)");
+                }
+                
                 // Load demo upload URL
                 var demoUploadUrl = database.LoadConfigValue("matchzy_demo_upload_url");
                 if (!string.IsNullOrEmpty(demoUploadUrl))

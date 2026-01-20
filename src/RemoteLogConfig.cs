@@ -43,7 +43,14 @@ namespace MatchZy
             if (player != null) return;
             string header = command.ArgByIndex(1).Trim();
 
-            if (header != "") matchConfig.RemoteLogHeaderKey = header;
+            if (header != "")
+            {
+                matchConfig.RemoteLogHeaderKey = header;
+                
+                // Persist to database so it survives server restarts
+                database.SaveConfigValue("matchzy_remote_log_header_key", header);
+                Log($"[RemoteLogHeaderKeyCommand] Remote log header key set and persisted to database: {header}");
+            }
         }
 
         [ConsoleCommand("get5_remote_log_header_value", "If defined, the value of the custom header added to the events sent over HTTP")]
@@ -53,7 +60,14 @@ namespace MatchZy
             if (player != null) return;
             string headerValue = command.ArgByIndex(1).Trim();
 
-            if (headerValue != "") matchConfig.RemoteLogHeaderValue = headerValue;
+            if (headerValue != "")
+            {
+                matchConfig.RemoteLogHeaderValue = headerValue;
+                
+                // Persist to database so it survives server restarts
+                database.SaveConfigValue("matchzy_remote_log_header_value", headerValue);
+                Log($"[RemoteLogHeaderValueCommand] Remote log header value set and persisted to database");
+            }
         }
 
         /// <summary>
