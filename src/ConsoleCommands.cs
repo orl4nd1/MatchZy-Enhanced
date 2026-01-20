@@ -862,9 +862,9 @@ namespace MatchZy
             {
                 (int t1score, int t2score) = GetTeamsScore();
 
-                Team playerTeam = player.TeamNum == 2 ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
-                int playerScore = playerTeam == matchzyTeam1 ? t1score : t2score;
-                int opponentScore = playerTeam == matchzyTeam1 ? t2score : t1score;
+                Team surrenderingTeam = player.TeamNum == 2 ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
+                int playerScore = surrenderingTeam == matchzyTeam1 ? t1score : t2score;
+                int opponentScore = surrenderingTeam == matchzyTeam1 ? t2score : t1score;
                 int scoreDiff = opponentScore - playerScore;
 
                 Log($"[GG] Score check for {player.PlayerName}: playerScore={playerScore}, opponentScore={opponentScore}, diff={scoreDiff}, ggMinScoreDiff={ggMinScoreDiff.Value}");
