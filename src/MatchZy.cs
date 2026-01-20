@@ -184,6 +184,7 @@ namespace MatchZy
                 { ".whitelist", OnWLCommand },
                 { ".globalnades", OnSaveNadesAsGlobalCommand },
                 { ".reload_admins", OnReloadAdmins },
+                { ".reload_config", OnReloadConfig },
                 { ".tactics", OnPracCommand },
                 { ".prac", OnPracCommand },
                 { ".showspawns", OnShowSpawnsCommand },

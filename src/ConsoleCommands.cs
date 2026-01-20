@@ -680,6 +680,27 @@ namespace MatchZy
             }
         }
 
+        [ConsoleCommand("matchzy_reload_config", "Re-executes MatchZy/config.cfg to reload MatchZy plugin configuration")]
+        public void OnReloadConfig(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (!IsPlayerAdmin(player, "matchzy_reload_config", "@css/config"))
+            {
+                SendPlayerNotAdminMessage(player);
+                return;
+            }
+
+            if (isMatchLive)
+            {
+                ReplyToUserCommand(player, "Cannot reload MatchZy config while a match is live. Please wait until postgame or warmup.");
+                return;
+            }
+
+            Log("[ReloadConfig] Executing MatchZy/config.cfg from matchzy_reload_config command.");
+            Server.ExecuteCommand("execifexists MatchZy/config.cfg");
+
+            ReplyToUserCommand(player, "MatchZy configuration reloaded from MatchZy/config.cfg.");
+        }
+
         [ConsoleCommand("css_match", "Starts match mode")]
         public void OnMatchCommand(CCSPlayerController? player, CommandInfo? command)
         {
