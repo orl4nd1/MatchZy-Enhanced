@@ -141,6 +141,26 @@ Improved pause controls with limits and coordination requirements.
   matchzy_pause_duration "300"
   ```
 
+#### Example: Use plugin‑managed pauses instead of native tactical timeouts
+
+If you want `.pause` / `.p` to use MatchZy’s **plugin‑managed pause system** (and **not** consume CS2 tactical timeouts), configure:
+
+```cfg
+// Use plugin pause system for .pause/.p instead of native tactical timeout
+matchzy_use_pause_command_for_tactical_pause "0"
+
+// Allow up to 3 pauses per team, tracked by MatchZy
+matchzy_max_pauses_per_team "3"
+
+// Optional: automatically unpause after 60 seconds
+matchzy_pause_duration "60"
+```
+
+With this setup:
+
+- `.pause` / `.p` calls `mp_pause_match` and is limited only by `matchzy_max_pauses_per_team`.
+- `.tac` still uses the **native CS2 tactical timeout system** (`timeout_terrorist_start` / `timeout_ct_start`) and may be further limited by Valve cvars like `mp_team_timeout_max`.
+
 **New command aliases:**
 - `.p` → `.pause`
 - `.up` → `.unpause`

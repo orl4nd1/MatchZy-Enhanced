@@ -5,6 +5,15 @@
 
 ---
 
+# 1.3.1
+
+#### January 20, 2026
+
+- Added example configuration for **plugin‑managed pauses** vs native tactical timeouts in `configuration.md` (showing how to use `matchzy_use_pause_command_for_tactical_pause 0` together with `matchzy_max_pauses_per_team`).
+- Documented the new **`matchzy_gg_min_score_diff`** convar and clarified `.gg` behavior in `commands.md` and `configuration.md`.
+- Added a **reload config** command (`.reload_config` / `matchzy_reload_config`) to re‑exec `cfg/MatchZy/config.cfg` safely between matches.
+- Restructured `commands.md` to include **linkable per‑command sections** (e.g. `#gg`, `#pause--p`, `#reload_config`) to make sharing specific commands easier.
+
 # 1.3.0
 
 #### January 19, 2026

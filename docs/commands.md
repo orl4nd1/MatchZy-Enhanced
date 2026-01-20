@@ -42,7 +42,7 @@ See sections below for command details and configuration options.
 | Command                 | Who can use it                  | Description                                                                                                                                                 |
 | ----------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.tech`                 | Players / admins (configurable) | Request a **technical pause** via MatchZy’s pause system (for hardware/network/config issues). Does **not** consume a CS2 tactical timeout.                 |
-| `.pause`, `.p`          | Players / admins (configurable) | General MatchZy pause. Behaves as a normal pause or as a tactical pause depending on `matchzy_use_pause_command_for_tactical` and other match settings. Counts towards `matchzy_max_pauses_per_team` when issued by players.     |
+| `.pause`, `.p`          | Players / admins (configurable) | General MatchZy pause. **Defaults to a plugin‑managed pause** using `mp_pause_match`. If `matchzy_use_pause_command_for_tactical_pause 1` is set, it instead behaves like a tactical timeout and can consume native CS2 timeouts. Counts towards `matchzy_max_pauses_per_team` when issued by players.     |
 | `.unpause`, `.up`       | Players / admins                | Request to unpause the match. Both teams must confirm unless an admin unpauses (via `.fp` / `.fup` or console), to prevent accidental or one‑sided resumes. If a native CS2 tactical timeout is active, `.unpause` immediately resumes the match. |
 | `.tac`                  | Players on a team               | Start a **tactical timeout** using the **native CS2 timeout system** (shows as a tactical timeout in‑game, consumes that team’s tactical timeout budget). Also counts towards `matchzy_max_pauses_per_team` for that team when limits are enabled.   |
 | `.fp`, `.forcepause`    | Admins only                     | Force‑pause the match as an admin, regardless of team votes.                                                                                                |
@@ -114,6 +114,7 @@ See sections below for command details and configuration options.
 | `.playout`                          | Admins only     | Toggle whether the match plays out all regulation rounds once clinched.      |
 | `.reloadmap`                        | Admins only     | Reload the current map via `changelevel` while keeping MatchZy state sane.   |
 | `.reload_admins`                    | Admins only     | Reload MatchZy’s admin list from disk.                                       |
+| `.reload_config`                    | Admins only     | Reload MatchZy’s core plugin config (`cfg/MatchZy/config.cfg`) from disk. Blocked while a match is live for safety. |
 | `.help`                             | Anyone          | Show a help message listing common MatchZy commands.                         |
 | `.asay`                             | Admins only     | Say a message with the admin chat prefix.                                    |
 | `.match`                            | Admins only     | Start match mode manually.                                                   |
@@ -140,6 +141,7 @@ Some of the most important console commands:
 - `css_restart`, `css_rr` – restart the current match/series.
 - `css_map <mapname>` – change to a specific map.
 - `css_rmap` – reload the current map.
+ - `matchzy_reload_config` – reload `cfg/MatchZy/config.cfg` from disk. Only allowed when no match is currently live.
 
 ### Pause & timeout
 
@@ -288,13 +290,88 @@ These are maintained by MatchZy / external controllers and are usually not edite
 - **Plugin Docs → Demo upload API** – exact request/response contract for demo uploads.
 - **Plugin Docs → Config loading behavior** – when each config file is executed during the match lifecycle.
 
-{
-"cells": [],
-"metadata": {
-"language_info": {
-"name": "python"
-}
-},
-"nbformat": 4,
-"nbformat_minor": 2
-}
+## Command details (linkable)
+
+Use these sections when you want to share a **direct link to a specific command**.  
+Each heading becomes an anchor, for example: `.../commands/#gg` or `.../commands/#pause--p`.
+
+### .gg
+
+Team forfeit vote:
+
+- **Chat:** `.gg`  
+- **Who:** Players on a team  
+- **Behavior:**  
+  - Counts a forfeit vote for the caller’s team.  
+  - When the fraction of connected teammates who have voted reaches `matchzy_gg_threshold`, MatchZy ends the match and awards the win to the opposing team via the normal match‑end flow.  
+  - Can be further restricted with `matchzy_gg_min_score_diff` so that `.gg` is only allowed once your team is losing by at least N rounds (for example, `6` for “only at 0–6 or worse”).  
+
+Related convars: `matchzy_gg_enabled`, `matchzy_gg_threshold`, `matchzy_gg_min_score_diff`.
+
+### .pause / .p
+
+General pause command:
+
+- **Chat:** `.pause`, `.p`  
+- **Console:** `css_pause`  
+- **Who:** Players / admins (configurable via permissions)  
+- **Behavior:**  
+  - By default uses MatchZy’s pause system and calls `mp_pause_match`.  
+  - If `matchzy_use_pause_command_for_tactical_pause 1`, `.pause` instead behaves like a **tactical timeout**, consuming native CS2 timeouts.  
+  - When triggered by players, counts toward `matchzy_max_pauses_per_team` (shared limit across pause types).  
+
+Related convars: `matchzy_use_pause_command_for_tactical_pause`, `matchzy_max_pauses_per_team`, `matchzy_pause_duration`, `matchzy_both_teams_unpause_required`.
+
+### .unpause / .up
+
+Unpause request:
+
+- **Chat:** `.unpause`, `.up`  
+- **Console:** none (use `css_fup` / `css_forceunpause` for admin force‑unpause)  
+- **Who:** Players / admins  
+- **Behavior:**  
+  - In normal pauses, both teams must confirm if `matchzy_both_teams_unpause_required 1` and the caller is not an admin.  
+  - Admins (or force‑unpause commands) immediately resume the match.  
+  - If a **native CS2 tactical timeout** is active, `.unpause` immediately clears it even if pause voting would normally be required.  
+
+Related convars: `matchzy_both_teams_unpause_required`, `matchzy_pause_duration`.
+
+### .tech
+
+Technical pause:
+
+- **Chat:** `.tech`  
+- **Console:** `css_tech`  
+- **Who:** Players / admins (controlled by `matchzy_tech_pause_flag`)  
+- **Behavior:**  
+  - Uses MatchZy’s pause system for **technical issues** and does **not** spend native CS2 tactical timeouts.  
+  - Each team has a limited number of tech pauses via `matchzy_max_tech_pauses_allowed`.  
+
+Related convars: `matchzy_enable_tech_pause`, `matchzy_tech_pause_flag`, `matchzy_tech_pause_duration`, `matchzy_max_tech_pauses_allowed`.
+
+### .tac
+
+Native tactical timeout:
+
+- **Chat:** `.tac`  
+- **Console:** `css_tac`  
+- **Who:** Players on a team  
+- **Behavior:**  
+  - Uses CS2’s **built‑in tactical timeout system** (`timeout_terrorist_start` / `timeout_ct_start`).  
+  - Subject to native game limits such as `mp_team_timeout_max`.  
+  - Also counts against MatchZy’s `matchzy_max_pauses_per_team` when that limit is enabled.  
+
+Related convars: `matchzy_max_pauses_per_team` (plugin‑side), Valve timeout cvars (game‑side).
+
+### .reload_config
+
+Reload MatchZy’s core plugin configuration:
+
+- **Chat:** `.reload_config`  
+- **Console:** `matchzy_reload_config`  
+- **Who:** Admins only  
+- **Behavior:**  
+  - Re‑executes `cfg/MatchZy/config.cfg` so you can apply convar changes without restarting the server.  
+  - For safety, the command is **blocked while a match is live**; use it between matches or on idle servers.  
+
+Related files: `cfg/MatchZy/config.cfg`.
