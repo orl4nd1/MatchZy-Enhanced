@@ -1036,5 +1036,81 @@ namespace MatchZy
                 }
             });
         }
+
+        [ConsoleCommand("matchzy_get_match_stats", "Returns complete match statistics as JSON for a given match ID")]
+        public void OnGetMatchStatsCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (command.ArgCount < 2)
+            {
+                ReplyToUserCommand(player, "Usage: matchzy_get_match_stats <matchId>");
+                return;
+            }
+
+            if (!long.TryParse(command.ArgByIndex(1), out long matchId))
+            {
+                ReplyToUserCommand(player, "Invalid match ID. Must be a number.");
+                return;
+            }
+
+            var statsJson = database.GetMatchStatsJson(matchId);
+            
+            if (statsJson == null)
+            {
+                ReplyToUserCommand(player, $"No stats found for match ID {matchId}");
+                Log($"[GetMatchStats] No stats found for match ID {matchId}");
+                return;
+            }
+
+            // For admin players, send a confirmation
+            if (player != null)
+            {
+                ReplyToUserCommand(player, $"Match stats for ID {matchId} retrieved from database.");
+            }
+
+            // Print to console (for API to capture if needed)
+            Log($"[GetMatchStats] Match ID {matchId} stats:");
+            Log($"[GetMatchStats] {statsJson}");
+            
+            // Also print to server console for easy viewing
+            Server.PrintToConsole($"=== MATCH STATS FOR ID {matchId} ===");
+            Server.PrintToConsole(statsJson);
+            Server.PrintToConsole($"=== END MATCH STATS ===");
+        }
+
+        [ConsoleCommand("matchzy_get_pending_events", "Shows how many events are queued for retry")]
+        public void OnGetPendingEventsCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (!IsPlayerAdmin(player, "css_pe", "@css/config"))
+            {
+                SendPlayerNotAdminMessage(player);
+                return;
+            }
+
+            var pendingEvents = database.GetPendingEvents(1000);
+            int pendingCount = pendingEvents?.Count ?? 0;
+            
+            ReplyToUserCommand(player, $"Event queue status:");
+            ReplyToUserCommand(player, $"  Pending events: {ChatColors.Yellow}{pendingCount}{ChatColors.Default}");
+            
+            if (pendingCount > 0 && pendingEvents != null)
+            {
+                var grouped = pendingEvents.GroupBy(e => e.event_type)
+                    .Select(g => $"{g.Key}: {g.Count()}")
+                    .ToList();
+                
+                ReplyToUserCommand(player, $"  Breakdown:");
+                foreach (var group in grouped.Take(10))
+                {
+                    ReplyToUserCommand(player, $"    - {group}");
+                }
+                
+                if (grouped.Count > 10)
+                {
+                    ReplyToUserCommand(player, $"    ... and {grouped.Count - 10} more event types");
+                }
+            }
+            
+            Log($"[GetPendingEvents] {pendingCount} events in retry queue");
+        }
     }
 }

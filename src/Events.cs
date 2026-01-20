@@ -447,6 +447,31 @@ public class MatchZySideSwapEvent : MatchZyMapEvent
 }
 
 // Test Event
+public class MatchZyServerConfiguredEvent : MatchZyEvent
+{
+    [JsonPropertyName("server_id")]
+    public required string ServerId { get; init; }
+
+    [JsonPropertyName("hostname")]
+    public required string Hostname { get; init; }
+
+    [JsonPropertyName("plugin_version")]
+    public required string PluginVersion { get; init; }
+
+    [JsonPropertyName("remote_log_url")]
+    public required string RemoteLogUrl { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public required long Timestamp { get; init; }
+
+    [JsonPropertyName("configured_by")]
+    public required string ConfiguredBy { get; init; }
+
+    public MatchZyServerConfiguredEvent() : base("server_configured")
+    {
+    }
+}
+
 public class MatchZyTestEvent : MatchZyMatchEvent
 {
     [JsonPropertyName("message")]

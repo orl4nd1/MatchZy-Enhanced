@@ -55,15 +55,23 @@ namespace MatchZy
                 else
                 {
                     string errorContent = await httpResponseMessage.Content.ReadAsStringAsync();
+                    string errorMsg = $"HTTP {httpResponseMessage.StatusCode}: {errorContent}";
                     Log($"[SendEventAsync] Sending {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} failed with status code: {httpResponseMessage.StatusCode}, ResponseContent: {errorContent}");
+                    
+                    // Queue the event for retry (jsonString already contains the serialized event)
+                    string eventDataForQueue = jsonString;
+                    Server.NextFrame(() => {
+                        database.QueueEvent(@event.EventName, eventDataForQueue, liveMatchId, matchConfig.CurrentMapNumber, errorMsg);
+                    });
                     
                     // Print error to console, and optionally to chat
                     Server.NextFrame(() => {
                         Server.PrintToConsole($"[MatchZy Events] ✗ FAILED to send '{@event.EventName}' (HTTP {httpResponseMessage.StatusCode})");
                         Server.PrintToConsole($"[MatchZy Events] Error: {errorContent}");
+                        Server.PrintToConsole($"[MatchZy Events] → Event queued for retry");
                         if (debugChatEnabled.Value)
                         {
-                            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}FAILED{ChatColors.Default} ({httpResponseMessage.StatusCode})");
+                            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}FAILED{ChatColors.Default} ({httpResponseMessage.StatusCode}) - {ChatColors.Yellow}queued for retry");
                         }
                     });
                 }
@@ -72,12 +80,26 @@ namespace MatchZy
             {
                 Log($"[SendEventAsync FATAL] An error occurred: {e.Message}");
                 
+                // Queue the event for retry
+                try
+                {
+                    string eventDataForQueue = JsonSerializer.Serialize(@event, @event.GetType());
+                    Server.NextFrame(() => {
+                        database.QueueEvent(@event.EventName, eventDataForQueue, liveMatchId, matchConfig.CurrentMapNumber, $"Exception: {e.Message}");
+                    });
+                }
+                catch (Exception queueEx)
+                {
+                    Log($"[SendEventAsync] Failed to queue event: {queueEx.Message}");
+                }
+                
                 // Print exception to console, and optionally to chat
                 Server.NextFrame(() => {
                     Server.PrintToConsole($"[MatchZy Events] ✗ EXCEPTION sending '{@event.EventName}': {e.Message}");
+                    Server.PrintToConsole($"[MatchZy Events] → Event queued for retry");
                     if (debugChatEnabled.Value)
                     {
-                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}ERROR:{ChatColors.Default} {e.Message}");
+                        Server.PrintToChatAll($"{chatPrefix} {ChatColors.Red}✗{ChatColors.Default} {ChatColors.Lime}{@event.EventName}{ChatColors.Default} {ChatColors.Red}ERROR:{ChatColors.Default} {e.Message} - {ChatColors.Yellow}queued for retry");
                     }
                 });
             }
@@ -93,6 +115,100 @@ namespace MatchZy
             catch
             {
                 return url.Length > 30 ? url.Substring(0, 27) + "..." : url;
+            }
+        }
+
+        /// <summary>
+        /// Starts background timer to retry failed events
+        /// </summary>
+        private void StartEventRetryTimer()
+        {
+            // Process retry queue every 30 seconds
+            AddTimer(30.0f, () =>
+            {
+                ProcessEventRetryQueue();
+                
+                // Reschedule for next run
+                StartEventRetryTimer();
+            });
+            
+            // Also cleanup old events once per hour
+            AddTimer(3600.0f, () =>
+            {
+                database.CleanupOldEvents();
+            });
+            
+            Log("[EventRetryTimer] Event retry system started (30s interval)");
+        }
+
+        /// <summary>
+        /// Processes the event retry queue
+        /// </summary>
+        private async void ProcessEventRetryQueue()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    // No webhook configured, skip retry processing
+                    return;
+                }
+
+                var pendingEvents = database.GetPendingEvents(50);
+                
+                if (pendingEvents.Count == 0)
+                {
+                    return;
+                }
+
+                Log($"[EventRetryQueue] Processing {pendingEvents.Count} pending events...");
+
+                foreach (var evt in pendingEvents)
+                {
+                    try
+                    {
+                        Log($"[EventRetryQueue] Retrying event {evt.id}: {evt.event_type} (attempt {evt.retry_count + 1})");
+
+                        using var httpClient = new HttpClient();
+                        using var jsonContent = new StringContent(evt.event_data, Encoding.UTF8, "application/json");
+
+                        if (!string.IsNullOrEmpty(matchConfig.RemoteLogHeaderKey) && !string.IsNullOrEmpty(matchConfig.RemoteLogHeaderValue))
+                        {
+                            httpClient.DefaultRequestHeaders.Add(matchConfig.RemoteLogHeaderKey, matchConfig.RemoteLogHeaderValue);
+                        }
+
+                        var httpResponseMessage = await httpClient.PostAsync(matchConfig.RemoteLogURL, jsonContent);
+
+                        if (httpResponseMessage.IsSuccessStatusCode)
+                        {
+                            database.MarkEventSent(evt.id);
+                            Log($"[EventRetryQueue] ✓ Event {evt.id} ({evt.event_type}) sent successfully on retry {evt.retry_count + 1}");
+                            
+                            Server.PrintToConsole($"[MatchZy Events] ✓ Retry successful: '{evt.event_type}' (attempt {evt.retry_count + 1})");
+                        }
+                        else
+                        {
+                            string errorContent = await httpResponseMessage.Content.ReadAsStringAsync();
+                            string errorMsg = $"HTTP {httpResponseMessage.StatusCode}: {errorContent}";
+                            database.MarkEventRetry(evt.id, evt.retry_count + 1, errorMsg);
+                            Log($"[EventRetryQueue] ✗ Event {evt.id} ({evt.event_type}) retry failed: {errorMsg}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        database.MarkEventRetry(evt.id, evt.retry_count + 1, $"Exception: {ex.Message}");
+                        Log($"[EventRetryQueue] ✗ Event {evt.id} ({evt.event_type}) retry exception: {ex.Message}");
+                    }
+
+                    // Small delay between retries to avoid overwhelming the API
+                    await Task.Delay(100);
+                }
+
+                Log($"[EventRetryQueue] Finished processing {pendingEvents.Count} events");
+            }
+            catch (Exception ex)
+            {
+                Log($"[EventRetryQueue FATAL] Error processing retry queue: {ex.Message}");
             }
         }
     }

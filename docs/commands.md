@@ -12,17 +12,59 @@ This page is a **quick reference** for the most important MatchZy commands and c
 
 For integration details (webhooks, demo upload, JSON config), see **Getting Started → Configuration**.
 
-## ✨ New in v1.3.0: Enhanced Features
+## ✨ Recent Enhancements
 
-MatchZy Enhanced introduces several new commands and improvements for better match management:
+### v1.3.6: Event Reliability System
+- **`matchzy_get_pending_events`** (admin) – View event queue status
+- **`matchzy_get_match_stats <matchId>`** – Pull complete match stats from local DB
+- Automatic event retry with exponential backoff
+- Zero data loss during API downtime
 
-- **Auto-Ready System**: Players can be automatically marked as ready on join (`matchzy_autoready_enabled`)
-- **Enhanced Pause Controls**: New `.p` and `.up` aliases, pause limits, timeout controls
+### v1.3.0: Player Experience Features
+- **Auto-Ready System**: Players automatically marked as ready on join
+- **Enhanced Pause Controls**: New `.p` and `.up` aliases, pause limits
 - **Side Selection Timer**: Time-limited side selection after knife round
 - **`.gg` Command**: Team forfeit voting system
-- **FFW System**: Automatic forfeit handling when teams disconnect
+- **FFW System**: Automatic forfeit when teams disconnect
 
 See sections below for command details and configuration options.
+
+## 🔐 Command Permissions Reference
+
+### Player Commands (No Admin Required)
+These commands can be used by any player on a team:
+- `.ready` / `.unready` – Ready system
+- `.pause` / `.unpause` / `.tech` – Pause management
+- `.tac` – Tactical timeouts
+- `.stay` / `.switch` / `.ct` / `.t` – Side selection (knife round winner)
+- `.gg` – Forfeit voting
+- `.settings` – View match settings
+- `.help` – Show available commands
+- Practice mode commands (when in practice): `.bot`, `.spawn`, `.savepos`, etc.
+
+### Admin Commands (Require Admin Permissions)
+These commands require admin flags (`@css/config`, `@css/map`, `@css/rcon`, or custom flags):
+- `.start` / `.forcestart` – Force start match
+- `.restart` / `.endmatch` – Restart/end match
+- `.forcepause` / `.fp` – Force pause (bypass team votes)
+- `.forceunpause` / `.fup` – Force unpause (immediate resume)
+- `.roundknife` / `.rk` – Toggle knife round
+- `.readyrequired` – Set minimum ready players
+- `.match` / `.exitprac` – Enter/exit match mode
+- `.prac` / `.tactics` – Enter practice mode
+- `.rcon` – Execute server commands
+- `.playout` – Toggle playout mode
+- `.asay` – Admin say
+- `.map` / `.rmap` – Change/reload map
+- `.whitelist` / `.wl` – Toggle whitelist
+- `.globalnades` – Toggle global lineups
+- `.testevent` / `.te` – Send test webhook event
+- `.reload_config` – Reload configuration
+- `matchzy_get_pending_events` – View event retry queue
+
+### Special Cases
+- `.unpause` – No admin required, but if an **admin paused** the match, only admins can unpause it
+- `matchzy_get_match_stats <matchId>` – No admin required (useful for API data recovery)
 
 ## Player chat commands (`.xxx`)
 
@@ -141,7 +183,12 @@ Some of the most important console commands:
 - `css_restart`, `css_rr` – restart the current match/series.
 - `css_map <mapname>` – change to a specific map.
 - `css_rmap` – reload the current map.
- - `matchzy_reload_config` – reload `cfg/MatchZy/config.cfg` from disk. Only allowed when no match is currently live.
+- `matchzy_reload_config` – reload `cfg/MatchZy/config.cfg` from disk. Only allowed when no match is currently live.
+
+### Event reliability & data recovery
+
+- `matchzy_get_pending_events` – (admin only) Shows how many events are queued for retry, with breakdown by event type. Useful for monitoring event delivery health.
+- `matchzy_get_match_stats <matchId>` – Returns complete match statistics as JSON from the local database. Useful for API data recovery or debugging. Example: `matchzy_get_match_stats 12345`
 
 ### Pause & timeout
 

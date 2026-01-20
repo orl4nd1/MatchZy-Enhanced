@@ -275,9 +275,9 @@ public partial class MatchZy
                 continue;
             }
 
-            // Send a synthetic player_connect event if remote logging is enabled and
-            // the match is setup. This mirrors EventPlayerConnectFullHandler but is
-            // explicitly targeted at simulation bots.
+            // Send synthetic player_connect event immediately for simulation bots.
+            // Then schedule a player_ready event after a short delay to simulate realistic
+            // human behavior (connect → wait a few seconds → ready up).
             if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && isMatchSetup)
             {
                 var playerInfo = BuildPlayerInfo(bot, "none");
@@ -293,11 +293,58 @@ public partial class MatchZy
                 {
                     await SendEventAsync(playerConnectEvent);
                 });
+
+                // Schedule the ready event after a delay to simulate human behavior
+                if (readyAvailable && !matchStarted)
+                {
+                    if (!playerReadyStatus.ContainsKey(userId))
+                    {
+                        playerReadyStatus[userId] = false;
+                    }
+
+                    if (!playerReadyStatus[userId])
+                    {
+                        // Random delay between 1.5 and 3.5 seconds to simulate realistic ready-up times
+                        float readyDelay = 1.5f + (new Random().Next(0, 200) / 100.0f);
+                        
+                        AddTimer(readyDelay, () =>
+                        {
+                            if (!playerData.TryGetValue(userId, out var delayedBot) || !IsPlayerValid(delayedBot))
+                            {
+                                Log($"[SimulationMode] Delayed ready: bot UserId={userId} no longer valid.");
+                                return;
+                            }
+
+                            if (!readyAvailable || matchStarted)
+                            {
+                                Log($"[SimulationMode] Delayed ready: match already started or ready system disabled for UserId={userId}.");
+                                return;
+                            }
+
+                            playerReadyStatus[userId] = true;
+                            Log($"[SimulationMode] Marking sim bot UserId={userId} as ready after {readyDelay:0.1f}s delay.");
+
+                            SendPlayerReadyEvent(delayedBot, true);
+                            CheckAndSendTeamReadyEvent();
+                            CheckLiveRequired();
+                        });
+                    }
+                }
             }
         }
 
-        // Now that we have mappings, ensure the simulated ready flow is scheduled.
-        ScheduleSimulationReadyFlowIfNeeded();
+        // All simulation bots have been mapped and marked as ready.
+        // Now ensure team overrides are set and final ready checks are performed.
+        if (readyAvailable && !matchStarted && isMatchSetup)
+        {
+            Log("[SimulationMode] All simulation bots mapped and ready. Setting team overrides and checking match start conditions.");
+            
+            teamReadyOverride[CsTeam.CounterTerrorist] = true;
+            teamReadyOverride[CsTeam.Terrorist] = true;
+            
+            CheckAndSendTeamReadyEvent();
+            CheckLiveRequired();
+        }
     }
 
     /// <summary>

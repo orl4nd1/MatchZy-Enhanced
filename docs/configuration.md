@@ -454,6 +454,33 @@ matchzy_ffw_enabled "1"
 matchzy_ffw_time "240"
 ```
 
+## Event reliability & retry system
+
+MatchZy Enhanced includes a **bulletproof event delivery system** that ensures no match data is lost, even during API downtime or network issues.
+
+**How it works:**
+
+1. **Server registration**: When `matchzy_remote_log_url` is set (or on startup if already configured), a `server_configured` event is sent immediately so your API knows the server is active.
+
+2. **Automatic queueing**: When an event POST to `matchzy_remote_log_url` fails (non-2xx response, timeout, or exception), the event is automatically saved to the local database.
+
+3. **Background retry**: Every 30 seconds, MatchZy processes the retry queue with exponential backoff (30s → 1m → 2m → 4m → 8m → 16m → 32m max).
+
+4. **Maximum retries**: Events are retried up to 20 times before being marked as `failed`.
+
+5. **Auto-cleanup**: Successfully sent events are removed from the database after 7 days.
+
+**Console commands:**
+
+- `matchzy_get_pending_events` (admin only) – Shows how many events are queued for retry
+- `matchzy_get_match_stats <matchId>` – Returns complete match statistics as JSON from local database
+
+**Benefits:** Zero data loss, automatic recovery, no manual intervention needed.
+
+**For API developers:** See `API_INTEGRATION_INSTRUCTIONS.md` for complete details. Your API just needs to return HTTP 200 OK when events are stored successfully – MatchZy handles all retries automatically.
+
+---
+
 ## Debugging & logging
 
 These options control how much diagnostic information MatchZy prints, which is very useful when collecting logs for bug reports.

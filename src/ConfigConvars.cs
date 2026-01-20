@@ -70,6 +70,26 @@ namespace MatchZy
         public FakeConVar<string> matchReportEndpoint = new("matchzy_report_endpoint", "HTTP endpoint for match report uploads (https://host/api/events/report)", "");
         public FakeConVar<string> matchReportServerId = new("matchzy_report_server_id", "Server identifier to send with match report uploads", "");
         public FakeConVar<string> matchReportToken = new("matchzy_report_token", "Authentication token for match report uploads (sent as x-matchzy-token)", "");
+        
+        [ConsoleCommand("matchzy_server_id", "Server identifier for event tracking and match reports")]
+        public void MatchZyServerId(CCSPlayerController? player, CommandInfo command)
+        {
+            if (player != null) return;
+            string id = command.ArgByIndex(1);
+            
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                Log($"[MatchZyServerId] Server ID is required. Usage: matchzy_server_id <server_id>");
+                return;
+            }
+            
+            id = id.Trim();
+            matchReportServerId.Value = id;
+            Log($"[MatchZyServerId] Server ID set to: {id}");
+            
+            // Persist to database so it survives server restarts
+            database.SaveConfigValue("matchzy_server_id", id);
+        }
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
         public void MatchZyWLConvar(CCSPlayerController? player, CommandInfo command)
@@ -219,6 +239,10 @@ namespace MatchZy
             {
                 demoUploadURLSetDynamically = true;
                 Log($"[MatchZyDemoUploadURL] Demo upload URL set to: {url}");
+                
+                // Persist to database so it survives server restarts
+                database.SaveConfigValue("matchzy_demo_upload_url", url);
+                Log($"[MatchZyDemoUploadURL] Demo upload URL persisted to database.");
             }
         }
 
@@ -267,6 +291,9 @@ namespace MatchZy
             chatPrefix = args;
 
             Log($"[MatchZyChatPrefix] chatPrefix: {chatPrefix}");
+            
+            // Persist to database so it survives server restarts
+            database.SaveConfigValue("matchzy_chat_prefix", chatPrefix);
         }
 
         [ConsoleCommand("matchzy_admin_chat_prefix", "Chat prefix to show whenever an admin sends message using .asay <message>. Default value: [{Green}MatchZy{Default}]")]
@@ -287,6 +314,9 @@ namespace MatchZy
             adminChatPrefix = args;
 
             Log($"[MatchZyAdminChatPrefix] adminChatPrefix: {adminChatPrefix}");
+            
+            // Persist to database so it survives server restarts
+            database.SaveConfigValue("matchzy_admin_chat_prefix", adminChatPrefix);
         }
 
         [ConsoleCommand("matchzy_chat_messages_timer_delay", "Number of seconds of delay before sending reminder messages from MatchZy (like unready message, paused message, etc). Default: 12")]

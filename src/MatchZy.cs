@@ -14,7 +14,7 @@ namespace MatchZy
 
         public override string ModuleName => "MatchZy";
 
-        public override string ModuleVersion => "1.3.5";
+        public override string ModuleVersion => "1.3.6";
 
         public override string ModuleAuthor => "WD- (https://github.com/shobhit-pathak/)";
 
@@ -127,6 +127,22 @@ namespace MatchZy
 
             // This sets default config ConVars
             Server.ExecuteCommand("execifexists MatchZy/config.cfg");
+            
+            // Load persistent configuration from database (overrides config.cfg if values exist)
+            LoadPersistentConfig();
+            
+            // Start event retry background process
+            StartEventRetryTimer();
+            
+            // Send server_configured event on startup if webhook is configured
+            // Delay slightly to ensure server is fully initialized
+            AddTimer(5.0f, () =>
+            {
+                if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    SendServerConfiguredEvent("Startup");
+                }
+            });
 
             teamSides[matchzyTeam1] = "CT";
             teamSides[matchzyTeam2] = "TERRORIST";

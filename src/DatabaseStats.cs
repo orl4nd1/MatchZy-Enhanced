@@ -3,6 +3,7 @@ using System.IO;
 using System.Data;
 using System.Text.Json;
 using System.Globalization;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using Dapper;
 using CounterStrikeSharp.API;
@@ -16,6 +17,16 @@ using MySqlConnector;
 
 namespace MatchZy
 {
+    public class QueuedEvent
+    {
+        public int id { get; set; }
+        public string event_type { get; set; } = "";
+        public string event_data { get; set; } = "";
+        public long match_id { get; set; }
+        public int map_number { get; set; }
+        public int retry_count { get; set; }
+    }
+
     public class Database
     {
         private IDbConnection connection = null!; // Initialized in ConnectDatabase()
@@ -42,6 +53,22 @@ namespace MatchZy
                 Log("[InitializeDatabase] Table matchzy_stats_matches created (or already exists)");
                 Log("[InitializeDatabase] Table matchzy_stats_players created (or already exists)");
                 Log("[InitializeDatabase] Table matchzy_stats_maps created (or already exists)");
+                
+                // Create server config table for persistent configuration
+                if (connection is SqliteConnection) {
+                    CreateServerConfigTableSQLite();
+                } else {
+                    CreateServerConfigTableSQL();
+                }
+                Log("[InitializeDatabase] Table matchzy_server_config created (or already exists)");
+                
+                // Create event queue table for reliable event delivery
+                if (connection is SqliteConnection) {
+                    CreateEventQueueTableSQLite();
+                } else {
+                    CreateEventQueueTableSQL();
+                }
+                Log("[InitializeDatabase] Table matchzy_event_queue created (or already exists)");
             }
             catch (Exception ex)
             {
@@ -227,6 +254,372 @@ namespace MatchZy
                 CONSTRAINT fk_player_map_ref FOREIGN KEY (matchid, mapnumber) 
                     REFERENCES matchzy_stats_maps (matchid, mapnumber)
             )");
+        }
+
+        public void CreateServerConfigTableSQLite()
+        {
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS matchzy_server_config (
+                    config_key TEXT PRIMARY KEY,
+                    config_value TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )");
+        }
+
+        public void CreateServerConfigTableSQL()
+        {
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS matchzy_server_config (
+                    config_key VARCHAR(255) PRIMARY KEY,
+                    config_value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )");
+        }
+
+        public void CreateEventQueueTableSQLite()
+        {
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS matchzy_event_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_type TEXT NOT NULL,
+                    event_data TEXT NOT NULL,
+                    match_id INTEGER,
+                    map_number INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    retry_count INTEGER DEFAULT 0,
+                    last_retry DATETIME,
+                    next_retry DATETIME,
+                    status TEXT DEFAULT 'pending',
+                    error_message TEXT
+                )");
+            
+            // Create index for efficient querying of pending events
+            connection.Execute(@"
+                CREATE INDEX IF NOT EXISTS idx_event_queue_status_retry 
+                ON matchzy_event_queue(status, next_retry)");
+        }
+
+        public void CreateEventQueueTableSQL()
+        {
+            connection.Execute(@"
+                CREATE TABLE IF NOT EXISTS matchzy_event_queue (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    event_type VARCHAR(100) NOT NULL,
+                    event_data TEXT NOT NULL,
+                    match_id INT,
+                    map_number INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    retry_count INT DEFAULT 0,
+                    last_retry TIMESTAMP NULL,
+                    next_retry TIMESTAMP NULL,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    error_message TEXT,
+                    INDEX idx_status_retry (status, next_retry)
+                )");
+        }
+
+        /// <summary>
+        /// Loads a configuration value from the database
+        /// </summary>
+        public string? LoadConfigValue(string key)
+        {
+            try
+            {
+                connection.Open();
+                var result = connection.QueryFirstOrDefault<string>(
+                    "SELECT config_value FROM matchzy_server_config WHERE config_key = @Key",
+                    new { Key = key }
+                );
+                connection.Close();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log($"[LoadConfigValue] Error loading config key '{key}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Queues a failed event for retry
+        /// </summary>
+        public void QueueEvent(string eventType, string eventData, long matchId, int mapNumber, string errorMessage = "")
+        {
+            try
+            {
+                connection.Open();
+                
+                // Calculate next retry time using exponential backoff (start with 30 seconds)
+                string nextRetryExpression = (connection is SqliteConnection) 
+                    ? "datetime('now', '+30 seconds')" 
+                    : "DATE_ADD(NOW(), INTERVAL 30 SECOND)";
+                
+                if (connection is SqliteConnection)
+                {
+                    connection.Execute($@"
+                        INSERT INTO matchzy_event_queue 
+                        (event_type, event_data, match_id, map_number, error_message, next_retry) 
+                        VALUES (@EventType, @EventData, @MatchId, @MapNumber, @ErrorMessage, {nextRetryExpression})",
+                        new { EventType = eventType, EventData = eventData, MatchId = matchId, MapNumber = mapNumber, ErrorMessage = errorMessage }
+                    );
+                }
+                else
+                {
+                    connection.Execute($@"
+                        INSERT INTO matchzy_event_queue 
+                        (event_type, event_data, match_id, map_number, error_message, next_retry) 
+                        VALUES (@EventType, @EventData, @MatchId, @MapNumber, @ErrorMessage, {nextRetryExpression})",
+                        new { EventType = eventType, EventData = eventData, MatchId = matchId, MapNumber = mapNumber, ErrorMessage = errorMessage }
+                    );
+                }
+                
+                connection.Close();
+                Log($"[QueueEvent] Queued {eventType} event for matchId={matchId} (will retry in 30s)");
+            }
+            catch (Exception ex)
+            {
+                Log($"[QueueEvent] Error queueing event: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets pending events ready for retry
+        /// </summary>
+        public List<QueuedEvent> GetPendingEvents(int limit = 50)
+        {
+            try
+            {
+                connection.Open();
+                
+                string nowExpression = (connection is SqliteConnection) ? "datetime('now')" : "NOW()";
+                
+                var events = connection.Query<QueuedEvent>($@"
+                    SELECT id, event_type, event_data, match_id, map_number, retry_count
+                    FROM matchzy_event_queue
+                    WHERE status = 'pending' 
+                    AND (next_retry IS NULL OR next_retry <= {nowExpression})
+                    AND retry_count < 20
+                    ORDER BY created_at ASC
+                    LIMIT {limit}
+                ").ToList();
+                
+                connection.Close();
+                return events;
+            }
+            catch (Exception ex)
+            {
+                Log($"[GetPendingEvents] Error: {ex.Message}");
+                return new List<QueuedEvent>();
+            }
+        }
+
+        /// <summary>
+        /// Marks an event as successfully sent
+        /// </summary>
+        public void MarkEventSent(int eventId)
+        {
+            try
+            {
+                connection.Open();
+                connection.Execute(@"
+                    UPDATE matchzy_event_queue 
+                    SET status = 'sent' 
+                    WHERE id = @Id",
+                    new { Id = eventId }
+                );
+                connection.Close();
+                Log($"[MarkEventSent] Event {eventId} marked as sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                Log($"[MarkEventSent] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates event with retry info and schedules next retry using exponential backoff
+        /// </summary>
+        public void MarkEventRetry(int eventId, int retryCount, string errorMessage = "")
+        {
+            try
+            {
+                connection.Open();
+                
+                // Exponential backoff: 30s, 1m, 2m, 4m, 8m, 16m, 32m (capped at 32 minutes)
+                int delaySeconds = Math.Min(30 * (1 << retryCount), 1920);
+                
+                string nextRetryExpression = (connection is SqliteConnection)
+                    ? $"datetime('now', '+{delaySeconds} seconds')"
+                    : $"DATE_ADD(NOW(), INTERVAL {delaySeconds} SECOND)";
+                    
+                string lastRetryExpression = (connection is SqliteConnection)
+                    ? "datetime('now')"
+                    : "NOW()";
+                
+                if (retryCount >= 20)
+                {
+                    // Max retries reached, mark as failed
+                    connection.Execute(@"
+                        UPDATE matchzy_event_queue 
+                        SET retry_count = @RetryCount, 
+                            last_retry = " + lastRetryExpression + @",
+                            status = 'failed',
+                            error_message = @ErrorMessage
+                        WHERE id = @Id",
+                        new { Id = eventId, RetryCount = retryCount, ErrorMessage = errorMessage }
+                    );
+                    Log($"[MarkEventRetry] Event {eventId} reached max retries (20), marked as failed.");
+                }
+                else
+                {
+                    connection.Execute($@"
+                        UPDATE matchzy_event_queue 
+                        SET retry_count = @RetryCount, 
+                            last_retry = {lastRetryExpression},
+                            next_retry = {nextRetryExpression},
+                            error_message = @ErrorMessage
+                        WHERE id = @Id",
+                        new { Id = eventId, RetryCount = retryCount, ErrorMessage = errorMessage }
+                    );
+                    Log($"[MarkEventRetry] Event {eventId} retry scheduled in {delaySeconds}s (attempt {retryCount + 1})");
+                }
+                
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                Log($"[MarkEventRetry] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cleans up old successfully sent events (older than 7 days)
+        /// </summary>
+        public void CleanupOldEvents()
+        {
+            try
+            {
+                connection.Open();
+                
+                string dateExpression = (connection is SqliteConnection)
+                    ? "datetime('now', '-7 days')"
+                    : "DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                
+                int deleted = connection.Execute($@"
+                    DELETE FROM matchzy_event_queue 
+                    WHERE status = 'sent' 
+                    AND created_at < {dateExpression}
+                ");
+                
+                connection.Close();
+                
+                if (deleted > 0)
+                {
+                    Log($"[CleanupOldEvents] Cleaned up {deleted} old sent events.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[CleanupOldEvents] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves a configuration value to the database (insert or update)
+        /// </summary>
+        public void SaveConfigValue(string key, string value)
+        {
+            try
+            {
+                connection.Open();
+                
+                if (connection is SqliteConnection)
+                {
+                    connection.Execute(@"
+                        INSERT INTO matchzy_server_config (config_key, config_value, updated_at) 
+                        VALUES (@Key, @Value, datetime('now'))
+                        ON CONFLICT(config_key) DO UPDATE SET 
+                            config_value = @Value,
+                            updated_at = datetime('now')",
+                        new { Key = key, Value = value }
+                    );
+                }
+                else
+                {
+                    connection.Execute(@"
+                        INSERT INTO matchzy_server_config (config_key, config_value) 
+                        VALUES (@Key, @Value)
+                        ON DUPLICATE KEY UPDATE 
+                            config_value = @Value,
+                            updated_at = CURRENT_TIMESTAMP",
+                        new { Key = key, Value = value }
+                    );
+                }
+                
+                connection.Close();
+                Log($"[SaveConfigValue] Saved config: {key} = {value}");
+            }
+            catch (Exception ex)
+            {
+                Log($"[SaveConfigValue] Error saving config key '{key}': {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets complete match statistics from database for API pull requests
+        /// </summary>
+        public string? GetMatchStatsJson(long matchId)
+        {
+            try
+            {
+                connection.Open();
+                
+                // Get match info
+                var match = connection.QueryFirstOrDefault<dynamic>(@"
+                    SELECT * FROM matchzy_stats_matches 
+                    WHERE matchid = @MatchId",
+                    new { MatchId = matchId }
+                );
+                
+                if (match == null)
+                {
+                    connection.Close();
+                    return null;
+                }
+                
+                // Get map info
+                var maps = connection.Query<dynamic>(@"
+                    SELECT * FROM matchzy_stats_maps 
+                    WHERE matchid = @MatchId
+                    ORDER BY mapnumber",
+                    new { MatchId = matchId }
+                ).ToList();
+                
+                // Get player stats
+                var players = connection.Query<dynamic>(@"
+                    SELECT * FROM matchzy_stats_players 
+                    WHERE matchid = @MatchId
+                    ORDER BY mapnumber, team, name",
+                    new { MatchId = matchId }
+                ).ToList();
+                
+                connection.Close();
+                
+                // Build JSON structure
+                var result = new
+                {
+                    match = match,
+                    maps = maps,
+                    players = players
+                };
+                
+                return JsonSerializer.Serialize(result);
+            }
+            catch (Exception ex)
+            {
+                Log($"[GetMatchStatsJson] Error: {ex.Message}");
+                return null;
+            }
         }
 
         public long InitMatch(string team1name, string team2name, string serverIp, bool isMatchSetup, long liveMatchId, int mapNumber, string seriesType, MatchConfig matchConfig)

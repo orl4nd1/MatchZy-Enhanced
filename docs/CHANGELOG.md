@@ -5,6 +5,68 @@
 
 ---
 
+# 1.3.6
+
+#### January 20, 2026
+
+**🚀 Bulletproof Event Delivery System**
+
+This release introduces a comprehensive **event reliability and retry system** that ensures zero data loss, even during API downtime, network issues, or server crashes.
+
+### ✨ New Features
+
+#### Event Queue & Automatic Retry
+- **Automatic queueing**: Failed webhook events are saved to local database
+- **Background retry**: Processes retry queue every 30 seconds with exponential backoff (30s → 1m → 2m → 4m → 8m → 16m → 32m max)
+- **Maximum 20 retries** before marking event as `failed`
+- **Auto-cleanup**: Successfully sent events removed after 7 days
+- **Database table**: `matchzy_event_queue` stores event type, data, match ID, retry count, timestamps, and status
+
+#### Server Registration Event
+- **`server_configured` event**: Automatically sent when webhook URL is set or on server startup
+- Contains server ID, hostname, plugin version, webhook URL, and timestamp
+- Enables API to track active servers and maintain server status database
+- Useful for dashboards, health monitoring, and server management
+
+#### Pull API for Data Recovery
+- **`matchzy_get_match_stats <matchId>`**: Returns complete match statistics as JSON from local database
+- **`matchzy_get_pending_events`** (admin only): Shows event queue status with breakdown by event type
+- Enables tournament platforms to pull missing data directly from CS2 servers
+
+#### Smart Console Logging
+- Visual feedback when events fail and are queued for retry
+- Success messages when retried events are delivered
+- Example: `[MatchZy Events] ✗ FAILED to send 'round_end' (HTTP 500) → Event queued for retry`
+- Example: `[MatchZy Events] ✓ Retry successful: 'round_end' (attempt 3)`
+
+### 🔧 Technical Details
+
+**Database schema:**
+- New `matchzy_event_queue` table for both SQLite and MySQL
+- Tracks event type, full JSON payload, match ID, map number, retry count, next retry time, status, and error messages
+
+**Event flow:**
+1. Event POST fails (non-2xx, timeout, or exception) → Auto-queued
+2. Background timer (30s interval) processes pending events
+3. Exponential backoff prevents API overload
+4. Successful delivery → Mark as `sent` and remove after 7 days
+5. Max retries reached → Mark as `failed` for manual review
+
+**Benefits:**
+- ✅ Zero data loss during API downtime
+- ✅ Works on managed hosting (Dathost, etc.) - no database exposure needed
+- ✅ Each server manages its own queue independently
+- ✅ No manual intervention required
+- ✅ Pull API available for data recovery
+
+### 📚 Documentation
+
+- Added **`API_INTEGRATION_INSTRUCTIONS.md`** with complete implementation guide for tournament platforms
+- Updated `configuration.md` with event reliability section
+- Includes architecture diagrams, error handling strategies, and testing procedures
+
+---
+
 # 1.3.5
 
 #### January 20, 2026

@@ -1,6 +1,8 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 
 namespace MatchZy
 {
@@ -25,6 +27,13 @@ namespace MatchZy
             // we can stop treating missing URLs as a noisy but expected startup condition.
             remoteLogUrlEverConfigured = true;
             remoteLogUrlMissingWarningLogged = false;
+            
+            // Persist to database so it survives server restarts
+            database.SaveConfigValue("matchzy_remote_log_url", url);
+            Log($"[RemoteLogURLCommand] Remote log URL set and persisted to database: {url}");
+            
+            // Send server_configured event so API knows this server is active and configured
+            SendServerConfiguredEvent("Console");
         }
 
         [ConsoleCommand("get5_remote_log_header_key", "If defined, a custom HTTP header with this name is added to the HTTP requests for events")]
@@ -45,6 +54,42 @@ namespace MatchZy
             string headerValue = command.ArgByIndex(1).Trim();
 
             if (headerValue != "") matchConfig.RemoteLogHeaderValue = headerValue;
+        }
+
+        /// <summary>
+        /// Sends a server_configured event to the API so it can track active servers
+        /// </summary>
+        private void SendServerConfiguredEvent(string configuredBy)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
+
+                // Get server hostname from ConVar
+                var hostnameConvar = ConVar.Find("hostname");
+                string hostname = hostnameConvar?.StringValue ?? "Unknown Server";
+
+                var serverConfiguredEvent = new MatchZyServerConfiguredEvent
+                {
+                    ServerId = matchReportServerId.Value,
+                    Hostname = hostname,
+                    PluginVersion = ModuleVersion,
+                    RemoteLogUrl = matchConfig.RemoteLogURL,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    ConfiguredBy = configuredBy
+                };
+
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(serverConfiguredEvent);
+                });
+
+                Log($"[SendServerConfiguredEvent] Sent server_configured event for server '{hostname}' (ID: {matchReportServerId.Value})");
+            }
+            catch (Exception ex)
+            {
+                Log($"[SendServerConfiguredEvent] Error: {ex.Message}");
+            }
         }
     }
 }

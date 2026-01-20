@@ -2700,6 +2700,64 @@ namespace MatchZy
             return regex.Replace(input, "");
         }
 
+        /// <summary>
+        /// Loads persistent configuration from database.
+        /// These values override config.cfg and survive server restarts.
+        /// </summary>
+        private void LoadPersistentConfig()
+        {
+            try
+            {
+                Log("[LoadPersistentConfig] Loading persistent configuration from database...");
+                
+                // Load remote log URL
+                var remoteLogUrl = database.LoadConfigValue("matchzy_remote_log_url");
+                if (!string.IsNullOrEmpty(remoteLogUrl))
+                {
+                    matchConfig.RemoteLogURL = remoteLogUrl;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_remote_log_url: {remoteLogUrl}");
+                }
+                
+                // Load demo upload URL
+                var demoUploadUrl = database.LoadConfigValue("matchzy_demo_upload_url");
+                if (!string.IsNullOrEmpty(demoUploadUrl))
+                {
+                    demoUploadURL = demoUploadUrl;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_demo_upload_url: {demoUploadUrl}");
+                }
+                
+                // Load chat prefix
+                var chatPrefix = database.LoadConfigValue("matchzy_chat_prefix");
+                if (!string.IsNullOrEmpty(chatPrefix))
+                {
+                    this.chatPrefix = chatPrefix;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_chat_prefix: {chatPrefix}");
+                }
+                
+                // Load admin chat prefix
+                var adminChatPrefix = database.LoadConfigValue("matchzy_admin_chat_prefix");
+                if (!string.IsNullOrEmpty(adminChatPrefix))
+                {
+                    this.adminChatPrefix = adminChatPrefix;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_admin_chat_prefix: {adminChatPrefix}");
+                }
+                
+                // Load server ID
+                var serverId = database.LoadConfigValue("matchzy_server_id");
+                if (!string.IsNullOrEmpty(serverId))
+                {
+                    matchReportServerId.Value = serverId;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_server_id: {serverId}");
+                }
+                
+                Log("[LoadPersistentConfig] Persistent configuration loaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                Log($"[LoadPersistentConfig] Error loading persistent config: {ex.Message}");
+            }
+        }
+
         private void Log(string message)
         {
             try
