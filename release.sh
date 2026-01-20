@@ -66,12 +66,19 @@ else
     echo -e "${GREEN}📦 Using current version: ${VERSION}${NC}"
 fi
 
+# Ensure working tree is completely clean before proceeding
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo -e "${RED}❌ Working tree is not clean. Please commit or stash all changes before running the release script.${NC}"
+    echo "Tip: run 'git status' to see pending changes."
+    exit 1
+fi
+
 # Final confirmation before doing anything destructive
 echo -e "\n${YELLOW}You are about to run a release for version v${VERSION}.${NC}"
-echo -e "${YELLOW}This will clean builds, optionally update MatchZy.cs, commit, tag, push, and create a GitHub release.${NC}"
+echo -e "${YELLOW}This will clean builds, optionally update MatchZy.cs, commit, push, and create a GitHub release + tag.${NC}"
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown-branch")
 echo -e "${YELLOW}Current Git branch: ${CURRENT_BRANCH}${NC}"
-read -rp "$(echo -e "${YELLOW}Continue with release v${VERSION}? [y/N]: ${NC}")" CONFIRM_RELEASE
+read -rp "$(echo -e \"${YELLOW}Continue with release v${VERSION}? [y/N]: ${NC}\")" CONFIRM_RELEASE
 case "$CONFIRM_RELEASE" in
     y|Y|yes|YES)
         echo -e "${GREEN}Proceeding with release v${VERSION}...${NC}"
@@ -82,18 +89,7 @@ case "$CONFIRM_RELEASE" in
         ;;
 esac
 
-# Update version in MatchZy.cs if bumped
-if [ "$BUMP_TYPE" != "none" ]; then
-    # Use different sed syntax for Linux vs macOS
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
-    else
-        sed -i "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
-    fi
-    echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
-fi
-
-# Check if tag already exists
+# Check if tag already exists (local)
 if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
     echo -e "${RED}❌ Tag v${VERSION} already exists!${NC}"
     echo "Please bump to a new version or delete the existing tag:"
@@ -113,6 +109,20 @@ dotnet restore
 # Build and publish
 echo -e "\n${BLUE}🔨 Building project (Release mode)...${NC}"
 dotnet publish -c Release
+
+# At this point, build & publish have succeeded. Only now do we touch version files
+# and create commits/tags so a failed build never leaves partial version bumps behind.
+
+# Update version in MatchZy.cs if bumped
+if [ "$BUMP_TYPE" != "none" ]; then
+    # Use different sed syntax for Linux vs macOS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    else
+        sed -i "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
+    fi
+    echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
+fi
 
 # Create release directory structure under build/
 RELEASE_DIR="MatchZy-${VERSION}"
@@ -140,34 +150,25 @@ mkdir -p "${BUILD_ROOT}"
 SIZE=$(du -h "${BUILD_ROOT}/${RELEASE_DIR}.zip" | cut -f1)
 echo -e "${GREEN}✓ Created ${BUILD_ROOT}/${RELEASE_DIR}.zip (${SIZE})${NC}"
 
-# Commit changes
-echo -e "\n${BLUE}💾 Committing changes...${NC}"
-git add .
-git commit -m "Release v${VERSION}"
-
-# Create and push tag
-echo -e "\n${BLUE}🏷️  Creating Git tag v${VERSION}...${NC}"
-CURRENT_BRANCH=$(git branch --show-current)
-git tag -a "v${VERSION}" -m "Release version ${VERSION}"
-git push origin "$CURRENT_BRANCH"
-git push origin "v${VERSION}"
-
 # Set default repo for gh CLI (if not already set)
 REPO_URL=$(git remote get-url origin | sed -E "s|.*github.com[:/](.*).git|\\1|")
 gh repo set-default "$REPO_URL" 2>/dev/null || true
 
+echo -e "\n${BLUE}💾 Committing changes...${NC}"
+git add .
+git commit -m "Release v${VERSION}"
+
 echo -e "\n${BLUE}📝 Generating changelog for GitHub release...${NC}"
 
-# Changelog based only on commits between the previous tag and this tag
-current_tag="v${VERSION}"
-prev_tag=$(git tag --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || echo "")
+# Changelog based on commits between the previous tag (if any) and HEAD
+prev_tag=$(git tag --sort=-v:refname | head -n 1 || echo "")
 
 log_range=""
 if [ -n "$prev_tag" ]; then
-    log_range="${prev_tag}..${current_tag}"
+    log_range="${prev_tag}..HEAD"
 else
-    # First tag in the repo – use commits reachable from the tag
-    log_range="${current_tag}"
+    # First tag in the repo – use all reachable commits
+    log_range="HEAD"
 fi
 
 CHANGELOG=$(git log ${log_range} --pretty=format:"- %s" 2>/dev/null | grep -viE "^- Release v[0-9]+\.[0-9]+\.[0-9]+$" || true)
@@ -202,8 +203,14 @@ Config files are located in \`csgo/cfg/MatchZy/\`:
 EOF
 )
 
-# Create GitHub release
-echo -e "\n${BLUE}🌟 Creating GitHub release...${NC}"
+# Push release commit (but no tag yet). This ensures the commit exists on GitHub
+# before we ask GitHub to create a tag/release pointing at it.
+echo -e "\n${BLUE}⬆️  Pushing release commit to origin...${NC}"
+CURRENT_BRANCH=$(git branch --show-current)
+git push origin "$CURRENT_BRANCH"
+
+# Create GitHub release (this will also create tag vX.Y.Z on GitHub if it doesn't exist)
+echo -e "\n${BLUE}🌟 Creating GitHub release (and tag v${VERSION})...${NC}"
 gh release create "v${VERSION}" \
     "${BUILD_ROOT}/${RELEASE_DIR}.zip" \
     --title "MatchZy v${VERSION}" \
