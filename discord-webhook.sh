@@ -121,26 +121,52 @@ get_changelog() {
     }
 
     if [ -z "$prev_tag" ]; then
-        # No previous tag, get all merged PRs up to the current tag
+        # No previous tag, get all merged PRs up to HEAD (excluding current commit if it's a release commit)
         if git rev-parse "${current_tag}" >/dev/null 2>&1; then
-            changelog=$(extract_pr_titles "${current_tag}")
+            # Tag exists, look at commits before the tag's commit
+            changelog=$(extract_pr_titles "${current_tag}~1")
             if [ -z "$changelog" ]; then
-                changelog=$(extract_commit_subjects "${current_tag}")
+                changelog=$(extract_commit_subjects "${current_tag}~1")
             fi
             echo "$changelog"
         else
-            # Tag doesn't exist, get recent changes on current branch
-            changelog=$(extract_pr_titles "")
-            if [ -z "$changelog" ]; then
-                changelog=$(extract_commit_subjects "")
+            # Tag doesn't exist, get recent changes on current branch (excluding HEAD if it's a release commit)
+            if git log -1 --format="%s" 2>/dev/null | grep -qE "^Release v[0-9]+\.[0-9]+\.[0-9]+$"; then
+                # HEAD is a release commit, look at commits before it
+                changelog=$(extract_pr_titles "HEAD~1")
+                if [ -z "$changelog" ]; then
+                    changelog=$(extract_commit_subjects "HEAD~1")
+                fi
+            else
+                changelog=$(extract_pr_titles "HEAD")
+                if [ -z "$changelog" ]; then
+                    changelog=$(extract_commit_subjects "HEAD")
+                fi
             fi
             echo "$changelog"
         fi
     else
-        # Get merged PRs between previous tag and current tag
-        changelog=$(extract_pr_titles "${prev_tag}..${current_tag}")
-        if [ -z "$changelog" ]; then
-            changelog=$(extract_commit_subjects "${prev_tag}..${current_tag}")
+        # Get merged PRs between previous tag and current tag (or HEAD if tag doesn't exist yet)
+        if git rev-parse "${current_tag}" >/dev/null 2>&1; then
+            # Current tag exists, look at range from prev_tag to current_tag (excluding the release commit itself)
+            changelog=$(extract_pr_titles "${prev_tag}..${current_tag}~1")
+            if [ -z "$changelog" ]; then
+                changelog=$(extract_commit_subjects "${prev_tag}..${current_tag}~1")
+            fi
+        else
+            # Current tag doesn't exist yet, look at range from prev_tag to HEAD
+            if git log -1 --format="%s" 2>/dev/null | grep -qE "^Release v[0-9]+\.[0-9]+\.[0-9]+$"; then
+                # HEAD is a release commit, exclude it
+                changelog=$(extract_pr_titles "${prev_tag}..HEAD~1")
+                if [ -z "$changelog" ]; then
+                    changelog=$(extract_commit_subjects "${prev_tag}..HEAD~1")
+                fi
+            else
+                changelog=$(extract_pr_titles "${prev_tag}..HEAD")
+                if [ -z "$changelog" ]; then
+                    changelog=$(extract_commit_subjects "${prev_tag}..HEAD")
+                fi
+            fi
         fi
         echo "$changelog"
     fi
