@@ -55,8 +55,6 @@ MatchZy includes an automatic event retry system that ensures no match data is l
 
 This means your tournament platform doesn't need to worry about temporary API downtime or network issues. Events will be delivered automatically when connectivity is restored.
 
-For implementation details, see `API_INTEGRATION_INSTRUCTIONS.md`.
-
 ## Required MatchZy configuration
 
 In `cfg/MatchZy/config.cfg`, the key convars for Auto Tournament are:

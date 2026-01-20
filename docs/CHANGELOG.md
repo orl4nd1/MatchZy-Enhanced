@@ -5,7 +5,7 @@
 
 ---
 
-# 1.3.6
+# 1.4.0
 
 #### January 20, 2026
 
@@ -61,9 +61,9 @@ This release introduces a comprehensive **event reliability and retry system** t
 
 ### 📚 Documentation
 
-- Added **`API_INTEGRATION_INSTRUCTIONS.md`** with complete implementation guide for tournament platforms
 - Updated `configuration.md` with event reliability section
-- Includes architecture diagrams, error handling strategies, and testing procedures
+- Updated `commands.md` with new commands and permission reference
+- Updated `integration.md` with event reliability details
 
 ---
 

@@ -477,7 +477,7 @@ MatchZy Enhanced includes a **bulletproof event delivery system** that ensures n
 
 **Benefits:** Zero data loss, automatic recovery, no manual intervention needed.
 
-**For API developers:** See `API_INTEGRATION_INSTRUCTIONS.md` for complete details. Your API just needs to return HTTP 200 OK when events are stored successfully – MatchZy handles all retries automatically.
+**For API developers:** Your API just needs to return HTTP 200 OK when events are stored successfully – MatchZy handles all retries automatically.
 
 ---
 

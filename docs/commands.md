@@ -14,13 +14,13 @@ For integration details (webhooks, demo upload, JSON config), see **Getting Star
 
 ## ✨ Recent Enhancements
 
-### v1.3.6: Event Reliability System
+### Event Reliability System
 - **`matchzy_get_pending_events`** (admin) – View event queue status
 - **`matchzy_get_match_stats <matchId>`** – Pull complete match stats from local DB
 - Automatic event retry with exponential backoff
 - Zero data loss during API downtime
 
-### v1.3.0: Player Experience Features
+### Player Experience Features
 - **Auto-Ready System**: Players automatically marked as ready on join
 - **Enhanced Pause Controls**: New `.p` and `.up` aliases, pause limits
 - **Side Selection Timer**: Time-limited side selection after knife round
