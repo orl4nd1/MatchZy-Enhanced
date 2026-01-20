@@ -250,6 +250,16 @@ namespace MatchZy
         [ConsoleCommand("css_unpause", "Unpause the match")]
         public void OnUnpauseCommand(CCSPlayerController? player, CommandInfo? command)
         {
+            // If a tactical timeout is active (native CS2 timeouts), treat .unpause as an
+            // immediate admin-style unpause so players are not stuck waiting for the timer.
+            if (IsTacticalTimeoutActive())
+            {
+                Log($"[OnUnpauseCommand] Tactical timeout active - immediate unpause requested by {(player != null ? player.PlayerName : "Console")}");
+                PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
+                UnpauseMatch();
+                return;
+            }
+
             if (isMatchLive && isPaused)
             {
                 var pauseTeamName = unpauseData["pauseTeam"];
@@ -289,6 +299,8 @@ namespace MatchZy
 
                 // Check if both teams unpause is required
                 bool requireBothTeams = bothTeamsUnpauseRequired.Value;
+
+                Log($"[OnUnpauseCommand] Unpause requested by team='{unpauseTeamName}', remainingTeam='{remainingUnpauseTeam}', requireBothTeams={requireBothTeams}, tReady={unpauseData["t"]}, ctReady={unpauseData["ct"]}, teamsReady={teamsReady}");
 
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
@@ -350,11 +362,49 @@ namespace MatchZy
                     return;
                 }
                 var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+
+                // Map the player to a logical MatchZy team for pause tracking
+                Team? pausingTeam = null;
+                string pauseTeamName = "Unknown";
+                if (player.TeamNum == 2 && reverseTeamSides.ContainsKey("TERRORIST"))
+                {
+                    pausingTeam = reverseTeamSides["TERRORIST"];
+                    pauseTeamName = pausingTeam.teamName;
+                }
+                else if (player.TeamNum == 3 && reverseTeamSides.ContainsKey("CT"))
+                {
+                    pausingTeam = reverseTeamSides["CT"];
+                    pauseTeamName = pausingTeam.teamName;
+                }
+
+                // Enforce MatchZy per-team pause limit for tactical timeouts as well, if configured
+                if (pausingTeam != null && maxPausesPerTeam.Value > 0)
+                {
+                    if (!pausesUsed.ContainsKey(pausingTeam))
+                    {
+                        pausesUsed[pausingTeam] = 0;
+                    }
+
+                    if (pausesUsed[pausingTeam] >= maxPausesPerTeam.Value)
+                    {
+                        Log($"[.tac] Pause limit reached for team '{pauseTeamName}' (used={pausesUsed[pausingTeam]}, max={maxPausesPerTeam.Value})");
+                        PrintToPlayerChat(player, Localizer["matchzy.pause.nopausesleft", pauseTeamName, maxPausesPerTeam.Value]);
+                        return;
+                    }
+                }
+
                 if (player.TeamNum == 2)
                 {
                     if (gameRules.TerroristTimeOuts > 0)
                     {
                         Server.ExecuteCommand("timeout_terrorist_start");
+
+                        if (pausingTeam != null && maxPausesPerTeam.Value > 0)
+                        {
+                            pausesUsed[pausingTeam]++;
+                            int remaining = maxPausesPerTeam.Value - pausesUsed[pausingTeam];
+                            Log($"[.tac] Tactical timeout started for '{pauseTeamName}'. pausesUsed={pausesUsed[pausingTeam]}, remaining={remaining}");
+                        }
                     }
                     else
                     {
@@ -367,6 +417,13 @@ namespace MatchZy
                     if (gameRules.CTTimeOuts > 0)
                     {
                         Server.ExecuteCommand("timeout_ct_start");
+
+                        if (pausingTeam != null && maxPausesPerTeam.Value > 0)
+                        {
+                            pausesUsed[pausingTeam]++;
+                            int remaining = maxPausesPerTeam.Value - pausesUsed[pausingTeam];
+                            Log($"[.tac] Tactical timeout started for '{pauseTeamName}'. pausesUsed={pausesUsed[pausingTeam]}, remaining={remaining}");
+                        }
                     }
                     else
                     {
@@ -774,10 +831,13 @@ namespace MatchZy
                 PrintToPlayerChat(player, message);
             }
         }
+
         [ConsoleCommand("css_gg", "Vote to end the match early (requires team consensus)")]
         public void OnGGCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || !player.IsValid || !player.UserId.HasValue) return;
+
+            Log($"[GG] Command received from {player.PlayerName} (UserId={player.UserId}, TeamNum={player.TeamNum}) - ggEnabled={ggEnabled.Value}, isMatchLive={isMatchLive}");
             
             if (!ggEnabled.Value)
             {
@@ -795,6 +855,26 @@ namespace MatchZy
             {
                 PrintToPlayerChat(player, Localizer["matchzy.gg.mustbeonteam"]);
                 return;
+            }
+
+            // Enforce optional minimum score difference for surrendering via .gg
+            if (ggMinScoreDiff.Value > 0)
+            {
+                (int t1score, int t2score) = GetTeamsScore();
+
+                Team playerTeam = player.TeamNum == 2 ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
+                int playerScore = playerTeam == matchzyTeam1 ? t1score : t2score;
+                int opponentScore = playerTeam == matchzyTeam1 ? t2score : t1score;
+                int scoreDiff = opponentScore - playerScore;
+
+                Log($"[GG] Score check for {player.PlayerName}: playerScore={playerScore}, opponentScore={opponentScore}, diff={scoreDiff}, ggMinScoreDiff={ggMinScoreDiff.Value}");
+
+                // Only allow .gg if the calling team is currently losing by at least ggMinScoreDiff
+                if (scoreDiff < ggMinScoreDiff.Value || scoreDiff <= 0)
+                {
+                    PrintToPlayerChat(player, $"You can only use .gg when your team is losing by at least {ggMinScoreDiff.Value} rounds.");
+                    return;
+                }
             }
             
             HashSet<ulong> votes = player.TeamNum == 2 ? ggVotesT : ggVotesCT;
@@ -824,6 +904,8 @@ namespace MatchZy
             
             int votesNeeded = (int)Math.Ceiling(teamPlayerCount * ggThreshold.Value);
             int currentVotes = votes.Count;
+
+            Log($"[GG] Vote state for team '{teamName}': currentVotes={currentVotes}, votesNeeded={votesNeeded}, teamPlayerCount={teamPlayerCount}, threshold={ggThreshold.Value}");
             
             PrintToAllChat(Localizer["matchzy.gg.playervoted", player.PlayerName, teamName, currentVotes, votesNeeded]);
             
@@ -831,6 +913,8 @@ namespace MatchZy
             if (currentVotes >= votesNeeded && votesNeeded > 0)
             {
                 PrintToAllChat(Localizer["matchzy.gg.thresholdmet", teamName]);
+
+                Log($"[GG] Threshold met for team '{teamName}'. Forfeiting in favor of '{opposingTeam.teamName}'. Updating scores and ending match.");
                 
                 // Award win to opposing team by setting scores
                 var teamEntities = Utilities.FindAllEntitiesByDesignerName<CCSTeam>("cs_team_manager");
@@ -859,8 +943,9 @@ namespace MatchZy
                         }
                     }
                 }
-                
-                Server.ExecuteCommand("mp_gungame_endround 1");
+
+                // Drive postgame / series-end logic via the normal match-end handler
+                HandleMatchEnd();
             }
         }
 

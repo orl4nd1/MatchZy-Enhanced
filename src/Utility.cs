@@ -2110,6 +2110,8 @@ namespace MatchZy
             
             bool tMissing = IsTeamFullyMissing(2);
             bool ctMissing = IsTeamFullyMissing(3);
+
+            Log($"[FFW] CheckAndStartFFW called - isMatchLive={isMatchLive}, tMissing={tMissing}, ctMissing={ctMissing}, ffwEnabled={ffwEnabled.Value}");
             
             if (tMissing && !ctMissing)
             {
@@ -2129,6 +2131,7 @@ namespace MatchZy
             ffwRemainingSeconds = ffwTime.Value;
             
             string teamName = teamNum == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
+            Log($"[FFW] Starting FFW timer for teamNum={teamNum} (teamName={teamName}), duration={ffwRemainingSeconds}s");
             PrintToAllChat(Localizer["matchzy.ffw.started", teamName, ffwRemainingSeconds / 60]);
             
             // Create timer that fires every minute
@@ -2154,6 +2157,7 @@ namespace MatchZy
             if (ffwTimer == null) return;
             
             string teamName = ffwTeamMissing == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
+            Log($"[FFW] Cancelling FFW timer for teamName={teamName}, remainingSeconds={ffwRemainingSeconds}");
             PrintToAllChat(Localizer["matchzy.ffw.cancelled", teamName]);
             
             ffwTimer.Kill();
@@ -2169,6 +2173,7 @@ namespace MatchZy
             string missingTeamName = ffwTeamMissing == 2 ? reverseTeamSides["TERRORIST"].teamName : reverseTeamSides["CT"].teamName;
             string winningTeamName = ffwTeamMissing == 2 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
             
+            Log($"[FFW] Executing forfeit - missingTeam={missingTeamName}, winningTeam={winningTeamName}, ffwRemainingSeconds={ffwRemainingSeconds}");
             PrintToAllChat(Localizer["matchzy.ffw.executed", missingTeamName, winningTeamName]);
             
             // Award win to the team that stayed by setting scores
@@ -2198,10 +2203,11 @@ namespace MatchZy
                     }
                 }
             }
+
+            // Use the normal match-end flow so all postgame logic, events, and cleanup run correctly
+            HandleMatchEnd();
             
-            Server.ExecuteCommand("mp_gungame_endround 1");
-            
-            // Clean up
+            // Clean up local FFW state
             ffwTimer = null;
             ffwTeamMissing = 0;
             ffwRemainingSeconds = 0;
@@ -2469,12 +2475,27 @@ namespace MatchZy
 
         public CCSGameRules GetGameRules()
         {
-            return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-        }
+            var proxy = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
+            if (proxy == null || proxy.GameRules == null)
+            {
+                Log("[GetGameRules WARN] No CCSGameRulesProxy/GameRules found – the map may not be fully initialized yet.");
+                throw new InvalidOperationException("GameRules not available (no CCSGameRulesProxy/GameRules found).");
+            }
 
+            return proxy.GameRules;
+        }
+        
         public int GetGamePhase()
         {
-            return GetGameRules().GamePhase;
+            try
+            {
+                return GetGameRules().GamePhase;
+            }
+            catch (Exception e)
+            {
+                Log($"[GetGamePhase WARN] Failed to read GamePhase: {e.Message}");
+                return -1;
+            }
         }
 
         public bool IsHalfTimePhase()
@@ -2502,7 +2523,7 @@ namespace MatchZy
                 Log($"[IsPostGamePhase FATAL] An error occurred: {e.Message}");
                 return false;
             }
-
+            
         }
 
         public bool IsTacticalTimeoutActive()

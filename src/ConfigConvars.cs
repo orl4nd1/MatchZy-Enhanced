@@ -49,6 +49,7 @@ namespace MatchZy
         // Early Match Termination (.gg)
         public FakeConVar<bool> ggEnabled = new("matchzy_gg_enabled", "Whether .gg command for early match termination is enabled. Default: false", false);
         public FakeConVar<float> ggThreshold = new("matchzy_gg_threshold", "Percentage (0.0-1.0) of team required to type .gg for match to end. Default: 0.8 (80%)", 0.8f);
+        public FakeConVar<int> ggMinScoreDiff = new("matchzy_gg_min_score_diff", "Minimum score difference required for the losing team to use .gg. Set to 0 to disable. Example: 6 means a team can only .gg if they are down by at least 6 rounds (e.g. 0-6, 1-7, etc.). Default: 0", 0);
 
         // FFW (Forfeit/Walkover) System
         public FakeConVar<bool> ffwEnabled = new("matchzy_ffw_enabled", "Whether automatic forfeit system is enabled when a team leaves. Default: false", false);
