@@ -69,6 +69,8 @@ public partial class MatchZy
                 if (readyAvailable && !matchStarted)
                 {
                     // Auto-ready system: if enabled, mark player as ready on join
+                    Log($"[AutoReady] Player connected: userId={player.UserId.Value}, name={player.PlayerName}, autoReadyEnabled={autoReadyEnabled.Value}, isMatchSetup={isMatchSetup}, connectedPlayers={connectedPlayers}");
+
                     playerReadyStatus[player.UserId.Value] = autoReadyEnabled.Value;
                     
                     if (autoReadyEnabled.Value)
@@ -83,6 +85,7 @@ public partial class MatchZy
                 }
                 else
                 {
+                    Log($"[AutoReady] Ready system not active on connect (readyAvailable={readyAvailable}, matchStarted={matchStarted}); defaulting new player to ready=true for internal tracking.");
                     playerReadyStatus[player.UserId.Value] = true;
                 }
                 playerConnectionTimes[player.SteamID] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

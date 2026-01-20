@@ -159,7 +159,7 @@ matchzy_pause_duration "60"
 With this setup:
 
 - `.pause` / `.p` calls `mp_pause_match` and is limited only by `matchzy_max_pauses_per_team`.
-- `.tac` still uses the **native CS2 tactical timeout system** (`timeout_terrorist_start` / `timeout_ct_start`) and may be further limited by Valve cvars like `mp_team_timeout_max`.
+- `.tac` still uses the **native CS2 tactical timeout system** (`timeout_terrorist_start` / `timeout_ct_start`) and may be further limited by Valve cvars like `mp_team_timeout_max`. For fully predictable tactical timeout counts, keep `mp_team_timeout_max` in sync with `matchzy_max_pauses_per_team` (or higher).
 
 **New command aliases:**
 - `.p` → `.pause`
@@ -453,6 +453,29 @@ matchzy_gg_enabled "0"
 matchzy_ffw_enabled "1"
 matchzy_ffw_time "240"
 ```
+
+## Debugging & logging
+
+These options control how much diagnostic information MatchZy prints, which is very useful when collecting logs for bug reports.
+
+### matchzy_debug_chat
+
+- **Type:** `0`/`1` (boolean)  
+- **Default:** `0`  
+- **Description:** When enabled, MatchZy sends extra debug/info messages to **in‑game chat** (for example webhook send status, certain state transitions, etc.).  
+- **Use case:** Enable temporarily while testing or when you want players/admins to see high‑level status without opening the server console.
+
+### matchzy_debug_console
+
+- **Type:** `0`/`1` (boolean)  
+- **Default:** `1`  
+- **Description:** Controls whether MatchZy writes **verbose debug logs** to the server console. These logs include things like:
+  - Ready / auto‑ready flow and match start decisions  
+  - Pause and tactical timeout handling (including `.tac` + pause limits)  
+  - `.gg` vote state and min score‑difference checks  
+  - FFW timers and cancel/start logic  
+  - Config reloads and key lifecycle events  
+- **Use case:** Leave enabled on most servers. If you need *very* quiet logs you can set it to `0`, but for support/issue reports you’ll almost always want this on.
 
 ---
 

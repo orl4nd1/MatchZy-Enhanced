@@ -233,6 +233,7 @@ All MatchZy convars can be set in `cfg/MatchZy/config.cfg` and changed at runtim
 - `matchzy_everyone_is_admin` – if `true`, treat all players as admins (useful for local testing only).
 - `matchzy_show_credits_on_match_start` – show a “MatchZy plugin by …” credit line when a match starts.
 - `matchzy_debug_chat` – if `true`, show debug/event logs (webhook success/failure etc.) in in‑game chat.
+- `matchzy_debug_console` – if `true` (default), write verbose debug logs (ready system, match start decisions, pauses, `.gg`, FFW, config reload, etc.) to the **server console** for easier issue reporting.
 - `matchzy_hostname_format` – template for the server hostname (e.g. `{TEAM1} vs {TEAM2}`).
 - `matchzy_enable_damage_report` – enable post‑round damage reports in chat.
 - `matchzy_stop_command_no_damage` – if `true`, disable `.stop` once any player has dealt damage that round.

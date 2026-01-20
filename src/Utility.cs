@@ -1039,12 +1039,18 @@ namespace MatchZy
         {
             if (!readyAvailable || matchStarted) return;
 
-            // Todo: Implement a same ready system for both pug and match
             int countOfReadyPlayers = playerReadyStatus.Count(kv => kv.Value == true);
             bool liveRequired = false;
+
+            Log($"[CheckLiveRequired] isMatchSetup={isMatchSetup}, readyAvailable={readyAvailable}, matchStarted={matchStarted}, minimumReadyRequired={minimumReadyRequired}, readyPlayers={countOfReadyPlayers}, connectedPlayers={connectedPlayers}");
+
             if (isMatchSetup)
             {
-                if (IsTeamsReady() && IsSpectatorsReady())
+                bool teamsReady = IsTeamsReady();
+                bool specsReady = IsSpectatorsReady();
+                Log($"[CheckLiveRequired] Match-setup mode: IsTeamsReady={teamsReady}, IsSpectatorsReady={specsReady}");
+
+                if (teamsReady && specsReady)
                 {
                     liveRequired = true;
                 }
@@ -1060,6 +1066,9 @@ namespace MatchZy
             {
                 liveRequired = true;
             }
+
+            Log($"[CheckLiveRequired] liveRequired={liveRequired}");
+
             if (liveRequired)
             {
                 HandleMatchStart();
@@ -2693,6 +2702,20 @@ namespace MatchZy
 
         private void Log(string message)
         {
+            try
+            {
+                // Allow turning verbose console logging on/off via convar.
+                // Falls back to logging if anything goes wrong when reading the value.
+                if (debugConsoleEnabled != null && !debugConsoleEnabled.Value)
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // Ignore and continue to log to console.
+            }
+
             Console.WriteLine("[MatchZy] " + message);
         }
 

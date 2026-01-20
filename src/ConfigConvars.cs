@@ -24,6 +24,9 @@ namespace MatchZy
 
         public FakeConVar<bool> debugChatEnabled = new("matchzy_debug_chat", "Whether to show debug/event logs in in-game chat (e.g. event send status, warmup_end, player_connect). Default: false", false);
 
+        // Console debug logging
+        public FakeConVar<bool> debugConsoleEnabled = new("matchzy_debug_console", "Whether to write verbose debug logs to the server console. Default: true", true);
+
         public FakeConVar<string> hostnameFormat = new(
             "matchzy_hostname_format",
             "The server hostname to use. Set to \"\" to disable/use existing. Default: {TEAM1} vs {TEAM2}",
