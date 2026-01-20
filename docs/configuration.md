@@ -122,9 +122,10 @@ Improved pause controls with limits and coordination requirements.
 - **`matchzy_max_pauses_per_team`** (integer, default: `0`)  
   Maximum number of pauses allowed per team.  
   `0` = unlimited pauses.  
-  Does not apply to admin/tactical pauses.
+  Applies to **both** MatchZy‑managed pauses (`.pause`/`.p`, `.tech`) and **tactical timeouts** (`.tac`) when they are triggered by players.  
+  Does **not** apply to admin force‑pauses/force‑unpauses.
   
-  **Use case:** Set to `2` or `3` for competitive leagues to prevent pause abuse.
+  **Use case:** Set to `2` or `3` for competitive leagues to prevent pause abuse across all pause types.
   
 - **`matchzy_pause_duration`** (seconds, default: `0`)  
   Maximum pause duration before automatic unpause.  
@@ -182,6 +183,14 @@ Allows teams to forfeit matches with team consensus.
   Votes reset each round.
   
   **Use case:** Set to `1.0` (100%) for ranked/competitive matches.
+
+- **`matchzy_gg_min_score_diff`** (integer, default: `0`)  
+  Minimum round **score difference** required for the losing team to be allowed to use `.gg`.  
+  `0` = disabled (no score constraint).  
+  Example: `6` means a team can only forfeit with `.gg` when they are **losing by at least 6 rounds** (e.g. 0–6, 1–7, 2–8, …).  
+  The check is always evaluated from the perspective of the team calling `.gg`.
+  
+  **Use case:** Prevent too‑early surrenders (e.g. only allow `.gg` at 6‑0 or worse).
 
   **Example:**
   ```cfg

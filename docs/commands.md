@@ -35,16 +35,16 @@ See sections below for command details and configuration options.
 | `.start`, `.force`, `.forcestart` | Admins only       | Force‑start the match immediately (skips waiting for all players to ready).                                                                   |
 | `.restart`, `.rr`                 | Admins only       | Fully restart the current match/series.                                                                                                       |
 | `.endmatch`, `.forceend`          | Admins only       | Force‑end and reset the current match.                                                                                                        |
-| `.gg`                             | Players on a team | Vote to forfeit the match. Requires team consensus (default 80%). Opposing team wins. **New in v1.3.0**                                       |
+| `.gg`                             | Players on a team | Vote to forfeit the match. Requires team consensus (default 80%). Opposing team wins via MatchZy’s normal match‑end flow. Can be gated behind a minimum score difference using `matchzy_gg_min_score_diff`. **New in v1.3.0**                                       |
 
 ### Pause & technical timeouts
 
 | Command                 | Who can use it                  | Description                                                                                                                                                 |
 | ----------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.tech`                 | Players / admins (configurable) | Request a **technical pause** via MatchZy’s pause system (for hardware/network/config issues). Does **not** consume a CS2 tactical timeout.                 |
-| `.pause`, `.p`          | Players / admins (configurable) | General MatchZy pause. Behaves as a normal pause or as a tactical pause depending on `matchzy_use_pause_command_for_tactical` and other match settings.     |
-| `.unpause`, `.up`       | Players / admins                | Request to unpause the match. Both teams must confirm unless an admin unpauses (via `.fp` / `.fup` or console), to prevent accidental or one‑sided resumes. |
-| `.tac`                  | Players on a team               | Start a **tactical timeout** using the **native CS2 timeout system** (shows as a tactical timeout in‑game, consumes that team’s tactical timeout budget).   |
+| `.pause`, `.p`          | Players / admins (configurable) | General MatchZy pause. Behaves as a normal pause or as a tactical pause depending on `matchzy_use_pause_command_for_tactical` and other match settings. Counts towards `matchzy_max_pauses_per_team` when issued by players.     |
+| `.unpause`, `.up`       | Players / admins                | Request to unpause the match. Both teams must confirm unless an admin unpauses (via `.fp` / `.fup` or console), to prevent accidental or one‑sided resumes. If a native CS2 tactical timeout is active, `.unpause` immediately resumes the match. |
+| `.tac`                  | Players on a team               | Start a **tactical timeout** using the **native CS2 timeout system** (shows as a tactical timeout in‑game, consumes that team’s tactical timeout budget). Also counts towards `matchzy_max_pauses_per_team` for that team when limits are enabled.   |
 | `.fp`, `.forcepause`    | Admins only                     | Force‑pause the match as an admin, regardless of team votes.                                                                                                |
 | `.fup`, `.forceunpause` | Admins only                     | Force‑unpause the match as an admin, immediately resuming play.                                                                                             |
 
