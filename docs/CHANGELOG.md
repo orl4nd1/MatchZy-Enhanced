@@ -67,6 +67,24 @@ This release introduces a comprehensive **event reliability and retry system** t
 
 ---
 
+# 1.4.2
+
+#### January 20, 2026
+
+- **Localized match winner messages**: Added `matchzy.match.won` localization key to all 12 supported languages (English, German, Spanish, French, Hungarian, Japanese, Portuguese BR/PT, Russian, Uzbek, Chinese Simplified/Traditional)
+- **Enhanced kick messages**: Players now see the match winner message 3 times in different colors (Lime → Green → Yellow) with a 5-second delay before being kicked, ensuring they can read the result even if the disconnect popup doesn't show the reason
+- **Improved side selection timer logic**: Enhanced chat reminders and timer handling for better player awareness
+
+# 1.4.1
+
+#### January 20, 2026
+
+- **Refactored event retry timer logic**: Fixed potential timer duplication issues by using a repeating timer pattern with proper flags to prevent multiple instances
+- **Improved cleanup timer**: Enhanced old event cleanup logic for better reliability
+- **Fixed changelog extraction**: Improved Discord webhook changelog generation to correctly handle release commits and non-existent tags
+
+---
+
 # 1.3.5
 
 #### January 20, 2026
