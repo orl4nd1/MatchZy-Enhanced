@@ -118,25 +118,36 @@ namespace MatchZy
             }
         }
 
+        private bool eventRetryTimerStarted = false;
+        private bool cleanupTimerStarted = false;
+
         /// <summary>
-        /// Starts background timer to retry failed events
+        /// Starts background timer to retry failed events (only once)
         /// </summary>
         private void StartEventRetryTimer()
         {
-            // Process retry queue every 30 seconds
-            AddTimer(30.0f, () =>
+            if (eventRetryTimerStarted) return;
+            eventRetryTimerStarted = true;
+            
+            // Process retry queue every 30 seconds (repeating)
+            void RetryTimerCallback()
             {
                 ProcessEventRetryQueue();
-                
                 // Reschedule for next run
-                StartEventRetryTimer();
-            });
+                AddTimer(30.0f, RetryTimerCallback);
+            }
             
-            // Also cleanup old events once per hour
-            AddTimer(3600.0f, () =>
+            AddTimer(30.0f, RetryTimerCallback);
+            
+            // Also cleanup old events once per hour (only start once)
+            if (!cleanupTimerStarted)
             {
-                database.CleanupOldEvents();
-            });
+                cleanupTimerStarted = true;
+                AddTimer(3600.0f, () =>
+                {
+                    database.CleanupOldEvents();
+                });
+            }
             
             Log("[EventRetryTimer] Event retry system started (30s interval)");
         }
