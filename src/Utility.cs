@@ -466,6 +466,7 @@ namespace MatchZy
             int sideSelectionSeconds = sideSelectionTime.Value;
             if (sideSelectionEnabled.Value && sideSelectionSeconds > 0)
             {
+                sideSelectionRemainingSeconds = sideSelectionSeconds;
                 PrintToAllChat(Localizer["matchzy.knife.sidedecisionpendingwithtimer", knifeWinnerName, sideSelectionSeconds]);
                 
                 // Start countdown timer for side selection
@@ -473,6 +474,13 @@ namespace MatchZy
                 {
                     if (isSideSelectionPhase)
                     {
+                        // Cancel reminder timer
+                        if (sideSelectionReminderTimer != null)
+                        {
+                            sideSelectionReminderTimer.Kill();
+                            sideSelectionReminderTimer = null;
+                        }
+                        
                         // Time expired, pick random side
                         bool shouldSwitch = new Random().Next(0, 2) == 1;
                         
@@ -490,6 +498,37 @@ namespace MatchZy
                         StartLive();
                     }
                 });
+                
+                // Start reminder timer that fires every 10 seconds
+                sideSelectionReminderTimer = AddTimer(10.0f, () =>
+                {
+                    if (!isSideSelectionPhase || sideSelectionTimer == null)
+                    {
+                        // Side selection ended, cancel reminder
+                        if (sideSelectionReminderTimer != null)
+                        {
+                            sideSelectionReminderTimer.Kill();
+                            sideSelectionReminderTimer = null;
+                        }
+                        return;
+                    }
+                    
+                    sideSelectionRemainingSeconds -= 10;
+                    
+                    if (sideSelectionRemainingSeconds <= 0)
+                    {
+                        // Timer will expire soon, don't show reminder
+                        if (sideSelectionReminderTimer != null)
+                        {
+                            sideSelectionReminderTimer.Kill();
+                            sideSelectionReminderTimer = null;
+                        }
+                        return;
+                    }
+                    
+                    // Show remaining time
+                    PrintToAllChat(Localizer["matchzy.knife.sidetimeremaining", knifeWinnerName, sideSelectionRemainingSeconds]);
+                }, TimerFlags.REPEAT);
             }
             else
             {
@@ -578,9 +617,11 @@ namespace MatchZy
             unreadyPlayerMessageTimer?.Kill();
             sideSelectionMessageTimer?.Kill();
             pausedStateTimer?.Kill();
+            sideSelectionReminderTimer?.Kill();
             unreadyPlayerMessageTimer = null;
             sideSelectionMessageTimer = null;
             pausedStateTimer = null;
+            sideSelectionReminderTimer = null;
         }
 
         private (int alivePlayers, int totalHealth) GetAlivePlayers(int team)
@@ -643,6 +684,11 @@ namespace MatchZy
                     sideSelectionTimer.Kill();
                     sideSelectionTimer = null;
                 }
+                if (sideSelectionReminderTimer != null)
+                {
+                    sideSelectionReminderTimer.Kill();
+                    sideSelectionReminderTimer = null;
+                }
                 if (ffwTimer != null)
                 {
                     ffwTimer.Kill();
@@ -650,6 +696,7 @@ namespace MatchZy
                 }
                 ffwTeamMissing = 0;
                 ffwRemainingSeconds = 0;
+                sideSelectionRemainingSeconds = 0;
 
                 lastBackupFileName = "";
                 lastMatchZyBackupFileName = "";
@@ -2065,21 +2112,30 @@ namespace MatchZy
                 pauseTimeoutTimer = null;
             }
 
-            // Send match_unpaused event
-            Log($"[UnpauseMatch] Sending match_unpaused event - pause duration: {pauseDuration}s");
-
-            var matchUnpausedEvent = new MatchZyMatchUnpausedEvent
+            // Only send event and update status if match is actually live
+            // Don't send events during ResetMatch when match is already ended
+            if (isMatchLive && isMatchSetup && liveMatchId > 0)
             {
-                MatchId = liveMatchId,
-                MapNumber = matchConfig.CurrentMapNumber,
-                PauseDuration = pauseDuration
-            };
+                // Send match_unpaused event
+                Log($"[UnpauseMatch] Sending match_unpaused event - pause duration: {pauseDuration}s");
 
-            Task.Run(async () =>
+                var matchUnpausedEvent = new MatchZyMatchUnpausedEvent
+                {
+                    MatchId = liveMatchId,
+                    MapNumber = matchConfig.CurrentMapNumber,
+                    PauseDuration = pauseDuration
+                };
+
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(matchUnpausedEvent);
+                });
+                UpdateTournamentStatus("live");
+            }
+            else
             {
-                await SendEventAsync(matchUnpausedEvent);
-            });
-            UpdateTournamentStatus("live");
+                Log($"[UnpauseMatch] Skipping event/status update - isMatchLive={isMatchLive}, isMatchSetup={isMatchSetup}, liveMatchId={liveMatchId}");
+            }
         }
 
         private void SetMatchPausedFlags()
@@ -2143,10 +2199,10 @@ namespace MatchZy
             Log($"[FFW] Starting FFW timer for teamNum={teamNum} (teamName={teamName}), duration={ffwRemainingSeconds}s");
             PrintToAllChat(Localizer["matchzy.ffw.started", teamName, ffwRemainingSeconds / 60]);
             
-            // Create timer that fires every minute
-            ffwTimer = AddTimer(60.0f, () =>
+            // Create timer that fires every 10 seconds
+            ffwTimer = AddTimer(10.0f, () =>
             {
-                ffwRemainingSeconds -= 60;
+                ffwRemainingSeconds -= 10;
                 
                 if (ffwRemainingSeconds <= 0)
                 {
@@ -2155,8 +2211,8 @@ namespace MatchZy
                 }
                 else
                 {
-                    int minutes = ffwRemainingSeconds / 60;
-                    PrintToAllChat(Localizer["matchzy.ffw.warning", teamName, minutes]);
+                    // Show remaining time in seconds
+                    PrintToAllChat(Localizer["matchzy.ffw.warning", teamName, ffwRemainingSeconds]);
                 }
             }, TimerFlags.REPEAT);
         }
@@ -2853,7 +2909,7 @@ namespace MatchZy
             if (GetGameMode() == 2 && GetGameType() == 0) return true;
             return false;
         }
-        public void KickPlayer(CCSPlayerController player)
+        public void KickPlayer(CCSPlayerController player, string? reason = null)
         {
             if (player == null || !player.IsValid)
                 return;
@@ -2869,8 +2925,55 @@ namespace MatchZy
             if (!player.UserId.HasValue)
                 return;
 
-            Log($"[KickPlayer] Executing kickid for player '{player.PlayerName}' (UserId={(ushort)player.UserId.Value}, IsBot={player.IsBot}, isSimulationMode={isSimulationMode}).");
-            Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
+            // Build kick command (reason included for server logs, even if popup doesn't show it)
+            string kickCommand = $"kickid {(ushort)player.UserId.Value}";
+            if (!string.IsNullOrEmpty(reason))
+            {
+                // Escape any existing quotes and wrap the reason in quotes
+                string escapedReason = reason.Replace("\"", "\\\"");
+                kickCommand += $" \"{escapedReason}\"";
+                
+                // Send chat message multiple times with different colors for maximum visibility
+                // (since kick reason doesn't show in popup, players need to see it in chat)
+                ushort userId = (ushort)player.UserId.Value;
+                
+                // Message 1: Immediately (Lime - very visible)
+                PrintToPlayerChat(player, $"{ChatColors.Lime}{reason}{ChatColors.Default}");
+                
+                // Message 2: After 1 second (Green)
+                AddTimer(1.0f, () =>
+                {
+                    if (player.IsValid && player.UserId.HasValue)
+                    {
+                        PrintToPlayerChat(player, $"{ChatColors.Green}{reason}{ChatColors.Default}");
+                    }
+                });
+                
+                // Message 3: After 2.5 seconds (Yellow - warning color)
+                AddTimer(2.5f, () =>
+                {
+                    if (player.IsValid && player.UserId.HasValue)
+                    {
+                        PrintToPlayerChat(player, $"{ChatColors.Yellow}{reason}{ChatColors.Default}");
+                    }
+                });
+                
+                // Kick after 5 seconds - gives players plenty of time to read the messages
+                AddTimer(5.0f, () =>
+                {
+                    if (player.IsValid && player.UserId.HasValue)
+                    {
+                        Server.ExecuteCommand(kickCommand);
+                    }
+                });
+            }
+            else
+            {
+                // No reason, kick immediately
+                Server.ExecuteCommand(kickCommand);
+            }
+
+            Log($"[KickPlayer] Executing kickid for player '{player.PlayerName}' (UserId={(ushort)player.UserId.Value}, IsBot={player.IsBot}, isSimulationMode={isSimulationMode}, reason={reason ?? "none"}).");
         }
 
         public bool IsPlayerValid(CCSPlayerController? player)

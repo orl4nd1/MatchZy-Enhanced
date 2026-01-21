@@ -7,6 +7,7 @@
 
   "matchzy.knife.sidedecisionpending": "{green}{0}{default} won the knife round. Waiting for them to type {green}.stay{default} or {green}.switch{default}.",
   "matchzy.knife.sidedecisionpendingwithtimer": "{green}{0}{default} won the knife round. They have {1} seconds to type {green}.stay{default} or {green}.switch{default}.",
+  "matchzy.knife.sidetimeremaining": "{green}{0}{default} has {1} seconds remaining to choose a side ({green}.stay{default} or {green}.switch{default}).",
   "matchzy.knife.decidedtostay": "{green}{0}{default} has decided to stay.",
   "matchzy.knife.decidedtoswitch": "{green}{0}{default} has decided to switch.",
   "matchzy.knife.timerexpiredrandomstay": "{green}{0}{default} did not choose a side. Random selection: staying on current sides.",
@@ -153,7 +154,9 @@
   "matchzy.gg.thresholdmet": "{green}{0}{default} has reached the threshold to end the match. The opposing team wins!",
 
   "matchzy.ffw.started": "{green}{0}{default} has left the server. Forfeit timer started: {1} minute(s) remaining.",
-  "matchzy.ffw.warning": "{yellow}Warning:{default} {green}{0}{default} still missing. Forfeit in {1} minute(s) if no one rejoins.",
+  "matchzy.ffw.warning": "{yellow}Warning:{default} {green}{0}{default} still missing. Forfeit in {1} second(s) if no one rejoins.",
   "matchzy.ffw.cancelled": "{green}{0}{default} returned! Forfeit timer cancelled.",
-  "matchzy.ffw.executed": "{green}{0}{default} forfeited the match. {green}{1}{default} wins by forfeit!"
+  "matchzy.ffw.executed": "{green}{0}{default} forfeited the match. {green}{1}{default} wins by forfeit!",
+
+  "matchzy.match.won": "{0} won the match"
 }

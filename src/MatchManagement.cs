@@ -1036,10 +1036,18 @@ namespace MatchZy
 
             AddTimer(kickDelay, () =>
             {
-                // Kick all players
+                // Kick all players with winner message
                 Log("[EndSeries] Kicking all players after series end...");
                 var playerEntities = Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller");
                 int kickedCount = 0;
+                
+                // Build kick reason message
+                string? kickReason = null;
+                if (!string.IsNullOrEmpty(winnerName))
+                {
+                    kickReason = Localizer["matchzy.match.won", winnerName];
+                }
+                
                 foreach (var player in playerEntities)
                 {
                     if (player == null) continue;
@@ -1048,8 +1056,8 @@ namespace MatchZy
 
                     if (player.UserId.HasValue)
                     {
-                        Log($"[EndSeries] Kicking player: {player.PlayerName} (UserId: {player.UserId})");
-                        KickPlayer(player);
+                        Log($"[EndSeries] Kicking player: {player.PlayerName} (UserId: {player.UserId}, reason: {kickReason ?? "none"})");
+                        KickPlayer(player, kickReason);
                         kickedCount++;
                     }
                 }

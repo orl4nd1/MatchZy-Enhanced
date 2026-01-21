@@ -97,6 +97,8 @@ namespace MatchZy
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionMessageTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? pausedStateTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionTimer = null;
+        public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionReminderTimer = null;
+        public int sideSelectionRemainingSeconds = 0;
 
         // Each message is kept in chat display for ~13 seconds, hence setting default chat timer to 13 seconds.
         // Configurable using matchzy_chat_messages_timer_delay <seconds>

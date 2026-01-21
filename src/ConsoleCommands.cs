@@ -140,6 +140,13 @@ namespace MatchZy
                     sideSelectionTimer = null;
                 }
                 
+                // Cancel reminder timer
+                if (sideSelectionReminderTimer != null)
+                {
+                    sideSelectionReminderTimer.Kill();
+                    sideSelectionReminderTimer = null;
+                }
+                
                 PrintToAllChat(Localizer["matchzy.knife.decidedtostay", knifeWinnerName]);
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} has decided to stay!");
                 StartLive();
@@ -161,6 +168,13 @@ namespace MatchZy
                 {
                     sideSelectionTimer.Kill();
                     sideSelectionTimer = null;
+                }
+                
+                // Cancel reminder timer
+                if (sideSelectionReminderTimer != null)
+                {
+                    sideSelectionReminderTimer.Kill();
+                    sideSelectionReminderTimer = null;
                 }
                 
                 Server.ExecuteCommand("mp_swapteams;");
