@@ -73,6 +73,16 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[InitializeDatabase - FATAL] Database connection or table creation error: {ex.Message}");
+                if (config != null && databaseType == DatabaseType.MySQL)
+                {
+                    string maskedPassword = string.IsNullOrEmpty(config.MySqlPassword) ? "(empty)" : "***";
+                    Log($"[InitializeDatabase - FATAL] Connection details - Host: {config.MySqlHost ?? "(null)"}, Port: {config.MySqlPort ?? 3306}, Database: {config.MySqlDatabase ?? "(null)"}, User: {config.MySqlUsername ?? "(null)"}, Password: {maskedPassword}");
+                }
+                else if (databaseType == DatabaseType.SQLite)
+                {
+                    string dbPath = Path.Join(directory, "matchzy.db");
+                    Log($"[InitializeDatabase - FATAL] SQLite database path: {dbPath}");
+                }
             }
         }
 
@@ -84,25 +94,37 @@ namespace MatchZy
 
                 if (databaseType == DatabaseType.SQLite)
                 {
-                    connection =
-                        new SqliteConnection(
-                            $"Data Source={Path.Join(directory, "matchzy.db")}");
+                    string dbPath = Path.Join(directory, "matchzy.db");
+                    connection = new SqliteConnection($"Data Source={dbPath}");
+                    Log($"[ConnectDatabase] Using SQLite database: {dbPath}");
                 }
                 else if (config != null && databaseType == DatabaseType.MySQL)
                 {
-                    string connectionString = $"Server={config.MySqlHost};Port={config.MySqlPort};Database={config.MySqlDatabase};User Id={config.MySqlUsername};Password={config.MySqlPassword};";
-                    connection = new MySqlConnection(connectionString);           
+                    // Build connection string with timeout settings
+                    // ConnectionTimeout: Time to wait for initial connection (default 15s, we'll use 10s)
+                    // DefaultCommandTimeout: Time to wait for commands to execute (default 30s, we'll use 15s)
+                    string connectionString = $"Server={config.MySqlHost};Port={config.MySqlPort};Database={config.MySqlDatabase};User Id={config.MySqlUsername};Password={config.MySqlPassword};Connection Timeout=10;Default Command Timeout=15;";
+                    connection = new MySqlConnection(connectionString);
+                    
+                    // Log connection details (mask password for security)
+                    string maskedPassword = string.IsNullOrEmpty(config.MySqlPassword) ? "(empty)" : "***";
+                    Log($"[ConnectDatabase] Attempting MySQL connection - Host: {config.MySqlHost ?? "(null)"}, Port: {config.MySqlPort ?? 3306}, Database: {config.MySqlDatabase ?? "(null)"}, User: {config.MySqlUsername ?? "(null)"}, Password: {maskedPassword}, Connection Timeout: 10s, Command Timeout: 15s");
                 }
                 else
                 {
-                    Log($"[InitializeDatabase] Invalid database specified, using SQLite.");
+                    Log($"[ConnectDatabase] Invalid database specified, using SQLite.");
                     connection = new SqliteConnection($"Data Source={Path.Join(directory, "matchzy.db")}");
                     databaseType = DatabaseType.SQLite;
                 }
             } 
             catch (Exception ex)
             {
-                Log($"[InitializeDatabase - FATAL] Database connection error: {ex.Message}");
+                Log($"[ConnectDatabase - FATAL] Database connection error: {ex.Message}");
+                if (config != null && databaseType == DatabaseType.MySQL)
+                {
+                    string maskedPassword = string.IsNullOrEmpty(config.MySqlPassword) ? "(empty)" : "***";
+                    Log($"[ConnectDatabase - FATAL] Connection details - Host: {config.MySqlHost ?? "(null)"}, Port: {config.MySqlPort ?? 3306}, Database: {config.MySqlDatabase ?? "(null)"}, User: {config.MySqlUsername ?? "(null)"}, Password: {maskedPassword}");
+                }
             }
 
         }
@@ -342,10 +364,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[LoadConfigValue] Error loading config key '{key}': {ex.Message}");
+                LogConnectionDetails("LoadConfigValue");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -400,10 +423,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[QueueEvent] Error queueing event: {ex.Message}");
+                LogConnectionDetails("QueueEvent");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -445,10 +469,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[GetPendingEvents] Error: {ex.Message}");
+                LogConnectionDetails("GetPendingEvents");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -484,10 +509,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[MarkEventSent] Error: {ex.Message}");
+                LogConnectionDetails("MarkEventSent");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -555,10 +581,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[MarkEventRetry] Error: {ex.Message}");
+                LogConnectionDetails("MarkEventRetry");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -602,10 +629,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[CleanupOldEvents] Error: {ex.Message}");
+                LogConnectionDetails("CleanupOldEvents");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -658,10 +686,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[SaveConfigValue] Error saving config key '{key}': {ex.Message}");
+                LogConnectionDetails("SaveConfigValue");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -732,10 +761,11 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[GetMatchStatsJson] Error: {ex.Message}");
+                LogConnectionDetails("GetMatchStatsJson");
                 // Ensure connection is closed on error
                 try
                 {
-                    if (connection.State == ConnectionState.Open)
+                    if (connection != null && connection.State == ConnectionState.Open)
                     {
                         connection.Close();
                     }
@@ -1097,6 +1127,23 @@ namespace MatchZy
         private void Log(string message)
         {
             Console.WriteLine("[MatchZy] " + message);
+        }
+
+        /// <summary>
+        /// Logs connection details for debugging (masks password)
+        /// </summary>
+        private void LogConnectionDetails(string context)
+        {
+            if (config != null && databaseType == DatabaseType.MySQL)
+            {
+                string maskedPassword = string.IsNullOrEmpty(config.MySqlPassword) ? "(empty)" : "***";
+                string connectionState = connection != null ? connection.State.ToString() : "null";
+                Log($"[{context}] Connection details - Host: {config.MySqlHost ?? "(null)"}, Port: {config.MySqlPort ?? 3306}, Database: {config.MySqlDatabase ?? "(null)"}, User: {config.MySqlUsername ?? "(null)"}, Password: {maskedPassword}, Connection State: {connectionState}");
+            }
+            else if (databaseType == DatabaseType.SQLite && connection != null)
+            {
+                Log($"[{context}] SQLite connection state: {connection.State}");
+            }
         }
 
         public enum DatabaseType
