@@ -11,3 +11,5 @@ MatchZy-*/
 .DS_Store
 
 .env
+
+*.log
