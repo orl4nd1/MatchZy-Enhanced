@@ -98,23 +98,9 @@ if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
     exit 1
 fi
 
-# Clean previous builds
-echo -e "\n${BLUE}🧹 Cleaning previous builds...${NC}"
-rm -rf build/ bin/ obj/
-
-# Restore dependencies
-echo -e "\n${BLUE}📥 Restoring dependencies...${NC}"
-dotnet restore
-
-# Build and publish
-echo -e "\n${BLUE}🔨 Building project (Release mode)...${NC}"
-dotnet publish -c Release
-
-# At this point, build & publish have succeeded. Only now do we touch version files
-# and create commits/tags so a failed build never leaves partial version bumps behind.
-
-# Update version in MatchZy.cs if bumped
+# Update version in MatchZy.cs BEFORE building (so the build includes the new version)
 if [ "$BUMP_TYPE" != "none" ]; then
+    echo -e "\n${BLUE}📝 Updating version in MatchZy.cs to ${VERSION}...${NC}"
     # Use different sed syntax for Linux vs macOS
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i "" "s/ModuleVersion => \\\".*\\\"/ModuleVersion => \\\"${VERSION}\\\"/" src/MatchZy.cs
@@ -123,6 +109,18 @@ if [ "$BUMP_TYPE" != "none" ]; then
     fi
     echo -e "${GREEN}✓ Updated MatchZy.cs to version ${VERSION}${NC}"
 fi
+
+# Clean previous builds
+echo -e "\n${BLUE}🧹 Cleaning previous builds...${NC}"
+rm -rf build/ bin/ obj/
+
+# Restore dependencies
+echo -e "\n${BLUE}📥 Restoring dependencies...${NC}"
+dotnet restore
+
+# Build and publish (now with the updated version)
+echo -e "\n${BLUE}🔨 Building project (Release mode)...${NC}"
+dotnet publish -c Release
 
 # Create release directory structure under build/
 RELEASE_DIR="MatchZy-${VERSION}"
