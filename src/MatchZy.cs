@@ -16,9 +16,9 @@ namespace MatchZy
 
         public override string ModuleVersion => "1.4.4";
 
-        public override string ModuleAuthor => "WD- (https://github.com/shobhit-pathak/)";
+        public override string ModuleAuthor => "sivert (https://github.com/sivert-io/)";
 
-        public override string ModuleDescription => "A plugin for running and managing CS2 practice/pugs/scrims/matches!";
+        public override string ModuleDescription => "Enhanced CS2 match management plugin optimized for tournament automation with event reliability, server tracking, and advanced player features!";
 
         public string chatPrefix = $"[{ChatColors.Green}MatchZy{ChatColors.Default}]";
         public string adminChatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
