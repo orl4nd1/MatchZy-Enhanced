@@ -325,17 +325,32 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 var result = connection.QueryFirstOrDefault<string>(
                     "SELECT config_value FROM matchzy_server_config WHERE config_key = @Key",
                     new { Key = key }
                 );
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 return result;
             }
             catch (Exception ex)
             {
                 Log($"[LoadConfigValue] Error loading config key '{key}': {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
                 return null;
             }
         }
@@ -347,7 +362,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 // Calculate next retry time using exponential backoff (start with 30 seconds)
                 string nextRetryExpression = (connection is SqliteConnection) 
@@ -373,12 +391,24 @@ namespace MatchZy
                     );
                 }
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 Log($"[QueueEvent] Queued {eventType} event for matchId={matchId} (will retry in 30s)");
             }
             catch (Exception ex)
             {
                 Log($"[QueueEvent] Error queueing event: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -389,7 +419,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 string nowExpression = (connection is SqliteConnection) ? "datetime('now')" : "NOW()";
                 
@@ -403,12 +436,24 @@ namespace MatchZy
                     LIMIT {limit}
                 ").ToList();
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 return events;
             }
             catch (Exception ex)
             {
                 Log($"[GetPendingEvents] Error: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
                 return new List<QueuedEvent>();
             }
         }
@@ -420,19 +465,34 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 connection.Execute(@"
                     UPDATE matchzy_event_queue 
                     SET status = 'sent' 
                     WHERE id = @Id",
                     new { Id = eventId }
                 );
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 Log($"[MarkEventSent] Event {eventId} marked as sent successfully.");
             }
             catch (Exception ex)
             {
                 Log($"[MarkEventSent] Error: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -443,7 +503,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 // Exponential backoff: 30s, 1m, 2m, 4m, 8m, 16m, 32m (capped at 32 minutes)
                 int delaySeconds = Math.Min(30 * (1 << retryCount), 1920);
@@ -484,11 +547,23 @@ namespace MatchZy
                     Log($"[MarkEventRetry] Event {eventId} retry scheduled in {delaySeconds}s (attempt {retryCount + 1})");
                 }
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
             }
             catch (Exception ex)
             {
                 Log($"[MarkEventRetry] Error: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -499,7 +574,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 string dateExpression = (connection is SqliteConnection)
                     ? "datetime('now', '-7 days')"
@@ -511,7 +589,10 @@ namespace MatchZy
                     AND created_at < {dateExpression}
                 ");
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 
                 if (deleted > 0)
                 {
@@ -521,6 +602,15 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[CleanupOldEvents] Error: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -531,7 +621,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 if (connection is SqliteConnection)
                 {
@@ -556,12 +649,24 @@ namespace MatchZy
                     );
                 }
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 Log($"[SaveConfigValue] Saved config: {key} = {value}");
             }
             catch (Exception ex)
             {
                 Log($"[SaveConfigValue] Error saving config key '{key}': {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
             }
         }
 
@@ -572,7 +677,10 @@ namespace MatchZy
         {
             try
             {
-                connection.Open();
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
                 
                 // Get match info
                 var match = connection.QueryFirstOrDefault<dynamic>(@"
@@ -583,7 +691,10 @@ namespace MatchZy
                 
                 if (match == null)
                 {
-                    connection.Close();
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
                     return null;
                 }
                 
@@ -603,7 +714,10 @@ namespace MatchZy
                     new { MatchId = matchId }
                 ).ToList();
                 
-                connection.Close();
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
                 
                 // Build JSON structure
                 var result = new
@@ -618,6 +732,15 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[GetMatchStatsJson] Error: {ex.Message}");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
                 return null;
             }
         }
