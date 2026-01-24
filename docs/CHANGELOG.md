@@ -5,6 +5,26 @@
 
 ---
 
+# 1.4.9
+
+#### January 24, 2026
+
+### ✨ New Features
+
+#### Enhanced Notification System with Duration Support
+- **Timed notifications**: Messages can now be displayed for a specified duration, enhancing visibility during matches
+- **Unique notification keys**: Multiple notifications can be managed effectively without overlap
+- **Duration parameters**: All notification methods now support duration parameters, ensuring messages remain visible for the specified time
+- Improved notification management for better user experience during critical match moments
+
+### 🔧 Technical Changes
+
+- Updated notification system architecture to support timed display
+- Implemented unique notification key management to prevent notification conflicts
+- Enhanced existing notification methods with duration support
+
+---
+
 # 1.4.8
 
 #### January 24, 2026
