@@ -19,6 +19,13 @@
   - If server ID is set after the URL, the event is automatically sent at that point
 - **Updated documentation**: Added configuration order requirements to `configuration.md` and `integration.md`
 
+#### Event Retry Queue Threading
+- **Fixed**: Event retry queue now properly handles CS2 API calls on the main game thread
+  - Previously, database operations and console prints in the retry processor would fail with "Invoked on a non-main thread" error
+  - This caused successfully-sent events to be incorrectly marked for retry, creating duplicate events
+  - Now all CS2 API calls (`Server.PrintToConsole()`, `database.MarkEventSent()`, `database.MarkEventRetry()`) are wrapped in `Server.NextFrame()`
+  - Events that are successfully retried are now properly marked as sent and removed from the queue
+
 ---
 
 # 1.4.0

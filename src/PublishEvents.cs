@@ -192,23 +192,48 @@ namespace MatchZy
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
-                            database.MarkEventSent(evt.id);
-                            Log($"[EventRetryQueue] ✓ Event {evt.id} ({evt.event_type}) sent successfully on retry {evt.retry_count + 1}");
+                            // Run on main thread to avoid CS2 API threading errors
+                            int eventId = evt.id;
+                            string eventType = evt.event_type;
+                            int attemptNumber = evt.retry_count + 1;
                             
-                            Server.PrintToConsole($"[MatchZy Events] ✓ Retry successful: '{evt.event_type}' (attempt {evt.retry_count + 1})");
+                            Server.NextFrame(() => {
+                                database.MarkEventSent(eventId);
+                                Server.PrintToConsole($"[MatchZy Events] ✓ Retry successful: '{eventType}' (attempt {attemptNumber})");
+                            });
+                            
+                            Log($"[EventRetryQueue] ✓ Event {eventId} ({eventType}) sent successfully on retry {attemptNumber}");
                         }
                         else
                         {
                             string errorContent = await httpResponseMessage.Content.ReadAsStringAsync();
                             string errorMsg = $"HTTP {httpResponseMessage.StatusCode}: {errorContent}";
-                            database.MarkEventRetry(evt.id, evt.retry_count + 1, errorMsg);
-                            Log($"[EventRetryQueue] ✗ Event {evt.id} ({evt.event_type}) retry failed: {errorMsg}");
+                            
+                            // Run on main thread to avoid CS2 API threading errors
+                            int eventId = evt.id;
+                            int retryCount = evt.retry_count + 1;
+                            string eventType = evt.event_type;
+                            
+                            Server.NextFrame(() => {
+                                database.MarkEventRetry(eventId, retryCount, errorMsg);
+                            });
+                            
+                            Log($"[EventRetryQueue] ✗ Event {eventId} ({eventType}) retry failed: {errorMsg}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        database.MarkEventRetry(evt.id, evt.retry_count + 1, $"Exception: {ex.Message}");
-                        Log($"[EventRetryQueue] ✗ Event {evt.id} ({evt.event_type}) retry exception: {ex.Message}");
+                        // Run on main thread to avoid CS2 API threading errors
+                        int eventId = evt.id;
+                        int retryCount = evt.retry_count + 1;
+                        string eventType = evt.event_type;
+                        string exceptionMsg = ex.Message;
+                        
+                        Server.NextFrame(() => {
+                            database.MarkEventRetry(eventId, retryCount, $"Exception: {exceptionMsg}");
+                        });
+                        
+                        Log($"[EventRetryQueue] ✗ Event {eventId} ({eventType}) retry exception: {exceptionMsg}");
                     }
 
                     // Small delay between retries to avoid overwhelming the API
