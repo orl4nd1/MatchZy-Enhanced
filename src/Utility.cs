@@ -77,42 +77,165 @@ namespace MatchZy
         }
 
         /// <summary>
-        /// Displays a large, styled notification to all players
+        /// Displays a large, styled notification to all players (with duration)
         /// </summary>
-        private void ShowNotification(string message, string color = "#00ff00", int size = 20)
+        private void ShowNotification(string message, string color = "#00ff00", int size = 20, float durationSeconds = 7.0f)
         {
             if (!centerHtmlNotifications.Value) return;
             
             string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            
+            // Create unique key for this notification
+            string notificationKey = $"global_{message.GetHashCode()}";
+            
+            // Kill any existing timer for this notification
+            if (activeNotificationTimers.ContainsKey(notificationKey) && activeNotificationTimers[notificationKey] != null)
+            {
+                activeNotificationTimers[notificationKey]?.Kill();
+            }
+            
+            // Send immediately
             PrintToCenterHtmlAll(html);
+            
+            // Calculate how many times to re-send (every 1 second to keep it visible)
+            int repeatCount = (int)Math.Ceiling(durationSeconds);
+            
+            if (repeatCount > 1)
+            {
+                int[] repeatCounter = { repeatCount - 1 }; // Use array to allow modification in closure
+                
+                void NotificationTick()
+                {
+                    if (repeatCounter[0] > 0)
+                    {
+                        PrintToCenterHtmlAll(html);
+                        repeatCounter[0]--;
+                        // Schedule next tick
+                        activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+                    }
+                    else
+                    {
+                        // Timer finished, clean up
+                        if (activeNotificationTimers.ContainsKey(notificationKey))
+                        {
+                            activeNotificationTimers[notificationKey] = null;
+                        }
+                    }
+                }
+                
+                activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+            }
         }
 
         /// <summary>
-        /// Displays a styled notification to a specific player
+        /// Displays a styled notification to a specific player (with duration)
         /// </summary>
-        private void ShowPlayerNotification(CCSPlayerController player, string message, string color = "#00ff00", int size = 18)
+        private void ShowPlayerNotification(CCSPlayerController player, string message, string color = "#00ff00", int size = 18, float durationSeconds = 6.0f)
         {
             if (!centerHtmlNotifications.Value) return;
+            if (player?.IsValid != true || player.IsBot) return;
             
             string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            
+            // Create unique key for this notification
+            string notificationKey = $"player_{player.UserId}_{message.GetHashCode()}";
+            
+            // Kill any existing timer for this notification
+            if (activeNotificationTimers.ContainsKey(notificationKey) && activeNotificationTimers[notificationKey] != null)
+            {
+                activeNotificationTimers[notificationKey]?.Kill();
+            }
+            
+            // Send immediately
             PrintToCenterHtml(player, html);
+            
+            // Calculate how many times to re-send (every 1 second to keep it visible)
+            int repeatCount = (int)Math.Ceiling(durationSeconds);
+            
+            if (repeatCount > 1)
+            {
+                int[] repeatCounter = { repeatCount - 1 }; // Use array to allow modification in closure
+                CCSPlayerController? playerRef = player; // Capture player reference
+                
+                void NotificationTick()
+                {
+                    if (repeatCounter[0] > 0 && playerRef?.IsValid == true)
+                    {
+                        PrintToCenterHtml(playerRef, html);
+                        repeatCounter[0]--;
+                        // Schedule next tick
+                        activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+                    }
+                    else
+                    {
+                        // Timer finished, clean up
+                        if (activeNotificationTimers.ContainsKey(notificationKey))
+                        {
+                            activeNotificationTimers[notificationKey] = null;
+                        }
+                    }
+                }
+                
+                activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+            }
         }
 
         /// <summary>
-        /// Displays a styled notification to a specific team
+        /// Displays a styled notification to a specific team (with duration)
         /// </summary>
-        private void ShowTeamNotification(string teamName, string message, string color = "#00ff00", int size = 18)
+        private void ShowTeamNotification(string teamName, string message, string color = "#00ff00", int size = 18, float durationSeconds = 6.0f)
         {
             if (!centerHtmlNotifications.Value) return;
             
             string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            
+            // Create unique key for this notification
+            string notificationKey = $"team_{teamName}_{message.GetHashCode()}";
+            
+            // Kill any existing timer for this notification
+            if (activeNotificationTimers.ContainsKey(notificationKey) && activeNotificationTimers[notificationKey] != null)
+            {
+                activeNotificationTimers[notificationKey]?.Kill();
+            }
+            
+            // Send immediately
             PrintToCenterHtmlTeam(teamName, html);
+            
+            // Calculate how many times to re-send (every 1 second to keep it visible)
+            int repeatCount = (int)Math.Ceiling(durationSeconds);
+            
+            if (repeatCount > 1)
+            {
+                int[] repeatCounter = { repeatCount - 1 }; // Use array to allow modification in closure
+                string teamNameRef = teamName; // Capture team name
+                
+                void NotificationTick()
+                {
+                    if (repeatCounter[0] > 0)
+                    {
+                        PrintToCenterHtmlTeam(teamNameRef, html);
+                        repeatCounter[0]--;
+                        // Schedule next tick
+                        activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+                    }
+                    else
+                    {
+                        // Timer finished, clean up
+                        if (activeNotificationTimers.ContainsKey(notificationKey))
+                        {
+                            activeNotificationTimers[notificationKey] = null;
+                        }
+                    }
+                }
+                
+                activeNotificationTimers[notificationKey] = AddTimer(1.0f, NotificationTick);
+            }
         }
 
         /// <summary>
         /// Starts a countdown timer with center HTML display
         /// </summary>
-        private void StartCountdown(int totalSeconds, string messageFormat, string color = "#ffff00", Action? onComplete = null)
+        private void StartCountdown(int totalSeconds, string messageFormat, string color = "#ffff00", Action? onComplete = null, int marginTop = 200)
         {
             // Kill any existing countdown
             if (countdownDisplayTimer != null)
@@ -139,7 +262,10 @@ namespace MatchZy
                 if (remainingSeconds > 0)
                 {
                     string message = string.Format(messageFormat, remainingSeconds);
-                    ShowNotification(message, color, 20);
+                    // Position lower on screen to appear below CS2's "MATCH PAUSED" overlay
+                    // Use larger font and bright color to be visible despite CS2's overlay
+                    string html = $"<div style='font-size:24px; color:{color}; font-weight:bold; text-align:center; margin-top:{marginTop}px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);'>{message}</div>";
+                    PrintToCenterHtmlAll(html);
                     remainingSeconds--;
                 }
                 else
@@ -596,13 +722,16 @@ namespace MatchZy
             knifeWinnerName = knifeWinner == 3 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
             ShowDamageInfo();
             
+            // Show knife winner notification immediately
+            ShowNotification($"🔪 {knifeWinnerName} WON KNIFE<br>Waiting for side selection...", "#ffaa00", 22);
+            
             int sideSelectionSeconds = sideSelectionTime.Value;
             if (sideSelectionEnabled.Value && sideSelectionSeconds > 0)
             {
                 sideSelectionRemainingSeconds = sideSelectionSeconds;
                 PrintToAllChat(Localizer["matchzy.knife.sidedecisionpendingwithtimer", knifeWinnerName, sideSelectionSeconds]);
                 
-                // Show countdown on center screen
+                // Show countdown on center screen (will replace the initial notification)
                 StartCountdown(sideSelectionSeconds, $"🔪 {knifeWinnerName} SIDE SELECTION<br>{{0}}s remaining", "#ffaa00");
                 
                 // Start countdown timer for side selection
@@ -669,6 +798,8 @@ namespace MatchZy
             else
             {
                 PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
+                // Show notification for side selection without timer
+                ShowNotification($"🔪 {knifeWinnerName} WON KNIFE<br>Waiting for side selection...", "#ffaa00", 22);
             }
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} Won the knife. Waiting for them to type {ChatColors.Green}.stay{ChatColors.Default} or {ChatColors.Green}.switch{ChatColors.Default}");
             sideSelectionMessageTimer ??= AddTimer(chatTimerDelay, SendSideSelectionMessage, TimerFlags.REPEAT);
@@ -2093,9 +2224,6 @@ namespace MatchZy
                 }
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{pauseTeamName}{ChatColors.Default} has paused the match. Type .unpause to unpause the match");
 
-                // Show center notification
-                ShowNotification($"⏸️ PAUSED ⏸️<br>{pauseTeamName}", "#ffff00", 22);
-
                 SetMatchPausedFlags();
                 
                 // Start pause timeout timer if configured
@@ -2110,9 +2238,14 @@ namespace MatchZy
                         }
                     });
 
-                    // Show countdown on center screen
-                    StartCountdown(pauseDuration.Value, "⏸️ PAUSE AUTO-ENDS IN {0}s", "#ffff00");
+                    // Show countdown on center screen (positioned lower to appear below CS2's "MATCH PAUSED" overlay)
+                    // CS2's built-in pause system shows "MATCH PAUSED" overlay at top - we can't disable it
+                    // Our countdown appears below it at 350px from top with larger text to be more visible
+                    StartCountdown(pauseDuration.Value, "⏸️ AUTO-ENDS IN {0}s", "#ffff00", null, 350);
                 }
+                // Note: We don't show "PAUSED" notification because CS2's built-in pause system already displays "MATCH PAUSED" overlay
+                // Player pauses: Chat only
+                // Admin pauses: Chat only (CS2 shows "MATCH PAUSED" overlay)
 
                 // Send match_paused event
                 if (player != null && player.UserId.HasValue)
@@ -2178,6 +2311,10 @@ namespace MatchZy
             {
                 Server.PrintToConsole($"[MatchZy] {Localizer["matchzy.pause.adminpausedthematch"]}");
             }
+            
+            // Note: CS2's built-in pause system shows "MATCH PAUSED" overlay, so we don't show additional center HTML
+            // Chat message is sufficient
+            
             SetMatchPausedFlags();
 
             // Send match_paused event for admin pause

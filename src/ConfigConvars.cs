@@ -28,7 +28,7 @@ namespace MatchZy
         public FakeConVar<bool> debugConsoleEnabled = new("matchzy_debug_console", "Whether to write verbose debug logs to the server console. Default: true", true);
 
         // Center HTML notifications
-        public FakeConVar<bool> centerHtmlNotifications = new("matchzy_center_html_notifications", "Whether to show important notifications in the center of the screen (match live, pause, etc). Default: true", true);
+        public FakeConVar<bool> centerHtmlNotifications = new("matchzy_center_html_notifications", "Whether to show important notifications in the center of the screen (match live, pause, etc). Default: false", false);
 
         public FakeConVar<string> hostnameFormat = new(
             "matchzy_hostname_format",
