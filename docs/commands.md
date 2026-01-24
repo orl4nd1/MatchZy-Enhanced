@@ -314,6 +314,11 @@ All MatchZy convars can be set in `cfg/MatchZy/config.cfg` and changed at runtim
 - `matchzy_chat_prefix` – prefix for standard MatchZy chat messages (supports `{Green}`, `{Default}`, etc.).
 - `matchzy_admin_chat_prefix` – prefix for admin `.asay` messages.
 - `matchzy_chat_messages_timer_delay` – seconds between repeated reminder messages (unready, paused, etc.).
+- `matchzy_center_html_notifications` – enable center-screen notifications for match events (`1` = enabled, `0` = disabled, default: `1`).
+  - Displays match live, pause/unpause, side selection, ready status, and countdown timers
+  - Personal notifications shown to individual players
+  - Team-specific messages shown only to relevant teams
+  - Automatically excluded for bots
 
 ### Backups, reports & automation
 

@@ -32,6 +32,138 @@ namespace MatchZy
             player.PrintToChat($"{chatPrefix} {message}");
         }
 
+        /// <summary>
+        /// Displays a center HTML notification to all players
+        /// </summary>
+        private void PrintToCenterHtmlAll(string message, int duration = 5)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            
+            var playerEntities = Utilities.GetPlayers().Where(p => p?.IsValid == true && !p.IsBot);
+            foreach (var player in playerEntities)
+            {
+                player.PrintToCenterHtml(message);
+            }
+        }
+
+        /// <summary>
+        /// Displays a center HTML notification to a specific player
+        /// </summary>
+        private void PrintToCenterHtml(CCSPlayerController player, string message)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            if (player?.IsValid != true || player.IsBot) return;
+            
+            player.PrintToCenterHtml(message);
+        }
+
+        /// <summary>
+        /// Displays a center HTML notification to all players on a specific team
+        /// </summary>
+        private void PrintToCenterHtmlTeam(string teamName, string message)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            
+            // Determine which team number (2=T, 3=CT)
+            var team = teamName == matchzyTeam1.teamName ? matchzyTeam1 : matchzyTeam2;
+            string teamSide = teamSides.ContainsKey(team) ? teamSides[team] : "";
+            int teamNum = teamSide == "CT" ? 3 : 2;
+            
+            var playerEntities = Utilities.GetPlayers().Where(p => p?.IsValid == true && !p.IsBot && p.TeamNum == teamNum);
+            foreach (var player in playerEntities)
+            {
+                player.PrintToCenterHtml(message);
+            }
+        }
+
+        /// <summary>
+        /// Displays a large, styled notification to all players
+        /// </summary>
+        private void ShowNotification(string message, string color = "#00ff00", int size = 20)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            
+            string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            PrintToCenterHtmlAll(html);
+        }
+
+        /// <summary>
+        /// Displays a styled notification to a specific player
+        /// </summary>
+        private void ShowPlayerNotification(CCSPlayerController player, string message, string color = "#00ff00", int size = 18)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            
+            string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            PrintToCenterHtml(player, html);
+        }
+
+        /// <summary>
+        /// Displays a styled notification to a specific team
+        /// </summary>
+        private void ShowTeamNotification(string teamName, string message, string color = "#00ff00", int size = 18)
+        {
+            if (!centerHtmlNotifications.Value) return;
+            
+            string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
+            PrintToCenterHtmlTeam(teamName, html);
+        }
+
+        /// <summary>
+        /// Starts a countdown timer with center HTML display
+        /// </summary>
+        private void StartCountdown(int totalSeconds, string messageFormat, string color = "#ffff00", Action? onComplete = null)
+        {
+            // Kill any existing countdown
+            if (countdownDisplayTimer != null)
+            {
+                countdownDisplayTimer.Kill();
+                countdownDisplayTimer = null;
+            }
+
+            // If notifications disabled, just run the completion timer
+            if (!centerHtmlNotifications.Value)
+            {
+                if (onComplete != null && totalSeconds > 0)
+                {
+                    AddTimer(totalSeconds, onComplete);
+                }
+                return;
+            }
+
+            int remainingSeconds = totalSeconds;
+
+            // Create repeating timer that updates every second
+            void CountdownTick()
+            {
+                if (remainingSeconds > 0)
+                {
+                    string message = string.Format(messageFormat, remainingSeconds);
+                    ShowNotification(message, color, 20);
+                    remainingSeconds--;
+                }
+                else
+                {
+                    // Countdown finished
+                    if (countdownDisplayTimer != null)
+                    {
+                        countdownDisplayTimer.Kill();
+                        countdownDisplayTimer = null;
+                    }
+                    onComplete?.Invoke();
+                }
+            }
+
+            // Show initial countdown immediately
+            CountdownTick();
+
+            // Then update every second
+            if (remainingSeconds > 0)
+            {
+                countdownDisplayTimer = AddTimer(1.0f, CountdownTick, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
+            }
+        }
+
         private void ReplyToUserCommand(CCSPlayerController? player, string message, bool console = false)
         {
             if (player == null)
@@ -453,6 +585,7 @@ namespace MatchZy
         {
             if (!isSideSelectionPhase) return;
             PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
+            ShowNotification($"🔪 {knifeWinnerName} WON KNIFE<br>Waiting for side selection...", "#ffaa00", 20);
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} Won the knife. Waiting for them to type {ChatColors.Green}.stay{ChatColors.Default} or {ChatColors.Green}.switch{ChatColors.Default}");
         }
 
@@ -468,6 +601,9 @@ namespace MatchZy
             {
                 sideSelectionRemainingSeconds = sideSelectionSeconds;
                 PrintToAllChat(Localizer["matchzy.knife.sidedecisionpendingwithtimer", knifeWinnerName, sideSelectionSeconds]);
+                
+                // Show countdown on center screen
+                StartCountdown(sideSelectionSeconds, $"🔪 {knifeWinnerName} SIDE SELECTION<br>{{0}}s remaining", "#ffaa00");
                 
                 // Start countdown timer for side selection
                 sideSelectionTimer = AddTimer(sideSelectionSeconds, () =>
@@ -583,6 +719,9 @@ namespace MatchZy
             // Professional LIVE announcement + short core command help for players
             PrintToAllChat($"{ChatColors.Lime}MATCH LIVE{ChatColors.Default} — {ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} vs {ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default}. Good luck & have fun!");
             PrintToAllChat($"{ChatColors.Grey}Pauses:{ChatColors.Default} your team can request a pause with {ChatColors.Red}.pause{ChatColors.Default} and resume with {ChatColors.Red}.unpause{ChatColors.Default}.");
+            
+            // Show center notification
+            ShowNotification($"🔴 MATCH LIVE 🔴<br>{matchzyTeam1.teamName} vs {matchzyTeam2.teamName}", "#00ff00", 24);
 
             // Send warmup_ended event if not coming from knife round
             if (!isSideSelectionPhase)
@@ -1954,6 +2093,9 @@ namespace MatchZy
                 }
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{pauseTeamName}{ChatColors.Default} has paused the match. Type .unpause to unpause the match");
 
+                // Show center notification
+                ShowNotification($"⏸️ PAUSED ⏸️<br>{pauseTeamName}", "#ffff00", 22);
+
                 SetMatchPausedFlags();
                 
                 // Start pause timeout timer if configured
@@ -1967,6 +2109,9 @@ namespace MatchZy
                             UnpauseMatch();
                         }
                     });
+
+                    // Show countdown on center screen
+                    StartCountdown(pauseDuration.Value, "⏸️ PAUSE AUTO-ENDS IN {0}s", "#ffff00");
                 }
 
                 // Send match_paused event

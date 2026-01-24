@@ -54,6 +54,7 @@ Built for **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-
 - 🏳️ **`.gg` command** — Team vote to forfeit early
 - 🚫 **FFW system** — Handle full team disconnects
 - ⚡ **Smart demo delays** — 10s restart when demos disabled
+- 📺 **Center notifications** — Important events shown center-screen with countdown timers
 
 ---
 

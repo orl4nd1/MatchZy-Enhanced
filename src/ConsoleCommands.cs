@@ -78,12 +78,14 @@ namespace MatchZy
                     {
                         // player.PrintToChat($"{chatPrefix} You are already ready!");
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedready"]);
+                        ShowPlayerNotification(player, "✅ YOU ARE READY", "#00ff00", 18);
                     }
                     else
                     {
                         playerReadyStatus[player.UserId.Value] = true;
                         // player.PrintToChat($"{chatPrefix} {Localizer["matchzy.youareready"]}");
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedready"]);
+                        ShowPlayerNotification(player, "✅ YOU ARE READY", "#00ff00", 18);
 
                         // Send player_ready event
                         SendPlayerReadyEvent(player, true);
@@ -111,11 +113,13 @@ namespace MatchZy
                     if (!playerReadyStatus[player.UserId.Value])
                     {
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedunready"]);
+                        ShowPlayerNotification(player, "❌ NOT READY<br>Type .ready to ready up", "#ff0000", 18);
                     }
                     else
                     {
                         playerReadyStatus[player.UserId.Value] = false;
                         PrintToPlayerChat(player, Localizer["matchzy.ready.markedunready"]);
+                        ShowPlayerNotification(player, "❌ NOT READY<br>Type .ready to ready up", "#ff0000", 18);
 
                         // Send player_unready event
                         SendPlayerReadyEvent(player, false);
@@ -149,6 +153,7 @@ namespace MatchZy
                 
                 PrintToAllChat(Localizer["matchzy.knife.decidedtostay", knifeWinnerName]);
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} has decided to stay!");
+                ShowNotification($"🔪 {knifeWinnerName} STAYS", "#00ff00", 20);
                 StartLive();
             }
         }
@@ -181,6 +186,7 @@ namespace MatchZy
                 SwapSidesInTeamData(true);
                 PrintToAllChat(Localizer["matchzy.knife.decidedtoswitch", knifeWinnerName]);
                 // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{knifeWinnerName}{ChatColors.Default} has decided to switch!");
+                ShowNotification($"🔪 {knifeWinnerName} SWITCHES", "#00ff00", 20);
                 StartLive();
             }
         }
@@ -319,23 +325,29 @@ namespace MatchZy
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
+                    ShowNotification("▶️ RESUMING ▶️", "#00ff00", 22);
                     UnpauseMatch();
                 }
                 else if (unpauseTeamName == "Admin")
                 {
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
+                    ShowNotification("▶️ RESUMING ▶️", "#00ff00", 22);
                     UnpauseMatch();
                 }
                 else if (!requireBothTeams)
                 {
                     // If both teams unpause not required, unpause immediately
                     PrintToAllChat(Localizer["matchzy.pause.teamunpausedthematch", unpauseTeamName]);
+                    ShowNotification("▶️ RESUMING ▶️", "#00ff00", 22);
                     UnpauseMatch();
                 }
                 else
                 {
                     PrintToAllChat(Localizer["matchzy.pause.teamwantstounpause", unpauseTeamName, remainingUnpauseTeam]);
                     // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{unpauseTeamName}{ChatColors.Default} wants to unpause the match. {ChatColors.Green}{remainingUnpauseTeam}{ChatColors.Default}, please write !unpause to confirm.");
+
+                    // Show team-specific notification to the team that needs to confirm
+                    ShowTeamNotification(remainingUnpauseTeam, $"⏸️ {unpauseTeamName} WANTS TO UNPAUSE<br>Type .unpause to confirm", "#ffaa00", 18);
 
                     // Send unpause_requested event
                     Log($"[OnUnpauseCommand] Sending unpause_requested event - team {unpauseTeamName}");

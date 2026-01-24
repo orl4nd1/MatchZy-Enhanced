@@ -1009,29 +1009,20 @@ namespace MatchZy
             PrintToAllChat(resetMessage);
             PrintToAllChat($"{ChatColors.Grey}All players will be disconnected to prepare the server for the next match.{ChatColors.Default}");
 
-            // Schedule countdown warnings before kick
-            if (kickDelay >= 30)
+            // Show countdown on center screen for last 30 seconds (or full duration if less than 30s)
+            int countdownStart = kickDelay > 30 ? 30 : kickDelay;
+            if (kickDelay > 30)
             {
+                // Start countdown from 30 seconds mark
                 AddTimer(kickDelay - 30, () =>
                 {
-                    PrintToAllChat($"{ChatColors.Yellow}Server resetting in 30 seconds. All players will be disconnected.{ChatColors.Default}");
+                    StartCountdown(30, "⚠️ SERVER RESTART<br>{0}s", "#ff0000");
                 });
             }
-
-            if (kickDelay >= 15)
+            else if (kickDelay > 0)
             {
-                AddTimer(kickDelay - 15, () =>
-                {
-                    PrintToAllChat($"{ChatColors.Yellow}Server resetting in 15 seconds...{ChatColors.Default}");
-                });
-            }
-
-            if (kickDelay >= 5)
-            {
-                AddTimer(kickDelay - 5, () =>
-                {
-                    PrintToAllChat($"{ChatColors.Lime}Server resetting in 5 seconds!{ChatColors.Default}");
-                });
+                // Start countdown immediately if less than 30 seconds
+                StartCountdown(kickDelay, "⚠️ SERVER RESTART<br>{0}s", "#ff0000");
             }
 
             AddTimer(kickDelay, () =>

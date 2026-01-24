@@ -76,6 +76,7 @@ public partial class MatchZy
                     if (autoReadyEnabled.Value)
                     {
                         PrintToPlayerChat(player, Localizer["matchzy.autoready.markedready"]);
+                        ShowPlayerNotification(player, "✅ AUTO-READY<br>Type .unready to opt-out", "#00ff00", 16);
                         SendPlayerReadyEvent(player, true);
                         
                         // Check if match can start now that this player is ready

@@ -127,6 +127,7 @@ nav:
       - Installation: installation.md
       - Configuration: configuration.md
       - Commands: commands.md
+      - Center Notifications: center-notifications.md
   - Integration:
       - Platform Integration: integration.md
       - LLM Quick Reference: LLM_QUICK_REFERENCE.md

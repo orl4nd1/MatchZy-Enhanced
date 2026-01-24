@@ -454,6 +454,42 @@ matchzy_ffw_enabled "1"
 matchzy_ffw_time "240"
 ```
 
+## Center HTML Notifications
+
+MatchZy can display important match events in the center of players' screens for better visibility.
+
+**Configuration:**
+```cfg
+matchzy_center_html_notifications "1"  // 1 = enabled, 0 = disabled (default: 1)
+```
+
+**What gets displayed:**
+
+- **Global notifications** (all players):
+  - Match live announcement with team names
+  - Pause/unpause status
+  - Side selection after knife round
+  
+- **Personal notifications** (individual players):
+  - Ready/unready status with instructions
+  - Auto-ready notifications
+  
+- **Team-specific notifications** (only relevant team):
+  - Unpause confirmation requests
+  
+- **Countdown timers**:
+  - Pause duration (if limit set)
+  - Side selection timer
+  - Server restart countdown
+
+**Benefits:**
+- Important messages don't get lost in chat
+- Clean, professional tournament-style notifications
+- Automatically excludes bots to avoid console spam
+- Works alongside chat messages
+
+---
+
 ## Event reliability & retry system
 
 MatchZy Enhanced includes a **bulletproof event delivery system** that ensures no match data is lost, even during API downtime or network issues.

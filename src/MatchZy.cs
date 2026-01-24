@@ -97,6 +97,7 @@ namespace MatchZy
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionMessageTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? pausedStateTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionTimer = null;
+        public CounterStrikeSharp.API.Modules.Timers.Timer? countdownDisplayTimer = null;
         public CounterStrikeSharp.API.Modules.Timers.Timer? sideSelectionReminderTimer = null;
         public int sideSelectionRemainingSeconds = 0;
 

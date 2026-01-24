@@ -9,6 +9,16 @@
 
 #### January 24, 2026
 
+### ✨ New Features
+
+#### Center HTML Notifications
+- **Global notifications**: Match live, pause/unpause, side selection displayed to all players
+- **Personal notifications**: Individual ready/unready status shown to specific players
+- **Team-specific notifications**: Unpause confirmation requests shown only to relevant team
+- **Countdown timers**: Live countdowns for pause duration, side selection, and server restart
+- Toggle with `matchzy_center_html_notifications` (default: enabled)
+- Clean, professional notifications that don't clutter chat
+
 ### 🐛 Bug Fixes
 
 - Fixed `server_configured` event delivery to tournament platforms
