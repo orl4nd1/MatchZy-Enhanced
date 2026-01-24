@@ -23,6 +23,10 @@
 
 - Fixed `server_configured` event delivery to tournament platforms
 - Fixed event retry queue threading issues
+- **Fixed**: Event retry queue now automatically clears when webhook URL changes
+  - Prevents retrying events to old/wrong URLs
+  - New URL configuration immediately takes effect
+  - Added `matchzy_clear_event_queue` command to manually clear pending events
 
 ---
 

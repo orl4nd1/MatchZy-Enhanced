@@ -21,6 +21,7 @@ namespace MatchZy
                 return;
             }
 
+            string oldUrl = matchConfig.RemoteLogURL;
             matchConfig.RemoteLogURL = url;
 
             // Mark that a remote log URL has been configured at least once this session so that
@@ -31,6 +32,17 @@ namespace MatchZy
             // Persist to database so it survives server restarts
             database.SaveConfigValue("matchzy_remote_log_url", url);
             Log($"[RemoteLogURLCommand] Remote log URL set and persisted to database: {url}");
+            
+            // If URL changed, clear old failed events that were queued with the previous URL
+            // This prevents retrying events to the wrong endpoint
+            if (!string.IsNullOrEmpty(oldUrl) && oldUrl != url)
+            {
+                int cleared = database.ClearEventQueue();
+                if (cleared > 0)
+                {
+                    Log($"[RemoteLogURLCommand] Cleared {cleared} pending/failed events from old URL configuration.");
+                }
+            }
             
             // Send server_configured event so API knows this server is active and configured
             SendServerConfiguredEvent("Console");

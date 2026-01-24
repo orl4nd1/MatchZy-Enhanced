@@ -643,6 +643,48 @@ namespace MatchZy
         }
 
         /// <summary>
+        /// Clears all pending/failed events from the retry queue
+        /// </summary>
+        public int ClearEventQueue()
+        {
+            try
+            {
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
+                
+                int deleted = connection.Execute(@"
+                    DELETE FROM matchzy_event_queue 
+                    WHERE status IN ('pending', 'failed')
+                ");
+                
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                
+                Log($"[ClearEventQueue] Cleared {deleted} pending/failed events from queue.");
+                return deleted;
+            }
+            catch (Exception ex)
+            {
+                Log($"[ClearEventQueue] Error: {ex.Message}");
+                LogConnectionDetails("ClearEventQueue");
+                // Ensure connection is closed on error
+                try
+                {
+                    if (connection != null && connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch { }
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// Saves a configuration value to the database (insert or update)
         /// </summary>
         public void SaveConfigValue(string key, string value)

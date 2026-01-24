@@ -188,6 +188,7 @@ Some of the most important console commands:
 ### Event reliability & data recovery
 
 - `matchzy_get_pending_events` – (admin only) Shows how many events are queued for retry, with breakdown by event type. Useful for monitoring event delivery health.
+- `matchzy_clear_event_queue` – (admin only) Clears all pending/failed events from the retry queue. Automatically called when webhook URL changes.
 - `matchzy_get_match_stats <matchId>` – Returns complete match statistics as JSON from the local database. Useful for API data recovery or debugging. Example: `matchzy_get_match_stats 12345`
 
 ### Pause & timeout

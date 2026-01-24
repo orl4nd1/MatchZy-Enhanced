@@ -1138,5 +1138,27 @@ namespace MatchZy
             
             Log($"[GetPendingEvents] {pendingCount} events in retry queue");
         }
+
+        [ConsoleCommand("matchzy_clear_event_queue", "Clears all pending/failed events from the retry queue")]
+        public void OnClearEventQueueCommand(CCSPlayerController? player, CommandInfo? command)
+        {
+            if (!IsPlayerAdmin(player, "css_pe", "@css/config"))
+            {
+                SendPlayerNotAdminMessage(player);
+                return;
+            }
+
+            int cleared = database.ClearEventQueue();
+            
+            if (cleared > 0)
+            {
+                ReplyToUserCommand(player, $"Cleared {ChatColors.Green}{cleared}{ChatColors.Default} pending/failed events from queue.");
+                Log($"[ClearEventQueue] Admin cleared {cleared} events from queue.");
+            }
+            else
+            {
+                ReplyToUserCommand(player, $"No pending/failed events to clear.");
+            }
+        }
     }
 }

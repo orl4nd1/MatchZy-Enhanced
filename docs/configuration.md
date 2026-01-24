@@ -515,6 +515,7 @@ matchzy_remote_log_header_value "your_secret_token"
 **Console commands:**
 
 - `matchzy_get_pending_events` (admin only) – Shows how many events are queued for retry
+- `matchzy_clear_event_queue` (admin only) – Clears all pending/failed events (automatically called when URL changes)
 - `matchzy_get_match_stats <matchId>` – Returns complete match statistics as JSON from local database
 
 **Benefits:** Zero data loss, automatic recovery, no manual intervention needed.
