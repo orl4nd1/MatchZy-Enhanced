@@ -5,24 +5,28 @@
 
 ---
 
-# 1.4.7 (Unreleased)
+# 1.4.8
 
 #### January 24, 2026
 
 ### ✨ New Features
 
-#### Center HTML Notifications
-- **Global notifications**: Match live, pause/unpause, side selection displayed to all players
+#### Center HTML Notifications (Experimental)
+- **Global notifications**: Match live, pause countdown, side selection displayed to all players
 - **Personal notifications**: Individual ready/unready status shown to specific players
 - **Team-specific notifications**: Unpause confirmation requests shown only to relevant team
 - **Countdown timers**: Live countdowns for pause duration, side selection, and server restart
-- Toggle with `matchzy_center_html_notifications` (default: enabled)
+- Toggle with `matchzy_center_html_notifications` (default: **disabled** - opt-in feature)
 - Clean, professional notifications that don't clutter chat
 
 ### 🐛 Bug Fixes
 
-- Fixed `server_configured` event delivery to tournament platforms
-- Fixed event retry queue threading issues
+- **Fixed**: `server_configured` event now requires `matchzy_server_id` to be set before sending
+  - Prevents events with empty server_id from being sent
+  - Auto-triggers event when server_id is set after URL configuration
+- **Fixed**: Event retry queue threading issues
+  - Database operations now run on main game thread
+  - Prevents "Invoked on a non-main thread" errors
 - **Fixed**: Event retry queue now automatically clears when webhook URL changes
   - Prevents retrying events to old/wrong URLs
   - New URL configuration immediately takes effect
