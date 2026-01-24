@@ -458,30 +458,23 @@ matchzy_ffw_time "240"
 
 MatchZy Enhanced includes a **bulletproof event delivery system** that ensures no match data is lost, even during API downtime or network issues.
 
-**How it works:**
-
-1. **Server registration**: When both `matchzy_server_id` and `matchzy_remote_log_url` are configured, a `server_configured` event is sent immediately so your API knows the server is active. **IMPORTANT:** You must set `matchzy_server_id` **before** setting `matchzy_remote_log_url` to ensure the `server_configured` event includes your server ID. If the URL is set first, the event will be skipped until the server ID is configured.
-
-2. **Automatic queueing**: When an event POST to `matchzy_remote_log_url` fails (non-2xx response, timeout, or exception), the event is automatically saved to the local database.
-
-3. **Background retry**: Every 30 seconds, MatchZy processes the retry queue with exponential backoff (30s → 1m → 2m → 4m → 8m → 16m → 32m max).
-
-4. **Maximum retries**: Events are retried up to 20 times before being marked as `failed`.
-
-5. **Auto-cleanup**: Successfully sent events are removed from the database after 7 days.
-
-**Configuration order (IMPORTANT):**
+**Configuration:**
 ```cfg
-// Step 1: Set server ID FIRST
+// Set server ID first
 matchzy_server_id "s_1"
 
-// Step 2: Set remote log URL (triggers server_configured event)
+// Then set remote log URL
 matchzy_remote_log_url "https://your-api/events"
 
-// Step 3: Optional authentication headers
+// Optional: Authentication headers
 matchzy_remote_log_header_key "X-MatchZy-Token"
 matchzy_remote_log_header_value "your_secret_token"
 ```
+
+**How it works:**
+- Failed events are automatically queued and retried every 30s with exponential backoff
+- Up to 20 retry attempts before marking as failed
+- Zero data loss during API downtime or network issues
 
 **Console commands:**
 

@@ -46,21 +46,13 @@ At a high level:
 
 ## Event reliability
 
-MatchZy includes an automatic event retry system that ensures no match data is lost:
+MatchZy includes automatic event retry with zero data loss:
 
-- **Automatic queueing**: Failed event POSTs are saved to the local database
-- **Background retry**: Events are retried every 30 seconds with exponential backoff
-- **Server tracking**: A `server_configured` event is sent when both the server ID and webhook URL are configured, allowing your API to track active servers
-- **Pull API**: Your API can query `matchzy_get_match_stats <matchId>` to retrieve match data directly from the server
+- Failed events are queued and retried every 30s with exponential backoff
+- `server_configured` event sent on startup to track active servers
+- Pull API available via `matchzy_get_match_stats <matchId>` command
 
-**IMPORTANT - Configuration Order:**  
-To ensure your API receives the `server_configured` event with a valid server ID, you must configure:
-1. **First:** `matchzy_server_id "your_server_id"`
-2. **Then:** `matchzy_remote_log_url "https://your-api/events"`
-
-If the URL is set before the server ID, the event will be skipped until both are configured.
-
-This means your tournament platform doesn't need to worry about temporary API downtime or network issues. Events will be delivered automatically when connectivity is restored.
+Your tournament platform doesn't need to worry about temporary API downtime - events are delivered automatically when connectivity is restored.
 
 ## Required MatchZy configuration
 
