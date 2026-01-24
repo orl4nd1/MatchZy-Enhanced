@@ -5,6 +5,22 @@
 
 ---
 
+# 1.4.7 (Unreleased)
+
+#### January 24, 2026
+
+### 🐛 Bug Fixes
+
+#### Server Configured Event
+- **Fixed**: `server_configured` event now requires `matchzy_server_id` to be set before sending
+  - Previously, the event could be sent with an empty server ID, causing tournament platforms to ignore/reject the event
+  - Now logs a clear message if the event is skipped due to missing server ID
+  - **Configuration order matters**: Set `matchzy_server_id` **before** `matchzy_remote_log_url`
+  - If server ID is set after the URL, the event is automatically sent at that point
+- **Updated documentation**: Added configuration order requirements to `configuration.md` and `integration.md`
+
+---
+
 # 1.4.0
 
 #### January 20, 2026

@@ -77,7 +77,19 @@ namespace MatchZy
         {
             try
             {
-                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    Log("[SendServerConfiguredEvent] Skipping: Remote log URL not configured");
+                    return;
+                }
+
+                // Require server_id to be set before sending server_configured event
+                // This ensures the API receives a valid server identifier
+                if (string.IsNullOrEmpty(matchReportServerId.Value))
+                {
+                    Log("[SendServerConfiguredEvent] Skipping: Server ID not configured. Set matchzy_server_id before configuring remote log URL.");
+                    return;
+                }
 
                 // Get server hostname from ConVar
                 var hostnameConvar = ConVar.Find("hostname");

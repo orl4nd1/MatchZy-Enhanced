@@ -89,6 +89,13 @@ namespace MatchZy
             
             // Persist to database so it survives server restarts
             database.SaveConfigValue("matchzy_server_id", id);
+            
+            // If remote log URL is already configured, send server_configured event now
+            // This handles the case where server_id is set after remote log URL
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+            {
+                SendServerConfiguredEvent("Console");
+            }
         }
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
