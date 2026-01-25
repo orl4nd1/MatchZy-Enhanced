@@ -547,6 +547,15 @@ namespace MatchZy
             UpdatePlayersMap();
             UpdateHostname();
 
+            // If auto-ready is enabled, check if players already on teams should be auto-readied
+            if (autoReadyEnabled.Value && readyAvailable && !matchStarted)
+            {
+                // Use a small delay to ensure all team assignments are complete
+                AddTimer(1.0f, () => {
+                    CheckAndAutoReadyPlayers();
+                });
+            }
+
             var seriesStartedEvent = new MatchZySeriesStartedEvent
             {
                 MatchId = liveMatchId,

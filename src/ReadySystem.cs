@@ -92,6 +92,80 @@ public partial class MatchZy
         return teamReadyOverride[team];
     }
 
+    /// <summary>
+    /// Checks if both teams have the minimum required players and marks all players as ready if auto-ready is enabled.
+    /// Only marks players as ready when both teams have at least MinPlayersToReady players.
+    /// </summary>
+    public void CheckAndAutoReadyPlayers()
+    {
+        // Skip if auto-ready is disabled, ready system not available, match started, or not in match setup
+        if (!autoReadyEnabled.Value || !readyAvailable || matchStarted || !isMatchSetup)
+        {
+            return;
+        }
+
+        // Skip auto-ready in simulation mode - it has its own ready logic
+        if (isSimulationMode)
+        {
+            return;
+        }
+
+        int minPlayersPerTeam = GetTeamMinReady((int)CsTeam.CounterTerrorist);
+        
+        // Ensure at least 1 player per team is required (prevent auto-ready with 0 players)
+        if (minPlayersPerTeam <= 0)
+        {
+            minPlayersPerTeam = 1;
+        }
+
+        (int ctPlayerCount, int ctReadyCount) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
+        (int tPlayerCount, int tReadyCount) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
+
+        Log($"[CheckAndAutoReadyPlayers] CT: {ctPlayerCount}/{minPlayersPerTeam} min required, T: {tPlayerCount}/{minPlayersPerTeam} min required");
+
+        // Check if both teams have at least the minimum required players (respects min_players_to_ready)
+        bool bothTeamsHaveMinimum = ctPlayerCount >= minPlayersPerTeam && tPlayerCount >= minPlayersPerTeam;
+
+        if (!bothTeamsHaveMinimum)
+        {
+            Log($"[CheckAndAutoReadyPlayers] Teams don't have minimum players yet - CT: {ctPlayerCount}/{minPlayersPerTeam}, T: {tPlayerCount}/{minPlayersPerTeam}");
+            return;
+        }
+
+        // Both teams are filled - mark all players on both teams as ready
+        bool anyPlayerMarkedReady = false;
+
+        foreach (var key in playerData.Keys)
+        {
+            if (!playerData[key].IsValid) continue;
+            
+            var p = playerData[key];
+            // Only mark players on CT or T teams, skip spectators
+            if (p.TeamNum == (int)CsTeam.CounterTerrorist || p.TeamNum == (int)CsTeam.Terrorist)
+            {
+                // Only mark as ready if they're not already ready
+                if (!playerReadyStatus.ContainsKey(key) || !playerReadyStatus[key])
+                {
+                    playerReadyStatus[key] = true;
+                    anyPlayerMarkedReady = true;
+
+                    PrintToPlayerChat(p, Localizer["matchzy.autoready.markedready"]);
+                    ShowPlayerNotification(p, "✅ AUTO-READY<br>Type .unready to opt-out", "#00ff00", 16);
+                    SendPlayerReadyEvent(p, true);
+
+                    Log($"[CheckAndAutoReadyPlayers] Marked {p.PlayerName} (TeamNum={p.TeamNum}) as ready");
+                }
+            }
+        }
+
+        if (anyPlayerMarkedReady)
+        {
+            Log($"[CheckAndAutoReadyPlayers] Both teams have minimum players ({minPlayersPerTeam}) - marked all players as ready");
+            CheckLiveRequired();
+            HandleClanTags();
+        }
+    }
+
     [ConsoleCommand("css_forceready", "Force-readies the team")]
     public void OnForceReadyCommandCommand(CCSPlayerController? player, CommandInfo? command)
     {

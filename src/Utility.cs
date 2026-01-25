@@ -1065,6 +1065,9 @@ namespace MatchZy
                     unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
                 }
                 UpdateTournamentStatus("idle", "");
+                
+                // Note: Auto-ready check not needed here because ResetMatch clears isMatchSetup,
+                // so auto-ready won't trigger until a new match is loaded
 
                 // If a new match was queued while the previous series was still active (postgame),
                 // automatically load it now that the server has been fully reset to idle.
@@ -1788,6 +1791,15 @@ namespace MatchZy
                 isDryRun = false;
                 StartWarmup();
                 SetMapSides();
+                
+                // After map change, check if auto-ready should trigger for players already on teams
+                // Use a delay to ensure warmup and team assignments are complete
+                AddTimer(2.0f, () => {
+                    if (autoReadyEnabled.Value && readyAvailable && !matchStarted && isMatchSetup)
+                    {
+                        CheckAndAutoReadyPlayers();
+                    }
+                });
             });
         }
 

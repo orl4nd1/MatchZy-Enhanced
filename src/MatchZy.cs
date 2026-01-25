@@ -316,6 +316,12 @@ namespace MatchZy
 
                 SwitchPlayerTeam(player, playerTeam);
 
+                // Auto-ready system: if enabled, check if both teams are filled and mark players as ready
+                if (autoReadyEnabled.Value && readyAvailable && !matchStarted && playerTeam != CsTeam.None && playerTeam != CsTeam.Spectator)
+                {
+                    CheckAndAutoReadyPlayers();
+                }
+
                 return HookResult.Continue;
             });
 

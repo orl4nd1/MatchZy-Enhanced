@@ -68,20 +68,22 @@ public partial class MatchZy
                 connectedPlayers++;
                 if (readyAvailable && !matchStarted)
                 {
-                    // Auto-ready system: if enabled, mark player as ready on join
-                    Log($"[AutoReady] Player connected: userId={player.UserId.Value}, name={player.PlayerName}, autoReadyEnabled={autoReadyEnabled.Value}, isMatchSetup={isMatchSetup}, connectedPlayers={connectedPlayers}");
+                    // Auto-ready system: if enabled, we'll mark players as ready once they join a team
+                    // and both teams are filled. For now, mark as not ready.
+                    Log($"[AutoReady] Player connected: userId={player.UserId.Value}, name={player.PlayerName}, autoReadyEnabled={autoReadyEnabled.Value}, isMatchSetup={isMatchSetup}, connectedPlayers={connectedPlayers}, TeamNum={player.TeamNum}");
 
-                    playerReadyStatus[player.UserId.Value] = autoReadyEnabled.Value;
-                    
-                    if (autoReadyEnabled.Value)
+                    // If auto-ready is enabled, start with player not ready - they'll be marked ready
+                    // once they join a team and both teams are filled
+                    playerReadyStatus[player.UserId.Value] = autoReadyEnabled.Value ? false : true;
+
+                    // If player already has a team assigned (e.g., reconnecting or match loaded while on server),
+                    // check if we should auto-ready them
+                    if (autoReadyEnabled.Value && (player.TeamNum == (int)CsTeam.CounterTerrorist || player.TeamNum == (int)CsTeam.Terrorist))
                     {
-                        PrintToPlayerChat(player, Localizer["matchzy.autoready.markedready"]);
-                        ShowPlayerNotification(player, "✅ AUTO-READY<br>Type .unready to opt-out", "#00ff00", 16);
-                        SendPlayerReadyEvent(player, true);
-                        
-                        // Check if match can start now that this player is ready
-                        CheckLiveRequired();
-                        HandleClanTags();
+                        // Use a small delay to ensure team assignment is complete
+                        AddTimer(0.5f, () => {
+                            CheckAndAutoReadyPlayers();
+                        });
                     }
                 }
                 else
