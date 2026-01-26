@@ -68,13 +68,14 @@ public partial class MatchZy
                 connectedPlayers++;
                 if (readyAvailable && !matchStarted)
                 {
-                    // Auto-ready system: if enabled, we'll mark players as ready once they join a team
-                    // and both teams are filled. For now, mark as not ready.
+                    // Auto-ready system: if enabled, mark players as ready by default
+                    // They'll be marked ready again when both teams are filled, but this prevents
+                    // "unready players" messages from showing
                     Log($"[AutoReady] Player connected: userId={player.UserId.Value}, name={player.PlayerName}, autoReadyEnabled={autoReadyEnabled.Value}, isMatchSetup={isMatchSetup}, connectedPlayers={connectedPlayers}, TeamNum={player.TeamNum}");
 
-                    // If auto-ready is enabled, start with player not ready - they'll be marked ready
-                    // once they join a team and both teams are filled
-                    playerReadyStatus[player.UserId.Value] = autoReadyEnabled.Value ? false : true;
+                    // If auto-ready is enabled, mark as ready by default to avoid "unready players" messages
+                    // The CheckAndAutoReadyPlayers will ensure they stay ready when both teams are filled
+                    playerReadyStatus[player.UserId.Value] = true;
 
                     // If player already has a team assigned (e.g., reconnecting or match loaded while on server),
                     // check if we should auto-ready them

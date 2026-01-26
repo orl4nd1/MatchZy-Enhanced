@@ -982,17 +982,17 @@ namespace MatchZy
             if (!isDemoRecordingEnabled)
             {
                 // Demo recording disabled - very fast
-                kickDelay = restartDelay + 5;
+                kickDelay = restartDelay + seriesEndKickDelayNoDemo.Value;
             }
             else if (!hasUploadEndpoint)
             {
                 // Demo recording enabled but no upload URL - don't wait for upload that won't happen
-                kickDelay = restartDelay + 10;
+                kickDelay = restartDelay + seriesEndKickDelayDemoNoUpload.Value;
             }
             else
             {
                 // Demo recording enabled with upload URL - wait for upload to complete
-                kickDelay = restartDelay + 60;
+                kickDelay = restartDelay + seriesEndKickDelayDemoUpload.Value;
             }
             
             Log($"[EndSeries] Demo recording: {isDemoRecordingEnabled}, Upload URL: {hasUploadEndpoint}, kickDelay: {kickDelay}s");

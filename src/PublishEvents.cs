@@ -129,27 +129,27 @@ namespace MatchZy
             if (eventRetryTimerStarted) return;
             eventRetryTimerStarted = true;
             
-            // Process retry queue every 30 seconds (repeating)
+            // Process retry queue at configured interval (repeating)
             void RetryTimerCallback()
             {
                 ProcessEventRetryQueue();
                 // Reschedule for next run
-                AddTimer(30.0f, RetryTimerCallback);
+                AddTimer(eventRetryInterval.Value, RetryTimerCallback);
             }
             
-            AddTimer(30.0f, RetryTimerCallback);
+            AddTimer(eventRetryInterval.Value, RetryTimerCallback);
             
-            // Also cleanup old events once per hour (only start once)
+            // Also cleanup old events at configured interval (only start once)
             if (!cleanupTimerStarted)
             {
                 cleanupTimerStarted = true;
-                AddTimer(3600.0f, () =>
+                AddTimer(eventCleanupInterval.Value, () =>
                 {
                     database.CleanupOldEvents();
                 });
             }
             
-            Log("[EventRetryTimer] Event retry system started (30s interval)");
+            Log($"[EventRetryTimer] Event retry system started ({eventRetryInterval.Value}s interval)");
         }
 
         /// <summary>

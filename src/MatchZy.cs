@@ -301,8 +301,6 @@ namespace MatchZy
 
             RegisterEventHandler<EventPlayerTeam>((@event, info) =>
             {
-                if (!isMatchSetup) return HookResult.Continue;
-
                 CCSPlayerController? player = @event.Userid;
 
                 if (!IsPlayerValid(player)) return HookResult.Continue;
@@ -312,14 +310,45 @@ namespace MatchZy
                     return HookResult.Continue;
                 }
 
-                CsTeam playerTeam = GetPlayerTeam(player);
-
-                SwitchPlayerTeam(player, playerTeam);
+                // Only handle team switching logic if in match setup
+                if (isMatchSetup)
+                {
+                    CsTeam playerTeam = GetPlayerTeam(player);
+                    SwitchPlayerTeam(player, playerTeam);
+                }
 
                 // Auto-ready system: if enabled, check if both teams are filled and mark players as ready
-                if (autoReadyEnabled.Value && readyAvailable && !matchStarted && playerTeam != CsTeam.None && playerTeam != CsTeam.Spectator)
+                // Use @event.Team from the event because player.TeamNum might not be updated yet when event fires
+                // Works in both match setup mode and warmup mode
+                if (autoReadyEnabled.Value && readyAvailable && !matchStarted && player.UserId.HasValue)
                 {
-                    CheckAndAutoReadyPlayers();
+                    int teamNum = @event.Team; // Use event's Team property, not player.TeamNum
+                    Log($"[EventPlayerTeam] Player {player.PlayerName} (UserId={player.UserId.Value}) joined team {teamNum} (event.Team={@event.Team}, player.TeamNum={player.TeamNum}), isMatchSetup={isMatchSetup}, checking auto-ready...");
+                    
+                    // Ensure player is in playerData (might not be if EventPlayerTeam fires before EventPlayerConnectFull completes)
+                    if (player.UserId.HasValue && !playerData.ContainsKey(player.UserId.Value))
+                    {
+                        playerData[player.UserId.Value] = player;
+                        Log($"[EventPlayerTeam] Added player {player.PlayerName} to playerData");
+                    }
+                    
+                    // Only check if player is on CT (3) or T (2) team, not spectator (1) or none (0)
+                    if (teamNum == (int)CsTeam.CounterTerrorist || teamNum == (int)CsTeam.Terrorist)
+                    {
+                        // Use a small delay to ensure player.TeamNum is synced with the event
+                        AddTimer(autoReadyCheckDelay.Value, () => {
+                            // Verify player is still on a team before checking
+                            if (player.IsValid && player.UserId.HasValue && playerData.ContainsKey(player.UserId.Value))
+                            {
+                                int currentTeamNum = player.TeamNum;
+                                Log($"[EventPlayerTeam] Timer fired for {player.PlayerName}, current TeamNum={currentTeamNum}, calling CheckAndAutoReadyPlayers");
+                                if (currentTeamNum == (int)CsTeam.CounterTerrorist || currentTeamNum == (int)CsTeam.Terrorist)
+                                {
+                                    CheckAndAutoReadyPlayers();
+                                }
+                            }
+                        });
+                    }
                 }
 
                 return HookResult.Continue;

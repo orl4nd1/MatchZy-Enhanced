@@ -29,6 +29,8 @@ namespace MatchZy
 
         // Center HTML notifications
         public FakeConVar<bool> centerHtmlNotifications = new("matchzy_center_html_notifications", "Whether to show important notifications in the center of the screen (match live, pause, etc). Default: false", false);
+        public FakeConVar<int> notificationDurationGlobal = new("matchzy_notification_duration_global", "Default duration in seconds for global center HTML notifications. Default: 5", 5);
+        public FakeConVar<float> notificationDurationPlayer = new("matchzy_notification_duration_player", "Default duration in seconds for player-specific center HTML notifications. Default: 6", 6.0f);
 
         public FakeConVar<string> hostnameFormat = new(
             "matchzy_hostname_format",
@@ -42,6 +44,8 @@ namespace MatchZy
 
         // Auto-Ready System
         public FakeConVar<bool> autoReadyEnabled = new("matchzy_autoready_enabled", "Whether players are automatically marked as ready when they join. Default: false", false);
+        public FakeConVar<int> autoReadyStartDelay = new("matchzy_autoready_start_delay", "Delay in seconds before match starts when auto-ready triggers (countdown). Default: 5", 5);
+        public FakeConVar<float> autoReadyCheckDelay = new("matchzy_autoready_check_delay", "Delay in seconds after player joins team before checking auto-ready status. Default: 0.3", 0.3f);
 
         // Enhanced Pause System
         public FakeConVar<bool> bothTeamsUnpauseRequired = new("matchzy_both_teams_unpause_required", "Whether both teams must type .unpause to resume (only for non-admin pauses). Default: true", true);
@@ -51,6 +55,7 @@ namespace MatchZy
         // Side Selection System
         public FakeConVar<bool> sideSelectionEnabled = new("matchzy_side_selection_enabled", "Whether side selection commands (.ct/.t/.stay/.swap) are enabled after knife round. Default: true", true);
         public FakeConVar<int> sideSelectionTime = new("matchzy_side_selection_time", "Time in seconds for side selection after knife round. Default: 60", 60);
+        public FakeConVar<float> sideSelectionReminderInterval = new("matchzy_side_selection_reminder_interval", "Interval in seconds between side selection reminder messages. Default: 10", 10.0f);
 
         // Early Match Termination (.gg)
         public FakeConVar<bool> ggEnabled = new("matchzy_gg_enabled", "Whether .gg command for early match termination is enabled. Default: false", false);
@@ -60,6 +65,7 @@ namespace MatchZy
         // FFW (Forfeit/Walkover) System
         public FakeConVar<bool> ffwEnabled = new("matchzy_ffw_enabled", "Whether automatic forfeit system is enabled when a team leaves. Default: false", false);
         public FakeConVar<int> ffwTime = new("matchzy_ffw_time", "Time in seconds before forfeit is declared when a team is missing. Default: 240 (4 minutes)", 240);
+        public FakeConVar<float> ffwCheckInterval = new("matchzy_ffw_check_interval", "Interval in seconds between FFW timer checks and warning messages. Default: 10", 10.0f);
 
         public FakeConVar<string> matchStartMessage = new("matchzy_match_start_message", "Message to show when the match starts. Use $$$ to break message into multiple lines. Set to \"\" to disable.", "");
 
@@ -73,6 +79,15 @@ namespace MatchZy
         public FakeConVar<string> matchReportEndpoint = new("matchzy_report_endpoint", "HTTP endpoint for match report uploads (https://host/api/events/report)", "");
         public FakeConVar<string> matchReportServerId = new("matchzy_report_server_id", "Server identifier to send with match report uploads", "");
         public FakeConVar<string> matchReportToken = new("matchzy_report_token", "Authentication token for match report uploads (sent as x-matchzy-token)", "");
+
+        // Series End Configuration
+        public FakeConVar<int> seriesEndKickDelayNoDemo = new("matchzy_series_end_kick_delay_no_demo", "Additional delay in seconds before kicking players when series ends and demo recording is disabled. Default: 5", 5);
+        public FakeConVar<int> seriesEndKickDelayDemoNoUpload = new("matchzy_series_end_kick_delay_demo_no_upload", "Additional delay in seconds before kicking players when series ends, demo recording is enabled but no upload URL. Default: 10", 10);
+        public FakeConVar<int> seriesEndKickDelayDemoUpload = new("matchzy_series_end_kick_delay_demo_upload", "Additional delay in seconds before kicking players when series ends, demo recording is enabled with upload URL. Default: 60", 60);
+
+        // Event System Configuration
+        public FakeConVar<float> eventRetryInterval = new("matchzy_event_retry_interval", "Interval in seconds between retry attempts for failed event uploads. Default: 30", 30.0f);
+        public FakeConVar<float> eventCleanupInterval = new("matchzy_event_cleanup_interval", "Interval in seconds between cleanup of old events from database. Default: 3600 (1 hour)", 3600.0f);
         
         [ConsoleCommand("matchzy_server_id", "Server identifier for event tracking and match reports")]
         public void MatchZyServerId(CCSPlayerController? player, CommandInfo command)

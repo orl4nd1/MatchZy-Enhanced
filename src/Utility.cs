@@ -35,7 +35,7 @@ namespace MatchZy
         /// <summary>
         /// Displays a center HTML notification to all players
         /// </summary>
-        private void PrintToCenterHtmlAll(string message, int duration = 5)
+        private void PrintToCenterHtmlAll(string message)
         {
             if (!centerHtmlNotifications.Value) return;
             
@@ -79,10 +79,11 @@ namespace MatchZy
         /// <summary>
         /// Displays a large, styled notification to all players (with duration)
         /// </summary>
-        private void ShowNotification(string message, string color = "#00ff00", int size = 20, float durationSeconds = 7.0f)
+        private void ShowNotification(string message, string color = "#00ff00", int size = 20, float? durationSeconds = null)
         {
             if (!centerHtmlNotifications.Value) return;
             
+            float actualDuration = durationSeconds ?? notificationDurationGlobal.Value;
             string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
             
             // Create unique key for this notification
@@ -98,7 +99,7 @@ namespace MatchZy
             PrintToCenterHtmlAll(html);
             
             // Calculate how many times to re-send (every 1 second to keep it visible)
-            int repeatCount = (int)Math.Ceiling(durationSeconds);
+            int repeatCount = (int)Math.Ceiling(actualDuration);
             
             if (repeatCount > 1)
             {
@@ -130,11 +131,12 @@ namespace MatchZy
         /// <summary>
         /// Displays a styled notification to a specific player (with duration)
         /// </summary>
-        private void ShowPlayerNotification(CCSPlayerController player, string message, string color = "#00ff00", int size = 18, float durationSeconds = 6.0f)
+        private void ShowPlayerNotification(CCSPlayerController player, string message, string color = "#00ff00", int size = 18, float? durationSeconds = null)
         {
             if (!centerHtmlNotifications.Value) return;
             if (player?.IsValid != true || player.IsBot) return;
             
+            float actualDuration = durationSeconds ?? notificationDurationPlayer.Value;
             string html = $"<div style='font-size:{size}px; color:{color}; font-weight:bold; text-align:center; margin-top:200px;'>{message}</div>";
             
             // Create unique key for this notification
@@ -150,7 +152,7 @@ namespace MatchZy
             PrintToCenterHtml(player, html);
             
             // Calculate how many times to re-send (every 1 second to keep it visible)
-            int repeatCount = (int)Math.Ceiling(durationSeconds);
+            int repeatCount = (int)Math.Ceiling(actualDuration);
             
             if (repeatCount > 1)
             {
@@ -764,8 +766,8 @@ namespace MatchZy
                     }
                 });
                 
-                // Start reminder timer that fires every 10 seconds
-                sideSelectionReminderTimer = AddTimer(10.0f, () =>
+                // Start reminder timer that fires at configured interval
+                sideSelectionReminderTimer = AddTimer(sideSelectionReminderInterval.Value, () =>
                 {
                     if (!isSideSelectionPhase || sideSelectionTimer == null)
                     {
@@ -849,7 +851,9 @@ namespace MatchZy
 
             // Professional LIVE announcement + short core command help for players
             PrintToAllChat($"{ChatColors.Lime}MATCH LIVE{ChatColors.Default} — {ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} vs {ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default}. Good luck & have fun!");
-            PrintToAllChat($"{ChatColors.Grey}Pauses:{ChatColors.Default} your team can request a pause with {ChatColors.Red}.pause{ChatColors.Default} and resume with {ChatColors.Red}.unpause{ChatColors.Default}.");
+            
+            // Display match rules and configuration
+            DisplayMatchRules();
             
             // Show center notification
             ShowNotification($"🔴 MATCH LIVE 🔴<br>{matchzyTeam1.teamName} vs {matchzyTeam2.teamName}", "#00ff00", 24);
@@ -884,6 +888,12 @@ namespace MatchZy
 
         private void KillPhaseTimers()
         {
+            // Kill match start countdown timer if active
+            if (matchStartCountdownTimer != null)
+            {
+                matchStartCountdownTimer.Kill();
+                matchStartCountdownTimer = null;
+            }
             unreadyPlayerMessageTimer?.Kill();
             sideSelectionMessageTimer?.Kill();
             pausedStateTimer?.Kill();
@@ -1391,7 +1401,118 @@ namespace MatchZy
 
             if (liveRequired)
             {
-                HandleMatchStart();
+                // If auto-ready is enabled, show a countdown before starting the match
+                if (autoReadyEnabled.Value && !matchStarted)
+                {
+                    StartMatchCountdown();
+                }
+                else
+                {
+                    HandleMatchStart();
+                }
+            }
+        }
+
+        private CounterStrikeSharp.API.Modules.Timers.Timer? matchStartCountdownTimer = null;
+        private int matchStartCountdownSeconds = 0;
+
+        private void StartMatchCountdown()
+        {
+            // Prevent multiple countdowns
+            if (matchStartCountdownTimer != null || matchStarted)
+            {
+                return;
+            }
+
+            // Use configurable delay, with minimum of 1 second
+            matchStartCountdownSeconds = Math.Max(1, autoReadyStartDelay.Value);
+            PrintToAllChat($"{ChatColors.Green}All players ready!{ChatColors.Default}");
+            
+            matchStartCountdownTimer = AddTimer(1.0f, () =>
+            {
+                if (matchStarted || !readyAvailable)
+                {
+                    matchStartCountdownTimer?.Kill();
+                    matchStartCountdownTimer = null;
+                    return;
+                }
+
+                matchStartCountdownSeconds--;
+                
+                if (matchStartCountdownSeconds > 0)
+                {
+                    PrintToAllChat($"{ChatColors.Yellow}Starting game in {matchStartCountdownSeconds}...{ChatColors.Default}");
+                }
+                else
+                {
+                    matchStartCountdownTimer?.Kill();
+                    matchStartCountdownTimer = null;
+                    HandleMatchStart();
+                }
+            }, TimerFlags.REPEAT);
+        }
+
+        private void DisplayMatchRules()
+        {
+            List<string> rules = new List<string>();
+            
+            // Pause rules
+            if (bothTeamsUnpauseRequired.Value)
+            {
+                rules.Add($"{ChatColors.Grey}Pauses:{ChatColors.Default} {ChatColors.Red}.pause{ChatColors.Default} to pause, {ChatColors.Red}.unpause{ChatColors.Default} to resume (both teams must unpause)");
+            }
+            else
+            {
+                rules.Add($"{ChatColors.Grey}Pauses:{ChatColors.Default} {ChatColors.Red}.pause{ChatColors.Default} to pause, {ChatColors.Red}.unpause{ChatColors.Default} to resume");
+            }
+            
+            if (maxPausesPerTeam.Value > 0)
+            {
+                rules.Add($"{ChatColors.Grey}Max pauses:{ChatColors.Default} {ChatColors.Yellow}{maxPausesPerTeam.Value}{ChatColors.Default} per team");
+            }
+            
+            if (pauseDuration.Value > 0)
+            {
+                int minutes = pauseDuration.Value / 60;
+                int seconds = pauseDuration.Value % 60;
+                string durationText = minutes > 0 ? $"{minutes}m {seconds}s" : $"{seconds}s";
+                rules.Add($"{ChatColors.Grey}Max pause length:{ChatColors.Default} {ChatColors.Yellow}{durationText}{ChatColors.Default}");
+            }
+            
+            // GG command
+            if (ggEnabled.Value)
+            {
+                int thresholdPercent = (int)(ggThreshold.Value * 100);
+                string ggRule = $"{ChatColors.Grey}Forfeit:{ChatColors.Default} {ChatColors.Red}.gg{ChatColors.Default} to forfeit (requires {ChatColors.Yellow}{thresholdPercent}%{ChatColors.Default} team consensus)";
+                if (ggMinScoreDiff.Value > 0)
+                {
+                    ggRule += $", min score diff: {ChatColors.Yellow}{ggMinScoreDiff.Value}{ChatColors.Default}";
+                }
+                rules.Add(ggRule);
+            }
+            
+            // Side selection timer
+            if (sideSelectionEnabled.Value && sideSelectionTime.Value > 0)
+            {
+                rules.Add($"{ChatColors.Grey}Side selection:{ChatColors.Default} {ChatColors.Yellow}{sideSelectionTime.Value}s{ChatColors.Default} timer after knife round");
+            }
+            
+            // FFW system
+            if (ffwEnabled.Value)
+            {
+                int ffwMinutes = ffwTime.Value / 60;
+                rules.Add($"{ChatColors.Grey}Forfeit on disconnect:{ChatColors.Default} {ChatColors.Yellow}{ffwMinutes}min{ChatColors.Default} timer if entire team leaves");
+            }
+            
+            // Display rules
+            if (rules.Count > 0)
+            {
+                PrintToAllChat($"{ChatColors.Grey}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{ChatColors.Default}");
+                foreach (string rule in rules)
+                {
+                    PrintToAllChat(rule);
+                }
+                PrintToAllChat($"{ChatColors.Grey}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{ChatColors.Default}");
             }
         }
 
@@ -2493,10 +2614,11 @@ namespace MatchZy
             Log($"[FFW] Starting FFW timer for teamNum={teamNum} (teamName={teamName}), duration={ffwRemainingSeconds}s");
             PrintToAllChat(Localizer["matchzy.ffw.started", teamName, ffwRemainingSeconds / 60]);
             
-            // Create timer that fires every 10 seconds
-            ffwTimer = AddTimer(10.0f, () =>
+            // Create timer that fires at configured interval
+            float checkInterval = ffwCheckInterval.Value;
+            ffwTimer = AddTimer(checkInterval, () =>
             {
-                ffwRemainingSeconds -= 10;
+                ffwRemainingSeconds -= (int)checkInterval;
                 
                 if (ffwRemainingSeconds <= 0)
                 {
