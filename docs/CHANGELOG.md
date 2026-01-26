@@ -5,6 +5,47 @@
 
 ---
 
+# 1.4.11
+
+#### January 26, 2026
+
+### ✨ New Features
+
+#### Auto-Ready Simulation (Testing Helper)
+- Added a ready-mode simulation helper that **spawns 2 bots (1 CT + 1 T)** during warmup so you can test ready/auto-ready flows without manually joining.
+- Added configurable timing and safety knobs to support bots-only testing and reduce flakiness during warmup → knife/live transitions.
+
+#### Crash / Debugging Utilities
+- Added **transition breadcrumbs** via `matchzy_crash_debug_breadcrumbs` to help diagnose phase-transition issues (warmup/knife/live).
+- Added an **event/webhook master switch** via `matchzy_events_enabled` to simplify isolation when debugging.
+
+### 🔧 Technical Changes
+
+- Improved ready/auto-ready state handling to better emulate real player `.ready` behavior during automated flows.
+- Refactored and expanded the shipped `cfg/MatchZy/config.cfg` comments for better clarity and usability.
+
+---
+
+# 1.4.10
+
+#### January 25, 2026
+
+### ✨ New Features
+
+#### Auto-Ready System
+- Added `matchzy_autoready_enabled` to automatically ready players when they join (with `.unready` opt-out).
+- Added configurable tuning:
+  - `matchzy_autoready_start_delay` (countdown before auto-start)
+  - `matchzy_autoready_check_delay` (delay after team assignment before checking readiness)
+  - `matchzy_autoready_ready_delay` (delay before simulating `.ready`)
+
+### 🔧 Technical Changes
+
+- Updated match flow readiness tracking in event handlers and ready system to support auto-ready reliably.
+- Updated the default config with the new auto-ready cvars and documentation.
+
+---
+
 # 1.4.9
 
 #### January 24, 2026
