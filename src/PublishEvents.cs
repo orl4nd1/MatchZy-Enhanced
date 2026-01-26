@@ -12,6 +12,7 @@ namespace MatchZy
         {
             try
             {
+                if (!eventsEnabled.Value) return;
                 if (string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
 
                 Log($"[SendEventAsync] Sending Event: {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} on {matchConfig.RemoteLogURL}");
@@ -126,6 +127,7 @@ namespace MatchZy
         /// </summary>
         private void StartEventRetryTimer()
         {
+            if (!eventsEnabled.Value) return;
             if (eventRetryTimerStarted) return;
             eventRetryTimerStarted = true;
             
@@ -159,6 +161,7 @@ namespace MatchZy
         {
             try
             {
+                if (!eventsEnabled.Value) return;
                 if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
                 {
                     // No webhook configured, skip retry processing

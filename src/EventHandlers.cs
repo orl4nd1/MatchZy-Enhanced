@@ -68,21 +68,20 @@ public partial class MatchZy
                 connectedPlayers++;
                 if (readyAvailable && !matchStarted)
                 {
-                    // Auto-ready system: if enabled, mark players as ready by default
-                    // They'll be marked ready again when both teams are filled, but this prevents
-                    // "unready players" messages from showing
                     Log($"[AutoReady] Player connected: userId={player.UserId.Value}, name={player.PlayerName}, autoReadyEnabled={autoReadyEnabled.Value}, isMatchSetup={isMatchSetup}, connectedPlayers={connectedPlayers}, TeamNum={player.TeamNum}");
 
-                    // If auto-ready is enabled, mark as ready by default to avoid "unready players" messages
-                    // The CheckAndAutoReadyPlayers will ensure they stay ready when both teams are filled
-                    playerReadyStatus[player.UserId.Value] = true;
+                    // Ready system: players start as UNREADY until they type .ready.
+                    // If auto-ready is enabled, we'll simulate the player typing .ready after a short delay
+                    // once both teams have the minimum required players.
+                    playerReadyStatus[player.UserId.Value] = false;
 
                     // If player already has a team assigned (e.g., reconnecting or match loaded while on server),
                     // check if we should auto-ready them
                     if (autoReadyEnabled.Value && (player.TeamNum == (int)CsTeam.CounterTerrorist || player.TeamNum == (int)CsTeam.Terrorist))
                     {
                         // Use a small delay to ensure team assignment is complete
-                        AddTimer(0.5f, () => {
+                        AddTimer(autoReadyCheckDelay.Value, () =>
+                        {
                             CheckAndAutoReadyPlayers();
                         });
                     }
@@ -197,6 +196,14 @@ public partial class MatchZy
             }
             playerData.Remove(userId);
             playerConnectionTimes.Remove(player.SteamID);
+            
+            // Auto-ready tracking cleanup
+            autoReadyOptOutUserIds.Remove(userId);
+            if (autoReadyPendingReadyTimers.TryGetValue(userId, out var pending))
+            {
+                pending?.Kill();
+                autoReadyPendingReadyTimers.Remove(userId);
+            }
 
             if (matchzyTeam1.coach.Contains(player))
             {

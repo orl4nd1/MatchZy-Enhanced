@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Drawing;
+using System.IO;
 
 
 namespace MatchZy
@@ -25,6 +26,34 @@ namespace MatchZy
         private void PrintToAllChat(string message)
         {
             Server.PrintToChatAll($"{chatPrefix} {message}");
+        }
+
+        private void CrashBreadcrumb(string step)
+        {
+            if (!crashDebugBreadcrumbs.Value)
+            {
+                return;
+            }
+
+            try
+            {
+                string ts = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                string line = $"[{ts}] {step}";
+
+                // Console log (so it shows in live output)
+                Log($"[CrashBreadcrumb] {line}");
+
+                // File log (so we can see the last step even after a segfault)
+                string logDir = Path.Combine(Server.GameDirectory, "csgo", "cfg", "MatchZy", "logs");
+                Directory.CreateDirectory(logDir);
+
+                string logPath = Path.Combine(logDir, "matchzy_breadcrumbs.log");
+                File.AppendAllText(logPath, line + Environment.NewLine);
+            }
+            catch
+            {
+                // Never let breadcrumb logging crash the plugin.
+            }
         }
 
         private void PrintToPlayerChat(CCSPlayerController player, string message)
@@ -579,21 +608,30 @@ namespace MatchZy
 
         private void StartWarmup()
         {
+            CrashBreadcrumb("StartWarmup: enter");
             unreadyPlayerMessageTimer?.Kill();
             unreadyPlayerMessageTimer = null;
             unreadyPlayerMessageTimer ??= AddTimer(chatTimerDelay, SendUnreadyPlayersMessage, TimerFlags.REPEAT);
             isWarmup = true;
             ExecWarmupCfg();
+            
+            // Auto-ready simulation helper: when enabled, spawn two bots after warmup config
+            // has executed (including humans.cfg bot_kick) so auto-ready can be tested
+            // without a human joining. Safe-guarded to never run if a human is connected.
+            ClearAutoReadySimulationState();
+            ScheduleAutoReadySimulationFlowIfNeeded(3.0f);
             // For real (non-simulation, non-practice) matches, ensure we always return
             // to normal cheats/timescale at the start of warmup so that any previous
             // simulation or practice configuration does not leak into this match.
             ApplyNormalTimescaleAndCheatsForRealMatches();
             UpdateTournamentStatus("warmup");
             TriggerMatchReportUpload("warmup_start");
+            CrashBreadcrumb("StartWarmup: exit");
         }
 
         private void StartKnifeRound()
         {
+            CrashBreadcrumb("StartKnifeRound: enter");
             // Kills unready players message timer
             if (unreadyPlayerMessageTimer != null)
             {
@@ -606,6 +644,12 @@ namespace MatchZy
             readyAvailable = false;
             isWarmup = false;
 
+            bool anyHumanConnectedForEvents = Utilities.GetPlayers().Any(p => p?.IsValid == true && !p.IsBot && !p.IsHLTV);
+            bool botsOnlyForEvents =
+                autoReadySimulationEnabled.Value &&
+                autoReadySimulationAllowStartWithoutHumans.Value &&
+                !anyHumanConnectedForEvents;
+
             // Send warmup_ended event
             Log($"[StartKnifeRound] Sending warmup_ended event");
             var warmupEndedEvent = new MatchZyWarmupEndedEvent
@@ -613,10 +657,17 @@ namespace MatchZy
                 MatchId = liveMatchId,
                 MapNumber = matchConfig.CurrentMapNumber
             };
-            Task.Run(async () =>
+            if (!(botsOnlyForEvents && autoReadySimulationSkipAsyncEvents.Value))
             {
-                await SendEventAsync(warmupEndedEvent);
-            });
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(warmupEndedEvent);
+                });
+            }
+            else
+            {
+                CrashBreadcrumb("StartKnifeRound: bots-only skipping async warmup_ended event send (crash isolation)");
+            }
 
             // Send knife_round_started event
             Log($"[StartKnifeRound] Sending knife_round_started event");
@@ -625,10 +676,17 @@ namespace MatchZy
                 MatchId = liveMatchId,
                 MapNumber = matchConfig.CurrentMapNumber
             };
-            Task.Run(async () =>
+            if (!(botsOnlyForEvents && autoReadySimulationSkipAsyncEvents.Value))
             {
-                await SendEventAsync(knifeStartedEvent);
-            });
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(knifeStartedEvent);
+                });
+            }
+            else
+            {
+                CrashBreadcrumb("StartKnifeRound: bots-only skipping async knife_round_started event send (crash isolation)");
+            }
 
             if (isSimulationMode)
             {
@@ -663,19 +721,244 @@ namespace MatchZy
             if (File.Exists(Path.Join(Server.GameDirectory + "/csgo/cfg", knifeCfgPath)))
             {
                 Log($"[StartKnifeRound] Starting Knife! Executing Knife CFG from {knifeCfgPath}");
-                Server.ExecuteCommand($"exec {knifeCfgPath}");
-                Server.ExecuteCommand("mp_restartgame 1;mp_warmup_end;");
+
+                // When starting with 0 humans (auto-ready simulation), CS2 has been observed to segfault
+                // during the warmup->knife transition on some servers. We provide an experimental set of
+                // alternate command sequences + delays that you can toggle via cvars to see if any are
+                // more stable on your environment.
+                bool anyHumanConnected = Utilities.GetPlayers().Any(p => p?.IsValid == true && !p.IsBot && !p.IsHLTV);
+                bool botsOnlyKnifeStart =
+                    autoReadySimulationEnabled.Value &&
+                    autoReadySimulationAllowStartWithoutHumans.Value &&
+                    !anyHumanConnected;
+
+                if (botsOnlyKnifeStart)
+                {
+                    int mode = autoReadySimulationKnifeStartMode.Value;
+                    float delay = autoReadySimulationKnifeStartCommandDelay.Value;
+                    if (delay < 0.0f) delay = 0.0f;
+                    if (delay > 5.0f) delay = 5.0f;
+
+                    CrashBreadcrumb($"StartKnifeRound: bots-only knife start mode={mode}, cmdDelay={delay:0.##}");
+
+                    // Fast path (default): behave like a normal server and just exec knife.cfg.
+                    // Safe/diagnostic mode can be enabled via cvar if needed.
+                    if (!autoReadySimulationKnifeUseSafeMode.Value)
+                    {
+                        CrashBreadcrumb($"StartKnifeRound: bots-only fast path - exec knife cfg ({knifeCfgPath})");
+                        Server.ExecuteCommand($"exec {knifeCfgPath}");
+                        CrashBreadcrumb("StartKnifeRound: bots-only fast path - after exec knife cfg");
+                    }
+                    // Mode 5 is a special diagnostic mode: execute knife.cfg lines one at a time
+                    // with breadcrumbs. Run immediately (no extra delay) so we can catch crashes
+                    // that happen very quickly after entering the knife phase.
+                    else if (mode == 5)
+                    {
+                        CrashBreadcrumb("StartKnifeRound: bots-only step-through knife.cfg enabled (immediate)");
+                        StepThroughKnifeCfgBotsOnly(delay);
+                    }
+                    else if (mode == 6)
+                    {
+                        CrashBreadcrumb("StartKnifeRound: bots-only mode 6 (enter knife, no commands) - doing nothing");
+                    }
+                    else
+                    {
+                        // Avoid executing knife.cfg in bots-only mode. Your logs show CS2 segfaulting
+                        // immediately after the server "execing MatchZy/knife.cfg" when no humans are connected.
+                        // Instead, apply the knife settings *without* mp_restartgame/mp_warmup_end here, and
+                        // then drive the transition using the experimental modes below.
+                        CrashBreadcrumb($"StartKnifeRound: bots-only - skipping exec {knifeCfgPath}, applying safe knife settings");
+                        Server.ExecuteCommand(
+                            "mp_ct_default_secondary \"\";" +
+                            "mp_free_armor 1;" +
+                            "mp_freezetime 10;" +
+                            "mp_give_player_c4 0;" +
+                            "mp_maxmoney 0;" +
+                            "mp_respawn_immunitytime 0;" +
+                            "mp_respawn_on_death_ct 0;" +
+                            "mp_respawn_on_death_t 0;" +
+                            "mp_roundtime 1.92;" +
+                            "mp_roundtime_defuse 1.92;" +
+                            "mp_roundtime_hostage 1.92;" +
+                            "mp_t_default_secondary \"\";" +
+                            "mp_round_restart_delay 3;" +
+                            "mp_team_intro_time 0;" +
+                            "mp_solid_teammates 1;"
+                        );
+
+                        CrashBreadcrumb($"StartKnifeRound: bots-only transition begin (mode={mode})");
+
+                        switch (mode)
+                        {
+                            case 0:
+                                CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_restartgame 1; mp_warmup_end'");
+                                Server.ExecuteCommand("mp_restartgame 1; mp_warmup_end");
+                                break;
+                            case 1:
+                                CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_warmup_end' then restartgame delayed");
+                                Server.ExecuteCommand("mp_warmup_end");
+                                AddTimer(delay, () =>
+                                {
+                                    CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_restartgame 1' (delayed)");
+                                    Server.ExecuteCommand("mp_restartgame 1");
+                                });
+                                break;
+                            case 2:
+                                CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_restartgame 1' then warmup_end delayed");
+                                Server.ExecuteCommand("mp_restartgame 1");
+                                AddTimer(delay, () =>
+                                {
+                                    CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_warmup_end' (delayed)");
+                                    Server.ExecuteCommand("mp_warmup_end");
+                                });
+                                break;
+                            case 3:
+                                CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_warmup_end' only");
+                                Server.ExecuteCommand("mp_warmup_end");
+                                break;
+                            case 4:
+                                CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_restartgame 1' only");
+                                Server.ExecuteCommand("mp_restartgame 1");
+                                break;
+                            default:
+                                CrashBreadcrumb("StartKnifeRound: bots-only unknown mode; defaulting to mode 2");
+                                Server.ExecuteCommand("mp_restartgame 1");
+                                AddTimer(delay, () =>
+                                {
+                                    CrashBreadcrumb("StartKnifeRound: bots-only exec 'mp_warmup_end' (delayed, default)");
+                                    Server.ExecuteCommand("mp_warmup_end");
+                                });
+                                break;
+                        }
+
+                        CrashBreadcrumb("StartKnifeRound: bots-only transition scheduled");
+                    }
+                }
+                else
+                {
+                    // Normal path: rely on knife.cfg to perform the warmup->knife transition.
+                    // (knife.cfg already contains mp_restartgame/mp_warmup_end by default)
+                    CrashBreadcrumb($"StartKnifeRound: exec knife cfg ({knifeCfgPath})");
+                    Server.ExecuteCommand($"exec {knifeCfgPath}");
+                    CrashBreadcrumb("StartKnifeRound: after exec knife cfg");
+                }
             }
             else
             {
                 Log($"[StartKnifeRound] Starting Knife! Knife CFG not found in {absolutePath}, using default CFG!");
+                CrashBreadcrumb("StartKnifeRound: knife cfg missing, using default cfg commands");
                 Server.ExecuteCommand("mp_ct_default_secondary \"\";mp_free_armor 1;mp_freezetime 10;mp_give_player_c4 0;mp_maxmoney 0;mp_respawn_immunitytime 0;mp_respawn_on_death_ct 0;mp_respawn_on_death_t 0;mp_roundtime 1.92;mp_roundtime_defuse 1.92;mp_roundtime_hostage 1.92;mp_t_default_secondary \"\";mp_round_restart_delay 3;mp_team_intro_time 0;mp_restartgame 1;mp_warmup_end;");
+                CrashBreadcrumb("StartKnifeRound: after default cfg commands");
             }
 
             PrintToAllChat($"{ChatColors.Olive}KNIFE!");
             PrintToAllChat($"{ChatColors.Lime}KNIFE!");
             PrintToAllChat($"{ChatColors.Green}KNIFE!");
             UpdateTournamentStatus("knife");
+            CrashBreadcrumb("StartKnifeRound: exit");
+        }
+
+        private void StepThroughKnifeCfgBotsOnly(float stepDelaySeconds)
+        {
+            try
+            {
+                string knifeCfgFilePath = Path.Join(Server.GameDirectory, "csgo", "cfg", knifeCfgPath);
+                var lines = new List<string>();
+
+                if (File.Exists(knifeCfgFilePath))
+                {
+                    lines.AddRange(File.ReadAllLines(knifeCfgFilePath));
+                }
+                else
+                {
+                    // Fallback to a reasonable default list matching the repo knife.cfg
+                    lines.AddRange(new[]
+                    {
+                        "mp_ct_default_secondary \"\"",
+                        "mp_free_armor 1",
+                        "mp_freezetime 10",
+                        "mp_give_player_c4 0",
+                        "mp_maxmoney 0",
+                        "mp_respawn_immunitytime 0",
+                        "mp_respawn_on_death_ct 0",
+                        "mp_respawn_on_death_t 0",
+                        "mp_roundtime 1.92",
+                        "mp_roundtime_defuse 1.92",
+                        "mp_roundtime_hostage 1.92",
+                        "mp_t_default_secondary \"\"",
+                        "mp_round_restart_delay 3",
+                        "mp_team_intro_time 0",
+                        "mp_restartgame 1",
+                        "mp_warmup_end",
+                        "mp_solid_teammates 1",
+                    });
+                }
+
+                // Filter comments/empty lines
+                var commands = new List<string>();
+                foreach (var raw in lines)
+                {
+                    if (raw == null) continue;
+                    var t = raw.Trim();
+                    if (t.Length == 0) continue;
+                    if (t.StartsWith("//")) continue;
+                    if (t.StartsWith("#")) continue;
+                    commands.Add(t);
+                }
+
+                int startIndex = autoReadySimulationKnifeStepStartIndex.Value;
+                if (startIndex < 0) startIndex = 0;
+                if (startIndex > commands.Count) startIndex = commands.Count;
+
+                int maxSteps = autoReadySimulationKnifeStartMaxSteps.Value;
+                if (maxSteps > 0 && startIndex + maxSteps < commands.Count)
+                {
+                    commands = commands.Skip(startIndex).Take(maxSteps).ToList();
+                }
+                else if (startIndex > 0)
+                {
+                    commands = commands.Skip(startIndex).ToList();
+                }
+
+                if (stepDelaySeconds < 0.0f) stepDelaySeconds = 0.0f;
+                if (stepDelaySeconds > 5.0f) stepDelaySeconds = 5.0f;
+
+                CrashBreadcrumb($"StepThroughKnifeCfgBotsOnly: executing {commands.Count} command(s) from knife.cfg, startIndex={startIndex}, stepDelay={stepDelaySeconds:0.##}");
+
+                // Execute the first command immediately (no timer), then schedule one command at a time.
+                // This helps isolate whether the crash is caused by:
+                // - entering knife phase itself,
+                // - a specific command,
+                // - or scheduling many timers at once.
+                void StepNext(int idx)
+                {
+                    if (idx < 0 || idx >= commands.Count)
+                    {
+                        CrashBreadcrumb("StepThroughKnifeCfgBotsOnly: completed all commands");
+                        return;
+                    }
+
+                    string cmd = commands[idx];
+                    CrashBreadcrumb($"StepThroughKnifeCfgBotsOnly: [{idx + 1}/{commands.Count}] exec '{cmd}'");
+                    Server.ExecuteCommand(cmd);
+
+                    int next = idx + 1;
+                    if (next < commands.Count)
+                    {
+                        AddTimer(stepDelaySeconds, () => StepNext(next));
+                    }
+                    else
+                    {
+                        CrashBreadcrumb("StepThroughKnifeCfgBotsOnly: completed all commands");
+                    }
+                }
+
+                StepNext(0);
+            }
+            catch (Exception e)
+            {
+                Log($"[AutoReadySimulation] StepThroughKnifeCfgBotsOnly failed: {e.Message}");
+            }
         }
 
         private void RandomizeSimulationSides()
@@ -839,8 +1122,11 @@ namespace MatchZy
 
         private void StartLive()
         {
+            CrashBreadcrumb("StartLive: enter");
             SetupLiveFlagsAndCfg();
+            CrashBreadcrumb("StartLive: after SetupLiveFlagsAndCfg");
             StartDemoRecording();
+            CrashBreadcrumb("StartLive: after StartDemoRecording");
 
             // Storing 0-0 score backup file as lastBackupFileName, so that .stop functions properly in first round.
             lastBackupFileName = $"matchzy_{liveMatchId}_{matchConfig.CurrentMapNumber}_round00.txt";
@@ -884,6 +1170,7 @@ namespace MatchZy
                 await SendEventAsync(goingLiveEvent);
             });
             UpdateTournamentStatus("live");
+            CrashBreadcrumb("StartLive: exit");
         }
 
         private void KillPhaseTimers()
@@ -947,6 +1234,8 @@ namespace MatchZy
                 isPractice = false;
                 isDryRun = false;
                 ClearSimulationState();
+                ClearAutoReadySimulationState();
+                ClearAutoReadyState();
                 
                 // Reset enhanced features tracking
                 pausesUsed.Clear();
@@ -1516,8 +1805,31 @@ namespace MatchZy
             }
         }
 
-        private void HandleMatchStart()
+        private void HandleMatchStart(bool allowAutoReadySimulationWithoutHumans = false)
         {
+            CrashBreadcrumb($"HandleMatchStart: enter (isMatchSetup={isMatchSetup}, isKnifeRequired={isKnifeRequired}, allowAutoReadySimOverride={allowAutoReadySimulationWithoutHumans})");
+            // Auto-ready simulation helper safety:
+            // When we're running the ready-simulation bots (0 humans on server), we should
+            // never transition into knife/live. Doing so appears to trigger CS2 instability
+            // on some servers (segfault during knife round). This mode is intended only
+            // to validate ready/auto-ready behavior in warmup.
+            if (autoReadySimulationEnabled.Value && !isSimulationMode)
+            {
+                bool anyHumanConnected = Utilities.GetPlayers().Any(p => p?.IsValid == true && !p.IsBot && !p.IsHLTV);
+                if (!anyHumanConnected)
+                {
+                    if (!allowAutoReadySimulationWithoutHumans && !autoReadySimulationAllowStartWithoutHumans.Value)
+                    {
+                        Log("[AutoReadySimulation] Blocking match start (no human players connected). Staying in warmup.");
+                        CrashBreadcrumb("HandleMatchStart: blocked by auto-ready simulation guard (no humans)");
+                        return;
+                    }
+
+                    Log("[AutoReadySimulation] WARNING: Allowing match start with 0 humans (admin/convar override). This may crash CS2 on some servers.");
+                    CrashBreadcrumb("HandleMatchStart: auto-ready simulation override active (0 humans)");
+                }
+            }
+
             isPractice = false;
             isDryRun = false;
             if (isRoundRestorePending)
@@ -1574,17 +1886,23 @@ namespace MatchZy
             HandleClanTags();
 
             string seriesType = "BO" + matchConfig.NumMaps.ToString();
+            CrashBreadcrumb($"HandleMatchStart: InitMatch begin (seriesType={seriesType})");
             liveMatchId = database.InitMatch(matchzyTeam1.teamName, matchzyTeam2.teamName, "-", isMatchSetup, liveMatchId, matchConfig.CurrentMapNumber, seriesType, matchConfig);
+            CrashBreadcrumb($"HandleMatchStart: InitMatch done (liveMatchId={liveMatchId})");
             SetupRoundBackupFile();
 
+            CrashBreadcrumb("HandleMatchStart: GetSpawns begin");
             GetSpawns();
+            CrashBreadcrumb("HandleMatchStart: GetSpawns done");
 
             if (isKnifeRequired)
             {
+                CrashBreadcrumb("HandleMatchStart: starting knife round");
                 StartKnifeRound();
             }
             else
             {
+                CrashBreadcrumb("HandleMatchStart: skipping knife, going live");
                 StartLive();
             }
             if (showCreditsOnMatchStart.Value)
@@ -1599,6 +1917,7 @@ namespace MatchZy
                     PrintToAllChat(GetColorTreatedString(FormatCvarValue(message.Trim())));
                 }
             }
+            CrashBreadcrumb("HandleMatchStart: exit");
         }
 
         public void HandleClanTags()
@@ -1890,6 +2209,12 @@ namespace MatchZy
                     simulationFlowDeferred = true;
                     simulationTargetMap = nextMap;
                 }
+                else
+                {
+                    // For non-simulation matches, ensure any ready-simulation tracking is reset
+                    // so that (if enabled) the next map can spawn a fresh pair of bots.
+                    ClearAutoReadySimulationState();
+                }
 
                 ChangeMap(nextMap, 3.0f);
                 matchStarted = false;
@@ -1921,6 +2246,10 @@ namespace MatchZy
                         CheckAndAutoReadyPlayers();
                     }
                 });
+
+                // Auto-ready simulation helper: on new maps, allow spawning the two test bots again.
+                ClearAutoReadySimulationState();
+                ScheduleAutoReadySimulationFlowIfNeeded(2.0f);
             });
         }
 

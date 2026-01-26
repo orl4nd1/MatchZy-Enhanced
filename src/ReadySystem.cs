@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -160,7 +161,7 @@ public partial class MatchZy
         }
 
         // Both teams are filled - mark all players on both teams as ready
-        bool anyPlayerMarkedReady = false;
+        bool anyReadyScheduled = false;
 
         foreach (var key in playerData.Keys)
         {
@@ -170,25 +171,50 @@ public partial class MatchZy
             // Only mark players on CT or T teams, skip spectators
             if (p.TeamNum == (int)CsTeam.CounterTerrorist || p.TeamNum == (int)CsTeam.Terrorist)
             {
-                // Only mark as ready if they're not already ready
-                if (!playerReadyStatus.ContainsKey(key) || !playerReadyStatus[key])
+                if (!playerReadyStatus.ContainsKey(key))
                 {
-                    playerReadyStatus[key] = true;
-                    anyPlayerMarkedReady = true;
+                    playerReadyStatus[key] = false;
+                }
 
-                    PrintToPlayerChat(p, Localizer["matchzy.autoready.markedready"]);
-                    ShowPlayerNotification(p, "✅ AUTO-READY<br>Type .unready to opt-out", "#00ff00", 16);
-                    SendPlayerReadyEvent(p, true);
+                // Respect opt-out: players who typed .unready should not be auto-readied until they type .ready again.
+                if (autoReadyOptOutUserIds.Contains(key))
+                {
+                    continue;
+                }
 
-                    Log($"[CheckAndAutoReadyPlayers] Marked {p.PlayerName} (TeamNum={p.TeamNum}) as ready");
+                // Only schedule auto-ready if they're not already ready and we don't already have a timer pending.
+                if (!playerReadyStatus[key] && !autoReadyPendingReadyTimers.ContainsKey(key))
+                {
+                    float baseDelay = autoReadyPlayerReadyDelay.Value;
+                    if (baseDelay < 0.0f) baseDelay = 0.0f;
+
+                    // Small jitter so it feels like real humans readying up.
+                    float jitter = (new Random().Next(0, 100) / 100.0f) * 1.0f; // 0.0 - 1.0s
+                    float delay = baseDelay + jitter;
+
+                    autoReadyPendingReadyTimers[key] = AddTimer(delay, () =>
+                    {
+                        autoReadyPendingReadyTimers.Remove(key);
+
+                        if (!autoReadyEnabled.Value || !readyAvailable || matchStarted) return;
+                        if (autoReadyOptOutUserIds.Contains(key)) return;
+                        if (!playerData.TryGetValue(key, out var delayedPlayer) || !IsPlayerValid(delayedPlayer)) return;
+                        if (delayedPlayer.TeamNum != (int)CsTeam.CounterTerrorist && delayedPlayer.TeamNum != (int)CsTeam.Terrorist) return;
+
+                        // Simulate the player typing .ready by calling the same handler.
+                        Log($"[AutoReady] Simulating .ready for {delayedPlayer.PlayerName} (UserId={key}) after {delay:0.##}s.");
+                        OnPlayerReady(delayedPlayer, null);
+                    });
+
+                    anyReadyScheduled = true;
+                    Log($"[AutoReady] Scheduled simulated .ready for {p.PlayerName} (UserId={key}) in {delay:0.##}s.");
                 }
             }
         }
 
-        if (anyPlayerMarkedReady)
+        if (anyReadyScheduled)
         {
-            Log($"[CheckAndAutoReadyPlayers] Both teams have minimum players ({minPlayersPerTeam}) - marked all players as ready");
-            HandleClanTags();
+            Log($"[CheckAndAutoReadyPlayers] Both teams have minimum players ({minPlayersPerTeam}) - scheduled simulated .ready for unready players");
         }
         
         // Always check if match can start, even if no new players were marked ready
@@ -225,5 +251,193 @@ public partial class MatchZy
 
         teamReadyOverride[(CsTeam)player.TeamNum] = true;
         CheckLiveRequired();
+    }
+
+    private void ClearAutoReadyState()
+    {
+        foreach (var kv in autoReadyPendingReadyTimers)
+        {
+            kv.Value?.Kill();
+        }
+        autoReadyPendingReadyTimers.Clear();
+        autoReadyOptOutUserIds.Clear();
+    }
+
+    private void ClearAutoReadySimulationState()
+    {
+        autoReadySimulationFlowScheduled = false;
+        autoReadySimulationFlowStartedForMap = false;
+        autoReadySimulationBotUserIds.Clear();
+    }
+
+    private void ScheduleAutoReadySimulationFlowIfNeeded(float delaySeconds)
+    {
+        if (!autoReadySimulationEnabled.Value)
+        {
+            return;
+        }
+
+        // Full simulation mode has its own bot spawning and ready flow.
+        if (isSimulationMode)
+        {
+            return;
+        }
+
+        if (matchStarted || !readyAvailable)
+        {
+            return;
+        }
+
+        // Only schedule once per map/warmup cycle.
+        if (autoReadySimulationFlowScheduled || autoReadySimulationFlowStartedForMap)
+        {
+            return;
+        }
+
+        autoReadySimulationFlowScheduled = true;
+        AddTimer(delaySeconds, () =>
+        {
+            autoReadySimulationFlowScheduled = false;
+            StartAutoReadySimulationFlow();
+        });
+    }
+
+    private void StartAutoReadySimulationFlow()
+    {
+        if (!autoReadySimulationEnabled.Value || isSimulationMode)
+        {
+            return;
+        }
+
+        if (matchStarted || !readyAvailable)
+        {
+            return;
+        }
+
+        if (autoReadySimulationFlowStartedForMap)
+        {
+            return;
+        }
+
+        // Only run when no humans are connected to avoid interfering with real players.
+        bool anyHumanConnected = false;
+
+        foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
+        {
+            if (player == null) continue;
+            if (!player.IsValid) continue;
+            if (player.IsHLTV) continue;
+            if (!player.UserId.HasValue) continue;
+            if (player.Connected != PlayerConnectedState.PlayerConnected) continue;
+
+            if (!player.IsBot)
+            {
+                anyHumanConnected = true;
+            }
+        }
+
+        if (anyHumanConnected)
+        {
+            Log($"[AutoReadySimulation] Skipping ready-simulation bot spawn (human player connected).");
+            return;
+        }
+
+        autoReadySimulationFlowStartedForMap = true;
+        autoReadySimulationBotUserIds.Clear();
+
+        float delayBetweenBots = autoReadySimulationBotSpawnDelay.Value;
+        if (delayBetweenBots < 0.0f) delayBetweenBots = 0.0f;
+
+        Log($"[AutoReadySimulation] Spawning ready-simulation bots: 1 CT now, 1 T in {delayBetweenBots:0.##}s.");
+
+        // Ensure bots can stay when server is empty, and avoid team limits kicking them.
+        // Also clear any pre-existing bots (CS2 may spawn bots at startup depending on gamemode cfg).
+        Server.ExecuteCommand("bot_join_after_player 0; mp_autokick 0; mp_autoteambalance 0; mp_limitteams 0; bot_quota_mode normal; bot_kick; bot_quota 0");
+
+        // Spawn first bot on CT
+        AddTimer(0.0f, () =>
+        {
+            if (!autoReadySimulationEnabled.Value || matchStarted || !readyAvailable) return;
+            Server.ExecuteCommand("bot_join_team CT");
+            Server.ExecuteCommand("bot_quota 1");
+        });
+
+        // Spawn second bot on T after configured delay
+        AddTimer(delayBetweenBots, () =>
+        {
+            if (!autoReadySimulationEnabled.Value || matchStarted || !readyAvailable) return;
+            Server.ExecuteCommand("bot_join_team T");
+            Server.ExecuteCommand("bot_quota 2");
+        });
+
+        // After both spawns have had time to connect, register them in MatchZy's ready tracking.
+        float registrationDelay = delayBetweenBots + 3.0f;
+        AddTimer(registrationDelay, EnsureAutoReadySimulationBotsTracked);
+    }
+
+    private void EnsureAutoReadySimulationBotsTracked()
+    {
+        if (!autoReadySimulationEnabled.Value || isSimulationMode)
+        {
+            return;
+        }
+
+        if (matchStarted || !readyAvailable)
+        {
+            return;
+        }
+
+        int added = 0;
+        int totalBotsFound = 0;
+        var trackedBots = new List<CCSPlayerController>();
+
+        foreach (var player in Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller"))
+        {
+            if (player == null) continue;
+            if (!player.IsValid) continue;
+            if (player.IsHLTV) continue;
+            if (!player.IsBot) continue;
+            if (!player.UserId.HasValue) continue;
+            if (player.Connected != PlayerConnectedState.PlayerConnected) continue;
+
+            totalBotsFound++;
+            int userId = player.UserId.Value;
+
+            if (!playerData.ContainsKey(userId))
+            {
+                playerData[userId] = player;
+                connectedPlayers++;
+                added++;
+            }
+
+            autoReadySimulationBotUserIds.Add(userId);
+            trackedBots.Add(player);
+        }
+
+        Log($"[AutoReadySimulation] Bot registration pass complete: totalBotsFound={totalBotsFound}, newlyTracked={added}, trackedBotUserIds={autoReadySimulationBotUserIds.Count}.");
+
+        // Start bots as unready, then simulate them typing .ready with a small stagger.
+        trackedBots.Sort((a, b) => (a.UserId ?? 0).CompareTo(b.UserId ?? 0));
+
+        float delayStep = 0.5f;
+        for (int i = 0; i < trackedBots.Count; i++)
+        {
+            var bot = trackedBots[i];
+            if (!bot.UserId.HasValue) continue;
+
+            int userId = bot.UserId.Value;
+            playerReadyStatus[userId] = false;
+
+            float delay = 0.75f + (i * delayStep);
+            AddTimer(delay, () =>
+            {
+                if (!autoReadySimulationEnabled.Value || isSimulationMode) return;
+                if (matchStarted || !readyAvailable) return;
+                if (!IsPlayerValid(bot) || !bot.UserId.HasValue) return;
+
+                Log($"[AutoReadySimulation] Simulating .ready for bot UserId={bot.UserId.Value}, Name={bot.PlayerName} after {delay:0.##}s.");
+                OnPlayerReady(bot, null);
+            });
+        }
     }
 }

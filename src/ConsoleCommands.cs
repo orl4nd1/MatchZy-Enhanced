@@ -70,6 +70,14 @@ namespace MatchZy
             {
                 if (player.UserId.HasValue)
                 {
+                    // Auto-ready opt-out: player manually readied, so clear opt-out and any pending timers.
+                    autoReadyOptOutUserIds.Remove(player.UserId.Value);
+                    if (autoReadyPendingReadyTimers.TryGetValue(player.UserId.Value, out var pending))
+                    {
+                        pending?.Kill();
+                        autoReadyPendingReadyTimers.Remove(player.UserId.Value);
+                    }
+
                     if (!playerReadyStatus.ContainsKey(player.UserId.Value))
                     {
                         playerReadyStatus[player.UserId.Value] = false;
@@ -106,6 +114,18 @@ namespace MatchZy
             {
                 if (player.UserId.HasValue)
                 {
+                    // Auto-ready opt-out: if auto-ready is enabled, remember that this player opted out,
+                    // and cancel any pending auto-ready timer for them.
+                    if (autoReadyEnabled.Value)
+                    {
+                        autoReadyOptOutUserIds.Add(player.UserId.Value);
+                        if (autoReadyPendingReadyTimers.TryGetValue(player.UserId.Value, out var pending))
+                        {
+                            pending?.Kill();
+                            autoReadyPendingReadyTimers.Remove(player.UserId.Value);
+                        }
+                    }
+
                     if (!playerReadyStatus.ContainsKey(player.UserId.Value))
                     {
                         playerReadyStatus[player.UserId.Value] = false;
@@ -661,7 +681,8 @@ namespace MatchZy
                 {
                     //Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}Admin{ChatColors.Default} has started the game!");
                     PrintToAllChat(Localizer["matchzy.cc.gamestarted"]);
-                    HandleMatchStart();
+                    // Admin override: allow transitioning even if only ready-simulation bots are present.
+                    HandleMatchStart(allowAutoReadySimulationWithoutHumans: true);
                 }
             }
             else

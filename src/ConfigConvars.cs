@@ -27,6 +27,13 @@ namespace MatchZy
         // Console debug logging
         public FakeConVar<bool> debugConsoleEnabled = new("matchzy_debug_console", "Whether to write verbose debug logs to the server console. Default: true", true);
 
+        // Crash / transition breadcrumbs (writes checkpoints to console + a file)
+        // Useful when diagnosing CS2 segfaults during phase transitions (warmup -> knife/live).
+        public FakeConVar<bool> crashDebugBreadcrumbs = new("matchzy_crash_debug_breadcrumbs", "When enabled, writes transition breadcrumbs to MatchZy/logs/matchzy_breadcrumbs.log to help diagnose crashes. Default: false", false);
+        
+        // Event/Webhook sending master switch (diagnostics)
+        public FakeConVar<bool> eventsEnabled = new("matchzy_events_enabled", "Master switch for MatchZy event/webhook sending and retry queue processing. Default: true", true);
+
         // Center HTML notifications
         public FakeConVar<bool> centerHtmlNotifications = new("matchzy_center_html_notifications", "Whether to show important notifications in the center of the screen (match live, pause, etc). Default: false", false);
         public FakeConVar<int> notificationDurationGlobal = new("matchzy_notification_duration_global", "Default duration in seconds for global center HTML notifications. Default: 5", 5);
@@ -46,6 +53,44 @@ namespace MatchZy
         public FakeConVar<bool> autoReadyEnabled = new("matchzy_autoready_enabled", "Whether players are automatically marked as ready when they join. Default: false", false);
         public FakeConVar<int> autoReadyStartDelay = new("matchzy_autoready_start_delay", "Delay in seconds before match starts when auto-ready triggers (countdown). Default: 5", 5);
         public FakeConVar<float> autoReadyCheckDelay = new("matchzy_autoready_check_delay", "Delay in seconds after player joins team before checking auto-ready status. Default: 0.3", 0.3f);
+        public FakeConVar<float> autoReadyPlayerReadyDelay = new("matchzy_autoready_ready_delay", "Delay in seconds before auto-ready simulates a player typing .ready once teams are eligible. Default: 2", 2.0f);
+        
+        // Auto-Ready Simulation (testing helper)
+        // When enabled, MatchZy will spawn two bots (1 CT, 1 T) during the ready/warmup phase
+        // so you can test auto-ready and ready gating without manually joining the server.
+        public FakeConVar<bool> autoReadySimulationEnabled = new("matchzy_autoready_simulation_enabled", "When enabled, spawns 2 bots for ready-mode testing (1 CT + 1 T) and counts them as players. Default: false", false);
+        public FakeConVar<float> autoReadySimulationBotSpawnDelay = new("matchzy_autoready_simulation_bot_spawn_delay", "Delay in seconds between spawning the two ready-simulation bots. Default: 5", 5.0f);
+        public FakeConVar<bool> autoReadySimulationAllowStartWithoutHumans = new("matchzy_autoready_simulation_allow_start_without_humans", "When enabled, allows starting knife/live with 0 humans connected while auto-ready simulation is active (may crash CS2). Default: false", false);
+        public FakeConVar<bool> autoReadySimulationKnifeUseSafeMode = new(
+            "matchzy_autoready_simulation_knife_use_safe_mode",
+            "When enabled and starting knife with 0 humans, uses the legacy 'safe/diagnostic' knife transition modes instead of execing knife.cfg (for crash isolation). Default: false",
+            false
+        );
+        public FakeConVar<int> autoReadySimulationKnifeStartMode = new(
+            "matchzy_autoready_simulation_knife_start_mode",
+            "Knife transition command sequence when starting with 0 humans (safe mode only). 0=restart_then_warmup_end(same cmd), 1=warmup_end_then_restart(delayed), 2=restart_then_warmup_end(delayed), 3=warmup_end_only, 4=restart_only, 5=step_through_knife_cfg(one command at a time), 6=enter_knife_no_commands. Default: 0",
+            0
+        );
+        public FakeConVar<float> autoReadySimulationKnifeStartCommandDelay = new(
+            "matchzy_autoready_simulation_knife_start_command_delay",
+            "Delay in seconds between knife transition commands when starting with 0 humans (safe mode only). Default: 0",
+            0.0f
+        );
+        public FakeConVar<int> autoReadySimulationKnifeStartMaxSteps = new(
+            "matchzy_autoready_simulation_knife_start_max_steps",
+            "When knife_start_mode=5, maximum number of knife.cfg commands to execute (0 = all). Default: 0",
+            0
+        );
+        public FakeConVar<int> autoReadySimulationKnifeStepStartIndex = new(
+            "matchzy_autoready_simulation_knife_step_start_index",
+            "When knife_start_mode=5, 0-based command index to start executing from within knife.cfg (after filtering comments/empties). Default: 0",
+            0
+        );
+        public FakeConVar<bool> autoReadySimulationSkipAsyncEvents = new(
+            "matchzy_autoready_simulation_skip_async_events",
+            "When enabled, suppresses Task.Run event sends during bots-only simulation knife/live transitions (for crash isolation). Default: false",
+            false
+        );
 
         // Enhanced Pause System
         public FakeConVar<bool> bothTeamsUnpauseRequired = new("matchzy_both_teams_unpause_required", "Whether both teams must type .unpause to resume (only for non-admin pauses). Default: true", true);

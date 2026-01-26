@@ -532,6 +532,11 @@ namespace MatchZy
             StartWarmup();
 
             isMatchSetup = true;
+            
+            // Auto-ready simulation helper: when enabled, spawn two bots (1 CT + 1 T) after warmup
+            // has started so auto-ready/ready gating can be tested without a human joining.
+            // We delay slightly so warmup.cfg + humans.cfg (bot_kick) have already executed.
+            ScheduleAutoReadySimulationFlowIfNeeded(2.0f);
 
             // If this match is configured for simulation and we are *not* in the middle of a
             // map change, schedule the simulation flow shortly after warmup is active so the

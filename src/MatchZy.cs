@@ -33,6 +33,17 @@ namespace MatchZy
         public bool isSideSelectionPhase = false;
         public bool isMatchLive = false;
         public bool isSimulationMode = false;
+        
+        // Auto-ready simulation mode (ready-phase testing helper)
+        // Spawns a minimal set of bots during warmup so auto-ready can be tested
+        // without manually joining the server.
+        private bool autoReadySimulationFlowScheduled = false;
+        private bool autoReadySimulationFlowStartedForMap = false;
+        private readonly HashSet<int> autoReadySimulationBotUserIds = new();
+        
+        // Auto-ready (human) scheduling + opt-out tracking
+        private readonly Dictionary<int, CounterStrikeSharp.API.Modules.Timers.Timer?> autoReadyPendingReadyTimers = new();
+        private readonly HashSet<int> autoReadyOptOutUserIds = new();
         public long liveMatchId = -1;
         public int autoStartMode = 1;
 
