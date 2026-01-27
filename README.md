@@ -30,7 +30,7 @@
 2. Extract to `game/csgo/` directory
 3. Restart your server
 
-📖 **[Documentation](https://me.sivert.io/)**
+📖 **[Documentation](https://docs.sivert.io/docs/me)**
 
 ---
 
@@ -58,12 +58,12 @@ Built for **[MatchZy Auto Tournament](https://github.com/sivert-io/matchzy-auto-
 
 ---
 
-## 📖 Documentation
+## 📖 Documentation (docs.sivert.io)
 
-- 📋 **[Configuration Guide](https://me.sivert.io/configuration/)** — All ConVars and examples
-- 🎮 **[Commands Reference](https://me.sivert.io/commands/)** — Player and admin commands
-- 🔗 **[Integration Guide](https://me.sivert.io/integration/)** — API endpoints and events
-- 📝 **[Changelog](https://me.sivert.io/CHANGELOG/)** — Release history
+- 📋 **[Configuration Guide](https://docs.sivert.io/docs/me/user/configuration)** — All ConVars and examples
+- 🎮 **[Commands Reference](https://docs.sivert.io/docs/me/user/commands)** — Player and admin commands
+- 🔗 **[Integration Guide](https://docs.sivert.io/docs/me/advanced/integration)** — API endpoints and events
+- 📝 **[Changelog](https://docs.sivert.io/docs/me/advanced/changelog)** — Release history
 
 ---
 
