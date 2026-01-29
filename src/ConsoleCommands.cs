@@ -1087,7 +1087,7 @@ namespace MatchZy
         [ConsoleCommand("matchzy_get_match_stats", "Returns complete match statistics as JSON for a given match ID")]
         public void OnGetMatchStatsCommand(CCSPlayerController? player, CommandInfo? command)
         {
-            if (command.ArgCount < 2)
+            if (command == null || command.ArgCount < 2)
             {
                 ReplyToUserCommand(player, "Usage: matchzy_get_match_stats <matchId>");
                 return;
