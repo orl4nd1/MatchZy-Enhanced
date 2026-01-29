@@ -31,6 +31,18 @@ namespace MatchZy
         // Useful when diagnosing CS2 segfaults during phase transitions (warmup -> knife/live).
         public FakeConVar<bool> crashDebugBreadcrumbs = new("matchzy_crash_debug_breadcrumbs", "When enabled, writes transition breadcrumbs to MatchZy/logs/matchzy_breadcrumbs.log to help diagnose crashes. Default: false", false);
         
+        // MatchZy-safe CS2 update checks (Steam UpToDateCheck)
+        public FakeConVar<bool> safeAutoUpdaterEnabled = new(
+            "matchzy_safeautoupdater_enabled",
+            "When enabled, periodically checks Steam UpToDateCheck and (only when MatchZy is idle/postgame/error) restarts the server for CS2 updates. Default: true",
+            true
+        );
+        public FakeConVar<int> safeAutoUpdaterOfflineBackoffSeconds = new(
+            "matchzy_safeautoupdater_offline_backoff_seconds",
+            "When Steam update checks fail due to DNS/network (offline servers), MatchZy will wait this many seconds before trying again. Default: 1800 (30 minutes)",
+            1800
+        );
+
         // Event/Webhook sending master switch (diagnostics)
         public FakeConVar<bool> eventsEnabled = new("matchzy_events_enabled", "Master switch for MatchZy event/webhook sending and retry queue processing. Default: true", true);
 

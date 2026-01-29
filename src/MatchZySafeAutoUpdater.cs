@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CounterStrikeSharp.API;
@@ -31,6 +32,8 @@ public partial class MatchZy
     private static bool _updateAvailable;
     private static bool _restartRequired;
     private static int _requiredVersion;
+    private static double _nextUpdateCheckAllowedTime;
+    private static bool _offlineWarningLogged;
 
     // Cvars we care about from MatchZy
     private static ConVar? _matchzyTournamentStatus;
@@ -53,6 +56,7 @@ public partial class MatchZy
     private void OnGameServerSteamAPIActivated()
     {
         Logger.LogInformation("[MatchZySafeAutoUpdater] Steam API activated. MatchZy-safe update checks enabled.");
+        _offlineWarningLogged = false;
     }
 
     /// <summary>
@@ -62,6 +66,11 @@ public partial class MatchZy
     {
         try
         {
+            if (!safeAutoUpdaterEnabled.Value)
+            {
+                return;
+            }
+
             // Never perform update checks while a MatchZy match is in progress; this keeps
             // all Steam API polling and restart decisions strictly outside live matches.
             string status = GetMatchZyStatus();
@@ -73,6 +82,12 @@ public partial class MatchZy
             if (_restartRequired)
             {
                 // Already committed to restarting; no need to keep hammering the Steam API.
+                return;
+            }
+
+            // Backoff window (offline/DNS failures).
+            if (Server.CurrentTime < _nextUpdateCheckAllowedTime)
+            {
                 return;
             }
 
@@ -99,6 +114,10 @@ public partial class MatchZy
             }
 
             Server.NextFrame(ManageServerUpdate);
+        }
+        catch (Exception ex) when (IsTransientNetworkOrDnsFailure(ex))
+        {
+            ApplyOfflineBackoff(ex);
         }
         catch (Exception ex)
         {
@@ -259,6 +278,20 @@ public partial class MatchZy
 
             try
             {
+                if (!safeAutoUpdaterEnabled.Value)
+                {
+                    string disabled = $"{prefix} Update checks are disabled (matchzy_safeautoupdater_enabled 0).";
+                    if (player != null && player.IsValid)
+                    {
+                        player.PrintToChat($" {disabled}");
+                    }
+                    else
+                    {
+                        Logger.LogInformation(disabled);
+                    }
+                    return;
+                }
+
                 (bool upToDate, int requiredVersion) = await GetUpdateStatusAsync();
 
                 string msg = upToDate
@@ -272,6 +305,19 @@ public partial class MatchZy
                 else
                 {
                     Logger.LogInformation(msg);
+                }
+            }
+            catch (Exception ex) when (IsTransientNetworkOrDnsFailure(ex))
+            {
+                // Avoid printing a scary "error" in offline environments.
+                string err = $"{prefix} Failed to check for updates (DNS/network/offline): {ex.Message}";
+                if (player != null && player.IsValid)
+                {
+                    player.PrintToChat($" {err}");
+                }
+                else
+                {
+                    Logger.LogWarning(err);
                 }
             }
             catch (Exception ex)
@@ -301,7 +347,10 @@ public partial class MatchZy
             throw new InvalidOperationException("steam.inf patch version could not be determined.");
         }
 
-        using HttpClient httpClient = new HttpClient();
+        using HttpClient httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
         var response = await httpClient.GetAsync(string.Format(SteamApiEndpoint, steamInfPatchVersion));
 
         if (!response.IsSuccessStatusCode)
@@ -368,6 +417,50 @@ public partial class MatchZy
 
     [GeneratedRegex(@"PatchVersion=(?<version>[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)", RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex PatchVersionRegex();
+
+    private void ApplyOfflineBackoff(Exception ex)
+    {
+        int backoffSeconds = Math.Max(30, safeAutoUpdaterOfflineBackoffSeconds.Value);
+        _nextUpdateCheckAllowedTime = Server.CurrentTime + backoffSeconds;
+
+        // Log only once per "offline period" to avoid spamming server consoles.
+        if (!_offlineWarningLogged)
+        {
+            _offlineWarningLogged = true;
+            Logger.LogWarning(
+                "[MatchZySafeAutoUpdater] Steam update check failed (DNS/network/offline): {Message}. Backing off for {BackoffSeconds}s. (Disable with matchzy_safeautoupdater_enabled 0)",
+                ex.Message,
+                backoffSeconds
+            );
+        }
+    }
+
+    private static bool IsTransientNetworkOrDnsFailure(Exception ex)
+    {
+        // HttpClient failures typically arrive as HttpRequestException with an inner SocketException.
+        // In many server environments, DNS is intentionally unavailable or outbound traffic is blocked.
+        if (ex is HttpRequestException hre)
+        {
+            if (hre.InnerException is SocketException)
+            {
+                return true;
+            }
+
+            // Sometimes the SocketException is nested deeper.
+            Exception? inner = hre.InnerException;
+            while (inner != null)
+            {
+                if (inner is SocketException)
+                {
+                    return true;
+                }
+                inner = inner.InnerException;
+            }
+        }
+
+        // Timeout / cancellation should also be treated as transient network failure.
+        return ex is TaskCanceledException;
+    }
 }
 
 // --- Steam UpToDateCheck DTOs ---
