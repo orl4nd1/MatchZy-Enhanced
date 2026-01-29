@@ -147,9 +147,6 @@ preflight_auth() {
     # - gh must be logged in (used for release creation)
     # - git must be able to push to origin (release commit + tags)
 
-    local repo_url
-    repo_url=$(git remote get-url origin 2>/dev/null || echo "")
-
     echo -e "\n${BLUE}🔐 Verifying GitHub authentication...${NC}"
 
     if ! gh auth status -h github.com >/dev/null 2>&1; then
@@ -159,18 +156,47 @@ preflight_auth() {
         exit 1
     fi
 
-    # Ensure gh token can access this repo (and prompt a clearer message if not).
-    if [ -n "$repo_url" ]; then
-        local repo_slug
-        repo_slug=$(echo "$repo_url" | sed -E "s|.*github.com[:/](.*?)(\\.git)?$|\\1|")
+    # Show which GitHub user gh is using (helps when multiple accounts exist).
+    local gh_user
+    gh_user=$(gh api user -q .login 2>/dev/null || echo "")
+    if [ -n "$gh_user" ]; then
+        echo -e "${GREEN}✓ gh authenticated as: ${gh_user}${NC}"
+    fi
+
+    # Ensure gh token can access this repo.
+    # Prefer letting gh infer the repo from the current git remote (avoids parsing bugs).
+    REPO_SLUG="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo "")"
+    if [ -z "$REPO_SLUG" ]; then
+        # Fallback: parse from origin URL.
+        local repo_url repo_slug
+        repo_url=$(git remote get-url origin 2>/dev/null || echo "")
+        repo_slug=""
+        if [[ "$repo_url" =~ ^git@github\.com: ]]; then
+            repo_slug="${repo_url#git@github.com:}"
+        elif [[ "$repo_url" =~ ^https?://github\.com/ ]]; then
+            repo_slug="${repo_url#https://github.com/}"
+            repo_slug="${repo_slug#http://github.com/}"
+        fi
+        repo_slug="${repo_slug%.git}"
+
         if [ -n "$repo_slug" ]; then
-            if ! gh repo view "$repo_slug" --json nameWithOwner >/dev/null 2>&1; then
-                echo -e "${RED}❌ gh is authenticated but cannot access repo ${repo_slug}.${NC}"
-                echo -e "${YELLOW}Fix:${NC} ensure your token has access to the repo (and required scopes), then re-run."
-                exit 1
+            if gh repo view "$repo_slug" --json nameWithOwner -q .nameWithOwner >/dev/null 2>&1; then
+                REPO_SLUG="$repo_slug"
             fi
         fi
     fi
+
+    if [ -z "$REPO_SLUG" ]; then
+        echo -e "${RED}❌ gh is authenticated but cannot access the GitHub repo for this directory.${NC}"
+        echo -e "${YELLOW}Fix:${NC}"
+        echo "  - Ensure this is a GitHub repo with a valid origin remote"
+        echo "  - Ensure you're logged into gh as an account with access to the repo"
+        echo "    (try: gh auth login --hostname github.com)"
+        echo "  - Or refresh scopes: gh auth refresh -h github.com -s repo"
+        echo "  - If using a PAT via environment, set GH_TOKEN to a token with repo access"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ gh repo access OK: ${REPO_SLUG}${NC}"
 
     # Verify git push authentication without making changes.
     # Disable interactive prompts so the script fails fast in CI/servers.
@@ -178,6 +204,11 @@ preflight_auth() {
         echo -e "${RED}❌ Git is not able to authenticate to push to 'origin'.${NC}"
         echo -e "${YELLOW}If your origin remote is HTTPS, the easiest fix is:${NC}"
         echo "  gh auth setup-git"
+        echo -e "${YELLOW}If it still fails, you likely have cached bad HTTPS credentials. Clear them, then retry:${NC}"
+        echo "  git credential reject <<'EOF'"
+        echo "  protocol=https"
+        echo "  host=github.com"
+        echo "  EOF"
         echo -e "${YELLOW}Alternatively use SSH for the origin remote and ensure your SSH key is added to GitHub.${NC}"
         exit 1
     fi
@@ -319,8 +350,12 @@ SIZE=$(du -h "${BUILD_ROOT}/${RELEASE_DIR}.zip" | cut -f1)
 echo -e "${GREEN}✓ Created ${BUILD_ROOT}/${RELEASE_DIR}.zip (${SIZE})${NC}"
 
 # Set default repo for gh CLI (if not already set)
-REPO_URL=$(git remote get-url origin | sed -E "s|.*github.com[:/](.*).git|\\1|")
-gh repo set-default "$REPO_URL" 2>/dev/null || true
+if [ -n "${REPO_SLUG:-}" ]; then
+    gh repo set-default "${REPO_SLUG}" 2>/dev/null || true
+else
+    REPO_URL=$(git remote get-url origin | sed -E "s|.*github.com[:/](.*)\\.git|\\1|" | sed -E "s|\\.git$||")
+    gh repo set-default "$REPO_URL" 2>/dev/null || true
+fi
 
 echo -e "\n${BLUE}💾 Committing changes...${NC}"
 git add .
