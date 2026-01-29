@@ -19,6 +19,129 @@ fi
 
 echo -e "${BLUE}🚀 MatchZy Automated Release Script${NC}\n"
 
+ensure_cmd() {
+    local cmd="$1"
+    local help="$2"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo -e "${RED}❌ Missing required command: ${cmd}${NC}"
+        echo -e "${YELLOW}${help}${NC}"
+        return 1
+    fi
+    return 0
+}
+
+install_deps_debian_like() {
+    # Best-effort dependency installer for Debian/Ubuntu.
+    # Requires root or passwordless sudo (sudo -n).
+    local pkgs=("$@")
+
+    if [ "${#pkgs[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    if [ "$(id -u)" -eq 0 ]; then
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y "${pkgs[@]}"
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${pkgs[@]}"
+        return 0
+    fi
+
+    echo -e "${RED}❌ Cannot auto-install packages (need root or passwordless sudo).${NC}"
+    echo -e "${YELLOW}Run this manually, then re-run ./release.sh:${NC}"
+    echo "  sudo apt-get update && sudo apt-get install -y ${pkgs[*]}"
+    exit 1
+}
+
+install_dotnet8_debian12() {
+    # Installs .NET 8 SDK on Debian 12 (bookworm) via Microsoft packages repo.
+    # Requires root or passwordless sudo (sudo -n).
+    local needs_dotnet_install=0
+    if command -v dotnet >/dev/null 2>&1; then
+        return 0
+    fi
+
+    needs_dotnet_install=1
+    if [ "$needs_dotnet_install" -eq 1 ]; then
+        echo -e "${BLUE}📦 Installing dotnet-sdk-8.0 (Debian 12)...${NC}"
+        install_deps_debian_like ca-certificates wget gnupg
+
+        if [ "$(id -u)" -eq 0 ]; then
+            wget -q "https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb" -O /tmp/packages-microsoft-prod.deb
+            dpkg -i /tmp/packages-microsoft-prod.deb
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y dotnet-sdk-8.0
+            return 0
+        fi
+
+        if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+            wget -q "https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb" -O /tmp/packages-microsoft-prod.deb
+            sudo dpkg -i /tmp/packages-microsoft-prod.deb
+            sudo apt-get update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dotnet-sdk-8.0
+            return 0
+        fi
+
+        echo -e "${RED}❌ Cannot auto-install dotnet (need root or passwordless sudo).${NC}"
+        echo -e "${YELLOW}Install it manually, then re-run ./release.sh.${NC}"
+        echo "  sudo apt-get update && sudo apt-get install -y ca-certificates wget gnupg"
+        echo "  wget -q \"https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb\" -O /tmp/packages-microsoft-prod.deb"
+        echo "  sudo dpkg -i /tmp/packages-microsoft-prod.deb"
+        echo "  sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0"
+        exit 1
+    fi
+}
+
+preflight_deps() {
+    # Ensure we have the tooling needed BEFORE we modify files/commit/push.
+    local missing=0
+
+    ensure_cmd git "Install git first (e.g. Debian/Ubuntu: sudo apt-get install -y git)" || missing=1
+
+    # dotnet (we can auto-install on Debian 12; otherwise print a hint)
+    if ! command -v dotnet >/dev/null 2>&1; then
+        # Attempt auto-install on Debian 12 if apt exists.
+        if [ -f /etc/os-release ] && grep -q 'VERSION_ID="12"' /etc/os-release && grep -q 'ID=debian' /etc/os-release && command -v apt-get >/dev/null 2>&1; then
+            install_dotnet8_debian12
+        else
+            echo -e "${RED}❌ Missing required command: dotnet${NC}"
+            echo -e "${YELLOW}Install .NET 8 SDK, then re-run ./release.sh (https://learn.microsoft.com/dotnet/core/install/)${NC}"
+            missing=1
+        fi
+    fi
+
+    # zip + gh (both are apt-installable on Debian/Ubuntu)
+    if ! command -v zip >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            echo -e "${BLUE}📦 Installing zip...${NC}"
+            install_deps_debian_like zip
+        else
+            echo -e "${RED}❌ Missing required command: zip${NC}"
+            echo -e "${YELLOW}Install zip then re-run (e.g. Debian/Ubuntu: sudo apt-get install -y zip).${NC}"
+            missing=1
+        fi
+    fi
+
+    if ! command -v gh >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            echo -e "${BLUE}📦 Installing GitHub CLI (gh)...${NC}"
+            install_deps_debian_like gh
+        else
+            echo -e "${RED}❌ Missing required command: gh${NC}"
+            echo -e "${YELLOW}Install GitHub CLI then re-run (https://cli.github.com/).${NC}"
+            missing=1
+        fi
+    fi
+
+    if [ "$missing" -ne 0 ]; then
+        exit 1
+    fi
+}
+
 # Get current version from MatchZy.cs
 CURRENT_VERSION=$(grep "ModuleVersion =>" src/MatchZy.cs | sed -E "s/.*\"(.*)\".*/\1/")
 if [ -z "$CURRENT_VERSION" ]; then
@@ -88,6 +211,9 @@ case "$CONFIRM_RELEASE" in
         exit 0
         ;;
 esac
+
+# Ensure tooling exists before we change files / build / commit / release.
+preflight_deps
 
 # Check if tag already exists (local)
 if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
