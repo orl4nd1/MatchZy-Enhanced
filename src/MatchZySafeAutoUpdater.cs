@@ -137,6 +137,27 @@ public partial class MatchZy
             //   [MATCHZY_UPDATE_AVAILABLE] required_version=<number>
             Logger.LogInformation("[MatchZySafeAutoUpdater] New CS2 update released (Required version: {Version})", _requiredVersion);
             Logger.LogInformation("[MATCHZY_UPDATE_AVAILABLE] required_version={Version}", _requiredVersion);
+
+            // Notify remote API (if configured) so admins get a clear warning.
+            try
+            {
+                if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && !string.IsNullOrEmpty(matchReportServerId.Value))
+                {
+                    var ev = new MatchZyCs2UpdateRequiredEvent
+                    {
+                        MatchId = -1,
+                        ServerId = matchReportServerId.Value,
+                        RequiredVersion = _requiredVersion,
+                        Phase = "available",
+                        Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    };
+                    Task.Run(async () => { await SendEventAsync(ev); });
+                }
+            }
+            catch
+            {
+                // Best effort; never block shutdown logic on webhook failures.
+            }
         }
 
         _restartRequired = true;
@@ -261,6 +282,27 @@ public partial class MatchZy
         //   [MATCHZY_UPDATE_SHUTDOWN] required_version=<number>
         Logger.LogInformation("[MatchZySafeAutoUpdater] Initiating server shutdown for CS2 update {Version}.", _requiredVersion);
         Logger.LogInformation("[MATCHZY_UPDATE_SHUTDOWN] required_version={Version}", _requiredVersion);
+
+        // Notify remote API (if configured) that shutdown is imminent.
+        try
+        {
+            if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL) && !string.IsNullOrEmpty(matchReportServerId.Value))
+            {
+                var ev = new MatchZyCs2UpdateRequiredEvent
+                {
+                    MatchId = -1,
+                    ServerId = matchReportServerId.Value,
+                    RequiredVersion = _requiredVersion,
+                    Phase = "shutdown",
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                };
+                Task.Run(async () => { await SendEventAsync(ev); });
+            }
+        }
+        catch
+        {
+            // Best effort only.
+        }
         Server.ExecuteCommand("quit");
     }
 

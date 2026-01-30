@@ -495,3 +495,25 @@ public class MatchZyTestEvent : MatchZyMatchEvent
     {
     }
 }
+
+// CS2 update status events (server-level)
+public class MatchZyCs2UpdateRequiredEvent : MatchZyMatchEvent
+{
+    [JsonPropertyName("server_id")]
+    public required string ServerId { get; init; }
+
+    [JsonPropertyName("required_version")]
+    public required int RequiredVersion { get; init; }
+
+    // Best-effort marker so the API/admin UI can distinguish "update found"
+    // vs "about to quit now".
+    [JsonPropertyName("phase")]
+    public string? Phase { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public required long Timestamp { get; init; }
+
+    public MatchZyCs2UpdateRequiredEvent() : base("cs2_update_required")
+    {
+    }
+}
