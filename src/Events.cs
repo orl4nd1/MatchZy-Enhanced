@@ -472,6 +472,34 @@ public class MatchZyServerConfiguredEvent : MatchZyEvent
     }
 }
 
+public class MatchZyServerHealthEvent : MatchZyEvent
+{
+    [JsonPropertyName("server_id")]
+    public required string ServerId { get; init; }
+
+    [JsonPropertyName("plugin_version")]
+    public required string PluginVersion { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public required long Timestamp { get; init; }
+
+    [JsonPropertyName("db_ok")]
+    public required bool DbOk { get; init; }
+
+    [JsonPropertyName("db_type")]
+    public required string DbType { get; init; } // "sqlite" | "mysql"
+
+    [JsonPropertyName("db_error")]
+    public string? DbError { get; init; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; init; } // "startup" | "periodic" | "change"
+
+    public MatchZyServerHealthEvent() : base("server_health")
+    {
+    }
+}
+
 public class MatchZyTestEvent : MatchZyMatchEvent
 {
     [JsonPropertyName("message")]

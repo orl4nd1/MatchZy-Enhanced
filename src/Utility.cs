@@ -3566,6 +3566,21 @@ namespace MatchZy
                     matchReportServerId.Value = serverId;
                     Log($"[LoadPersistentConfig] Loaded matchzy_server_id: {serverId}");
                 }
+
+                // Load bootstrap URL/token (server pull-based initialization)
+                var bootstrapUrl = database.LoadConfigValue("matchzy_bootstrap_url");
+                if (!string.IsNullOrEmpty(bootstrapUrl))
+                {
+                    this.bootstrapUrl = bootstrapUrl;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_bootstrap_url: {bootstrapUrl}");
+                }
+
+                var bootstrapToken = database.LoadConfigValue("matchzy_bootstrap_token");
+                if (!string.IsNullOrEmpty(bootstrapToken))
+                {
+                    this.bootstrapToken = bootstrapToken;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_bootstrap_token (hidden for security)");
+                }
                 
                 Log("[LoadPersistentConfig] Persistent configuration loaded successfully.");
             }

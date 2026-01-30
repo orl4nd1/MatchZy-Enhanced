@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Events;
+using CounterStrikeSharp.API.Modules.Timers;
 
 
 namespace MatchZy
@@ -55,6 +56,16 @@ namespace MatchZy
         //   an external controller is still wiring up webhooks.
         private bool remoteLogUrlEverConfigured = false;
         private bool remoteLogUrlMissingWarningLogged = false;
+
+        // Bootstrap init (one-shot configuration pull)
+        private string bootstrapUrl = "";
+        private string bootstrapToken = "";
+        private bool bootstrapFetchInProgress = false;
+        private long lastBootstrapAttemptAt = 0;
+
+        // Server DB health reporting state
+        private bool? lastReportedDbOk = null;
+        private string? lastReportedDbError = null;
 
         // When true, the current series is in simulation mode but the initial map change
         // is still in progress. In that case we defer spawning bots and starting the
@@ -148,6 +159,13 @@ namespace MatchZy
             
             // Start event retry background process
             StartEventRetryTimer();
+
+            // Bootstrap init: if a bootstrap URL/token is configured, fetch the single payload
+            // and apply it locally (reduces RCON command churn from controllers).
+            AddTimer(2.0f, () =>
+            {
+                TryBootstrapFetch("startup");
+            });
             
             // Send server_configured event on startup if webhook is configured
             // Delay slightly to ensure server is fully initialized
@@ -156,8 +174,47 @@ namespace MatchZy
                 if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
                 {
                     SendServerConfiguredEvent("Startup");
+                    // Also send an initial health snapshot once the server is reachable.
+                    SendServerHealthEvent("startup");
                 }
             });
+
+            // DB health reporting:
+            // - send periodic snapshots
+            // - send immediately on detected changes (polled at a shorter interval)
+            AddTimer(60.0f, () =>
+            {
+                if (!string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    SendServerHealthEvent("periodic");
+                }
+            }, TimerFlags.REPEAT);
+
+            AddTimer(10.0f, () =>
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
+                    if (string.IsNullOrEmpty(matchReportServerId.Value)) return;
+
+                    var (ok, _dbType, error) = database.CheckHealth();
+                    var changed =
+                        !lastReportedDbOk.HasValue ||
+                        lastReportedDbOk.Value != ok ||
+                        (ok == false && (lastReportedDbError ?? "") != (error ?? ""));
+
+                    if (changed)
+                    {
+                        lastReportedDbOk = ok;
+                        lastReportedDbError = error;
+                        SendServerHealthEvent("change");
+                    }
+                }
+                catch
+                {
+                    // Best-effort only
+                }
+            }, TimerFlags.REPEAT);
 
             teamSides[matchzyTeam1] = "CT";
             teamSides[matchzyTeam2] = "TERRORIST";

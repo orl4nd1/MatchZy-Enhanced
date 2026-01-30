@@ -129,5 +129,48 @@ namespace MatchZy
                 Log($"[SendServerConfiguredEvent] Error: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Sends a server_health event to the API so controllers can surface
+        /// important server health signals (e.g. plugin DB connectivity).
+        /// </summary>
+        private void SendServerHealthEvent(string reason)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL))
+                {
+                    // No remote log URL; we can't reach the API anyway.
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(matchReportServerId.Value))
+                {
+                    return;
+                }
+
+                var (ok, dbType, error) = database.CheckHealth();
+
+                var ev = new MatchZyServerHealthEvent
+                {
+                    ServerId = matchReportServerId.Value,
+                    PluginVersion = ModuleVersion,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    DbOk = ok,
+                    DbType = dbType,
+                    DbError = ok ? null : error,
+                    Reason = reason
+                };
+
+                Task.Run(async () =>
+                {
+                    await SendEventAsync(ev);
+                });
+            }
+            catch (Exception ex)
+            {
+                Log($"[SendServerHealthEvent] Error: {ex.Message}");
+            }
+        }
     }
 }

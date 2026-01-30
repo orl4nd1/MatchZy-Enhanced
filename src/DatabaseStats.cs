@@ -34,6 +34,10 @@ namespace MatchZy
         DatabaseConfig? config;
         public DatabaseType databaseType { get; set; }
 
+        // Health state (best-effort; updated by CheckHealth)
+        public bool LastHealthOk { get; private set; } = true;
+        public string? LastHealthError { get; private set; } = null;
+
         public void InitializeDatabase(string directory)
         {
             ConnectDatabase(directory);
@@ -73,6 +77,8 @@ namespace MatchZy
             catch (Exception ex)
             {
                 Log($"[InitializeDatabase - FATAL] Database connection or table creation error: {ex.Message}");
+                LastHealthOk = false;
+                LastHealthError = ex.Message;
                 if (config != null && databaseType == DatabaseType.MySQL)
                 {
                     string maskedPassword = string.IsNullOrEmpty(config.MySqlPassword) ? "(empty)" : "***";
@@ -82,6 +88,49 @@ namespace MatchZy
                 {
                     string dbPath = Path.Join(directory, "matchzy.db");
                     Log($"[InitializeDatabase - FATAL] SQLite database path: {dbPath}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Best-effort DB health check. Runs a trivial query and returns current status.
+        /// This is used for server health reporting to external controllers.
+        /// </summary>
+        public (bool ok, string dbType, string? error) CheckHealth()
+        {
+            string dbType = (connection is SqliteConnection) ? "sqlite" : "mysql";
+            try
+            {
+                if (connection.State == ConnectionState.Closed)
+                {
+                    connection.Open();
+                }
+
+                // Use a trivial query that should work on both SQLite and MySQL.
+                connection.ExecuteScalar<int>("SELECT 1");
+
+                LastHealthOk = true;
+                LastHealthError = null;
+                return (true, dbType, null);
+            }
+            catch (Exception ex)
+            {
+                LastHealthOk = false;
+                LastHealthError = ex.Message;
+                return (false, dbType, ex.Message);
+            }
+            finally
+            {
+                try
+                {
+                    if (connection != null && connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
+                }
+                catch
+                {
+                    // ignore
                 }
             }
         }
