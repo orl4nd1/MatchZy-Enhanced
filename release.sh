@@ -216,6 +216,44 @@ preflight_auth() {
     echo -e "${GREEN}✓ GitHub authentication looks good (gh + git push).${NC}"
 }
 
+preflight_release_config() {
+    # Release-script configuration preflight.
+    #
+    # By default we require Discord webhook configuration so releases always
+    # get announced (avoids accidentally forgetting it).
+    #
+    # To explicitly skip Discord announcements, set:
+    #   SKIP_DISCORD_WEBHOOK=1
+
+    if [ "${SKIP_DISCORD_WEBHOOK:-}" = "1" ] || [ "${SKIP_DISCORD_WEBHOOK:-}" = "true" ]; then
+        echo -e "${YELLOW}⚠️  SKIP_DISCORD_WEBHOOK is set; Discord notification will be skipped.${NC}"
+        return 0
+    fi
+
+    if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+        echo -e "${RED}❌ DISCORD_WEBHOOK_URL is required for releases but is not set.${NC}"
+        echo -e "${YELLOW}Fix one of these:${NC}"
+        echo "  - Create a .env file in this repo (see .env.example), or"
+        echo "  - Export DISCORD_WEBHOOK_URL in your shell"
+        echo -e "${YELLOW}Or to explicitly skip Discord notification:${NC}"
+        echo "  SKIP_DISCORD_WEBHOOK=1 ./release.sh ${BUMP_TYPE:-}"
+        exit 1
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+        echo -e "${RED}❌ Missing required command: curl (needed for Discord webhook).${NC}"
+        echo -e "${YELLOW}Install curl, then re-run (e.g. Debian/Ubuntu: sudo apt-get install -y curl).${NC}"
+        exit 1
+    fi
+
+    if [ ! -f "./discord-webhook.sh" ]; then
+        echo -e "${RED}❌ discord-webhook.sh not found; cannot send Discord release notification.${NC}"
+        echo -e "${YELLOW}If you truly want to proceed without Discord notification:${NC}"
+        echo "  SKIP_DISCORD_WEBHOOK=1 ./release.sh ${BUMP_TYPE:-}"
+        exit 1
+    fi
+}
+
 # Get current version from MatchZy.cs
 CURRENT_VERSION=$(grep "ModuleVersion =>" src/MatchZy.cs | sed -E "s/.*\"(.*)\".*/\1/")
 if [ -z "$CURRENT_VERSION" ]; then
@@ -289,6 +327,7 @@ esac
 # Ensure tooling + authentication exists before we do anything else.
 preflight_deps
 preflight_auth
+preflight_release_config
 
 # Check if tag already exists (local)
 if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
@@ -421,14 +460,13 @@ gh release create "v${VERSION}" \
     --draft=false \
     --latest
 
-# Optional: send Discord webhook notification if configured
-if [ -x "./discord-webhook.sh" ]; then
-    echo -e "\n${BLUE}🔔 Sending Discord release notification (if configured)...${NC}"
-    if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
-        ./discord-webhook.sh "${VERSION}" || echo -e "${YELLOW}⚠️ Discord webhook failed, continuing without stopping release.${NC}"
-    else
-        echo -e "${YELLOW}DISCORD_WEBHOOK_URL not set; skipping Discord notification.${NC}"
-    fi
+# Send Discord webhook notification (required unless explicitly skipped)
+if [ "${SKIP_DISCORD_WEBHOOK:-}" = "1" ] || [ "${SKIP_DISCORD_WEBHOOK:-}" = "true" ]; then
+    echo -e "\n${YELLOW}⚠️  SKIP_DISCORD_WEBHOOK is set; skipping Discord release notification.${NC}"
+else
+    echo -e "\n${BLUE}🔔 Sending Discord release notification...${NC}"
+    # Run via bash so the script doesn't need +x.
+    bash ./discord-webhook.sh "${VERSION}"
 fi
 
 # Cleanup
