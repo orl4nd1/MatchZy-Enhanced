@@ -34,8 +34,13 @@ namespace MatchZy
         // MatchZy-safe CS2 update checks (Steam UpToDateCheck)
         public FakeConVar<bool> safeAutoUpdaterEnabled = new(
             "matchzy_safeautoupdater_enabled",
-            "When enabled, periodically checks Steam UpToDateCheck and (only when MatchZy is idle/postgame/error) restarts the server for CS2 updates. Default: true",
+            "When enabled, periodically checks Steam UpToDateCheck and emits update markers/events. Shutdown behavior is controlled by matchzy_safeautoupdater_action. Default: true",
             true
+        );
+        public FakeConVar<string> safeAutoUpdaterAction = new(
+            "matchzy_safeautoupdater_action",
+            "What to do when a CS2 update is detected. warn_only = emit markers/events only; restart = kick players + quit when MatchZy is idle/postgame/error. Default: warn_only",
+            "warn_only"
         );
         public FakeConVar<int> safeAutoUpdaterOfflineBackoffSeconds = new(
             "matchzy_safeautoupdater_offline_backoff_seconds",

@@ -71,6 +71,22 @@ public partial class MatchZy
                 return;
             }
 
+            // In warn-only mode, once we've detected an update we stop polling until restart.
+            // This avoids hammering Steam continuously while waiting for an external server
+            // manager/admin to perform the update.
+            try
+            {
+                string action = (safeAutoUpdaterAction.Value ?? "warn_only").Trim().ToLowerInvariant();
+                if (action != "restart" && _updateAvailable)
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // best-effort
+            }
+
             // Never perform update checks while a MatchZy match is in progress; this keeps
             // all Steam API polling and restart decisions strictly outside live matches.
             string status = GetMatchZyStatus();
@@ -158,6 +174,22 @@ public partial class MatchZy
             {
                 // Best effort; never block shutdown logic on webhook failures.
             }
+        }
+
+        string action = "warn_only";
+        try
+        {
+            action = (safeAutoUpdaterAction.Value ?? "warn_only").Trim().ToLowerInvariant();
+        }
+        catch
+        {
+            action = "warn_only";
+        }
+
+        if (action != "restart")
+        {
+            // Default for MAT setups: do not quit the server automatically.
+            return;
         }
 
         _restartRequired = true;
