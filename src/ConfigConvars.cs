@@ -24,6 +24,13 @@ namespace MatchZy
 
         public FakeConVar<bool> debugChatEnabled = new("matchzy_debug_chat", "Whether to show debug/event logs in in-game chat (e.g. event send status, warmup_end, player_connect). Default: false", false);
 
+        [ConsoleCommand("matchzy_debug_chat_get", "Get current value of matchzy_debug_chat (0/1).")]
+        public void MatchZyDebugChatGet(CCSPlayerController? player, CommandInfo command)
+        {
+            if (player != null) return;
+            command.ReplyToCommand($"matchzy_debug_chat = {(debugChatEnabled.Value ? 1 : 0)}");
+        }
+
         // Console debug logging
         public FakeConVar<bool> debugConsoleEnabled = new("matchzy_debug_console", "Whether to write verbose debug logs to the server console. Default: true", true);
 
@@ -191,9 +198,16 @@ namespace MatchZy
         public void MatchZyKnifeConvar(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;
+            // No-args call acts as a "get"
+            if (command.ArgCount <= 1)
+            {
+                command.ReplyToCommand($"matchzy_knife_enabled_default = {(isKnifeRequired ? 1 : 0)}");
+                return;
+            }
             string args = command.ArgString;
 
             isKnifeRequired = bool.TryParse(args, out bool isKnifeRequiredValue) ? isKnifeRequiredValue : args != "0" && isKnifeRequired;
+            command.ReplyToCommand($"matchzy_knife_enabled_default = {(isKnifeRequired ? 1 : 0)}");
         }
 
         [ConsoleCommand("matchzy_playout_enabled_default", "Whether knife round is enabled by default or not. Default value: true")]
@@ -365,11 +379,23 @@ namespace MatchZy
         {
             if (player != null) return;
 
+            // No-args call acts as a "get"
+            if (command.ArgCount <= 1)
+            {
+                command.ReplyToCommand($"matchzy_chat_prefix = {chatPrefix}");
+                return;
+            }
+
             string args = command.ArgString.Trim();
+            // When executed from cfg or RCON, string args are commonly wrapped in quotes.
+            // Strip surrounding quotes so we don't print literal quotes in chat
+            // and so color tokens at the start (e.g. "{Green}...") are handled correctly.
+            args = args.Trim().Trim('"').Trim('\'').Trim();
 
             if (string.IsNullOrEmpty(args))
             {
                 chatPrefix = $"[{ChatColors.Green}MatchZy{ChatColors.Default}]";
+                command.ReplyToCommand($"matchzy_chat_prefix = {chatPrefix}");
                 return;
             }
 
@@ -378,6 +404,7 @@ namespace MatchZy
             chatPrefix = args;
 
             Log($"[MatchZyChatPrefix] chatPrefix: {chatPrefix}");
+            command.ReplyToCommand($"matchzy_chat_prefix = {chatPrefix}");
             
             // Persist to database so it survives server restarts
             database.SaveConfigValue("matchzy_chat_prefix", chatPrefix);
@@ -388,11 +415,22 @@ namespace MatchZy
         {
             if (player != null) return;
 
+            // No-args call acts as a "get"
+            if (command.ArgCount <= 1)
+            {
+                command.ReplyToCommand($"matchzy_admin_chat_prefix = {adminChatPrefix}");
+                return;
+            }
+
             string args = command.ArgString.Trim();
+            // When executed from cfg or RCON, string args are commonly wrapped in quotes.
+            // Strip surrounding quotes so we don't print literal quotes in chat.
+            args = args.Trim().Trim('"').Trim('\'').Trim();
 
             if (string.IsNullOrEmpty(args))
             {
-                chatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
+                adminChatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
+                command.ReplyToCommand($"matchzy_admin_chat_prefix = {adminChatPrefix}");
                 return;
             }
 
@@ -401,6 +439,7 @@ namespace MatchZy
             adminChatPrefix = args;
 
             Log($"[MatchZyAdminChatPrefix] adminChatPrefix: {adminChatPrefix}");
+            command.ReplyToCommand($"matchzy_admin_chat_prefix = {adminChatPrefix}");
             
             // Persist to database so it survives server restarts
             database.SaveConfigValue("matchzy_admin_chat_prefix", adminChatPrefix);
