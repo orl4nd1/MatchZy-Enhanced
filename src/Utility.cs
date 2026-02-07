@@ -1665,11 +1665,13 @@ namespace MatchZy
 
             if (isMatchSetup)
             {
+                bool allConfiguredPlayersConnectedAndOnCorrectTeams =
+                    AreAllConfiguredPlayersConnectedAndOnCorrectTeams();
                 bool teamsReady = IsTeamsReady();
                 bool specsReady = IsSpectatorsReady();
-                Log($"[CheckLiveRequired] Match-setup mode: IsTeamsReady={teamsReady}, IsSpectatorsReady={specsReady}");
+                Log($"[CheckLiveRequired] Match-setup mode: allConfiguredPlayersConnectedAndOnCorrectTeams={allConfiguredPlayersConnectedAndOnCorrectTeams}, IsTeamsReady={teamsReady}, IsSpectatorsReady={specsReady}");
 
-                if (teamsReady && specsReady)
+                if (allConfiguredPlayersConnectedAndOnCorrectTeams && teamsReady && specsReady)
                 {
                     liveRequired = true;
                 }
@@ -1681,9 +1683,25 @@ namespace MatchZy
                     liveRequired = true;
                 }
             }
-            else if (countOfReadyPlayers >= minimumReadyRequired)
+            else
             {
-                liveRequired = true;
+                // When no match is loaded, interpret minimumReadyRequired as a per-team threshold
+                // (CT and T), not a global ready count.
+                (int ctPlayers, int ctReady) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
+                (int tPlayers, int tReady) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
+
+                Log($"[CheckLiveRequired] No-match mode: minReadyPerTeam={minimumReadyRequired}, CT ready={ctReady}/{ctPlayers}, T ready={tReady}/{tPlayers}");
+
+                if (
+                    minimumReadyRequired > 0 &&
+                    ctPlayers >= minimumReadyRequired &&
+                    tPlayers >= minimumReadyRequired &&
+                    ctReady >= minimumReadyRequired &&
+                    tReady >= minimumReadyRequired
+                )
+                {
+                    liveRequired = true;
+                }
             }
 
             Log($"[CheckLiveRequired] liveRequired={liveRequired}");
@@ -1700,6 +1718,65 @@ namespace MatchZy
                     HandleMatchStart();
                 }
             }
+        }
+
+        private bool AreAllConfiguredPlayersConnectedAndOnCorrectTeams()
+        {
+            // Simulation mode has its own readiness and roster logic (bots).
+            if (isSimulationMode) return true;
+
+            // If we don't have explicit per-team player rosters, fall back to the existing
+            // players_per_team readiness gate.
+            if (matchzyTeam1.teamPlayers is not Newtonsoft.Json.Linq.JObject team1Players ||
+                matchzyTeam2.teamPlayers is not Newtonsoft.Json.Linq.JObject team2Players)
+            {
+                return true;
+            }
+
+            bool allOk = true;
+
+            bool IsExpectedPlayerConnectedAndCorrectTeam(string steamIdString)
+            {
+                if (!ulong.TryParse(steamIdString, out ulong steamId))
+                {
+                    // Ignore non-steam keys; config should normally be Steam64 -> name.
+                    return true;
+                }
+
+                CCSPlayerController? player = Utilities.GetPlayerFromSteamId(steamId);
+                if (!IsPlayerValid(player))
+                {
+                    return false;
+                }
+
+                // GetPlayerTeam derives the correct in-game CS team based on the match config roster
+                // (team1/team2) and the current side assignment (CT/TERRORIST).
+                CsTeam expectedTeam = GetPlayerTeam(player!);
+                if (expectedTeam == CsTeam.None)
+                {
+                    return false;
+                }
+
+                return player!.TeamNum == (int)expectedTeam;
+            }
+
+            foreach (var prop in team1Players.Properties())
+            {
+                if (!IsExpectedPlayerConnectedAndCorrectTeam(prop.Name))
+                {
+                    allOk = false;
+                }
+            }
+
+            foreach (var prop in team2Players.Properties())
+            {
+                if (!IsExpectedPlayerConnectedAndCorrectTeam(prop.Name))
+                {
+                    allOk = false;
+                }
+            }
+
+            return allOk;
         }
 
         private CounterStrikeSharp.API.Modules.Timers.Timer? matchStartCountdownTimer = null;
@@ -3783,6 +3860,7 @@ namespace MatchZy
                     Log($"[UploadFileAsync] Demo file exists locally at: {filePath} (Size: {fileInfo.Length / 1024 / 1024} MB)");
                     Log($"[UploadFileAsync] To enable upload, set matchzy_demo_upload_url in your config.");
                 }
+                Log($"[DEMO_UPLOAD] SKIPPED matchId={matchId} map={mapNumber} reason=\"missing_filePath_or_uploadUrl\"");
                 return;
             }
 
@@ -3792,11 +3870,38 @@ namespace MatchZy
                 Log($"[UploadFileAsync] ===== Starting demo upload =====");
                 Log($"[UploadFileAsync] Upload URL: {fileUploadURL}");
                 Log($"[UploadFileAsync] File path: {filePath}");
+                Log($"[DEMO_UPLOAD] START matchId={matchId} map={mapNumber} round={roundNumber} url=\"{fileUploadURL}\" file=\"{Path.GetFileName(filePath)}\"");
 
                 if (!File.Exists(filePath))
                 {
                     Log($"[UploadFileAsync ERROR] File not found: {filePath}");
                     Log($"[UploadFileAsync ERROR] The demo file was not created. Check if GOTV is enabled (tv_enable 1)");
+                    Log($"[DEMO_UPLOAD] FAIL matchId={matchId} map={mapNumber} reason=\"file_not_found\"");
+
+                    // Emit demo upload failure (best-effort).
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SendEventAsync(new MatchZyDemoUploadFailEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = Path.GetFileName(filePath),
+                                SizeMB = null,
+                                Status = "file_not_found",
+                                Reason = "file_not_found"
+                            });
+                            await SendEventAsync(new MatchZyDemoUploadedEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = Path.GetFileName(filePath),
+                                Success = false
+                            });
+                        }
+                        catch { /* best-effort */ }
+                    });
                     return;
                 }
 
@@ -3804,6 +3909,23 @@ namespace MatchZy
                 long fileSizeBytes = fileInfo.Length;
                 double fileSizeMB = fileSizeBytes / 1024.0 / 1024.0;
                 Log($"[UploadFileAsync] File found. Size: {fileSizeMB:F2} MB ({fileSizeBytes} bytes)");
+                Log($"[DEMO_UPLOAD] FILE_OK matchId={matchId} map={mapNumber} sizeMB={fileSizeMB:F2}");
+
+                // Emit upload started (best-effort).
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendEventAsync(new MatchZyDemoUploadStartedEvent
+                        {
+                            MatchId = matchId,
+                            MapNumber = mapNumber,
+                            FileName = Path.GetFileName(filePath),
+                            SizeMB = fileSizeMB
+                        });
+                    }
+                    catch { /* best-effort */ }
+                });
                 Log($"[UploadFileAsync] Reading file into memory...");
 
                 using FileStream fileStream = File.OpenRead(filePath);
@@ -3836,7 +3958,7 @@ namespace MatchZy
                 if (!string.IsNullOrEmpty(headerKey) && !string.IsNullOrEmpty(headerValue))
                 {
                     httpClient.DefaultRequestHeaders.Add(headerKey, headerValue);
-                    Log($"[UploadFileAsync]   - Custom header: {headerKey} = {headerValue}");
+                    Log($"[UploadFileAsync]   - Custom header: {headerKey} = [REDACTED]");
                 }
 
                 Log($"[UploadFileAsync] Sending POST request to {fileUploadURL}...");
@@ -3855,6 +3977,31 @@ namespace MatchZy
                     Log($"[UploadFileAsync] FileSize: {fileSizeMB:F2} MB");
                     Log($"[UploadFileAsync] Response: {responseBody}");
                     Log($"[UploadFileAsync] ===========================");
+                    Log($"[DEMO_UPLOAD] SUCCESS matchId={matchId} map={mapNumber} sizeMB={fileSizeMB:F2} seconds={uploadDuration.TotalSeconds:F2} status={(int)response.StatusCode}");
+
+                    // Emit success markers (best-effort).
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SendEventAsync(new MatchZyDemoUploadSuccessEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = fileName,
+                                SizeMB = fileSizeMB,
+                                Status = ((int)response.StatusCode).ToString()
+                            });
+                            await SendEventAsync(new MatchZyDemoUploadedEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = fileName,
+                                Success = true
+                            });
+                        }
+                        catch { /* best-effort */ }
+                    });
 
                     // Send success message to chat
                     Server.NextFrame(() =>
@@ -3876,6 +4023,32 @@ namespace MatchZy
                     Log($"[UploadFileAsync] MatchId: {matchId}, MapNumber: {mapNumber}");
                     Log($"[UploadFileAsync] FileName: {fileName}");
                     Log($"[UploadFileAsync] ===========================");
+                    Log($"[DEMO_UPLOAD] FAIL matchId={matchId} map={mapNumber} status={(int)response.StatusCode} reason=\"{errorReason}\" seconds={uploadDuration.TotalSeconds:F2}");
+
+                    // Emit failure markers (best-effort).
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await SendEventAsync(new MatchZyDemoUploadFailEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = fileName,
+                                SizeMB = fileSizeMB,
+                                Status = ((int)response.StatusCode).ToString(),
+                                Reason = errorReason
+                            });
+                            await SendEventAsync(new MatchZyDemoUploadedEvent
+                            {
+                                MatchId = matchId,
+                                MapNumber = mapNumber,
+                                FileName = fileName,
+                                Success = false
+                            });
+                        }
+                        catch { /* best-effort */ }
+                    });
 
                     // Send failure message to chat
                     Server.NextFrame(() =>
@@ -3900,6 +4073,32 @@ namespace MatchZy
                 }
                 Log($"[UploadFileAsync] Stack trace: {e.StackTrace}");
                 Log($"[UploadFileAsync] ==============================");
+                Log($"[DEMO_UPLOAD] FATAL matchId={matchId} map={mapNumber} error=\"{errorMessage}\"");
+
+                // Emit fatal marker (best-effort).
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendEventAsync(new MatchZyDemoUploadFailEvent
+                        {
+                            MatchId = matchId,
+                            MapNumber = mapNumber,
+                            FileName = Path.GetFileName(filePath),
+                            SizeMB = null,
+                            Status = "exception",
+                            Reason = errorMessage
+                        });
+                        await SendEventAsync(new MatchZyDemoUploadedEvent
+                        {
+                            MatchId = matchId,
+                            MapNumber = mapNumber,
+                            FileName = Path.GetFileName(filePath),
+                            Success = false
+                        });
+                    }
+                    catch { /* best-effort */ }
+                });
 
                 // Send error message to chat
                 Server.NextFrame(() =>

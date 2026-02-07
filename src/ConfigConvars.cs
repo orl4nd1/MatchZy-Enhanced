@@ -246,7 +246,7 @@ namespace MatchZy
             resetCvarsOnSeriesEnd = bool.TryParse(args, out bool resetCvarsOnSeriesEndValue) ? resetCvarsOnSeriesEndValue : args != "0" && resetCvarsOnSeriesEnd;
         }
 
-        [ConsoleCommand("matchzy_minimum_ready_required", "Minimum ready players required to start the match. Default: 1")]
+        [ConsoleCommand("matchzy_minimum_ready_required", "Minimum ready players required to start the match. 0 = everyone connected must ready. Default: 0")]
         public void MatchZyMinimumReadyRequired(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;

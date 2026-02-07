@@ -220,6 +220,78 @@ public class MatchZyDemoUploadedEvent : MatchZyMatchEvent
     }
 }
 
+// ============================================================================
+// Demo lifecycle events (recording + upload progress)
+// ============================================================================
+
+public class MatchZyDemoRecordingStartedEvent : MatchZyMapEvent
+{
+    [JsonPropertyName("filename")]
+    public required string FileName { get; init; }
+
+    public MatchZyDemoRecordingStartedEvent() : base("demo_recording_start")
+    {
+    }
+}
+
+public class MatchZyDemoRecordingStoppedEvent : MatchZyMapEvent
+{
+    [JsonPropertyName("filename")]
+    public required string FileName { get; init; }
+
+    public MatchZyDemoRecordingStoppedEvent() : base("demo_recording_stop")
+    {
+    }
+}
+
+public class MatchZyDemoUploadStartedEvent : MatchZyMapEvent
+{
+    [JsonPropertyName("filename")]
+    public required string FileName { get; init; }
+
+    [JsonPropertyName("size_mb")]
+    public required double SizeMB { get; init; }
+
+    public MatchZyDemoUploadStartedEvent() : base("demo_upload_start")
+    {
+    }
+}
+
+public class MatchZyDemoUploadSuccessEvent : MatchZyMapEvent
+{
+    [JsonPropertyName("filename")]
+    public required string FileName { get; init; }
+
+    [JsonPropertyName("size_mb")]
+    public required double SizeMB { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    public MatchZyDemoUploadSuccessEvent() : base("demo_upload_success")
+    {
+    }
+}
+
+public class MatchZyDemoUploadFailEvent : MatchZyMapEvent
+{
+    [JsonPropertyName("filename")]
+    public required string FileName { get; init; }
+
+    [JsonPropertyName("size_mb")]
+    public double? SizeMB { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    [JsonPropertyName("reason")]
+    public required string Reason { get; init; }
+
+    public MatchZyDemoUploadFailEvent() : base("demo_upload_fail")
+    {
+    }
+}
+
 // Player Ready System Events
 public class MatchZyPlayerReadyEvent : MatchZyMatchEvent
 {

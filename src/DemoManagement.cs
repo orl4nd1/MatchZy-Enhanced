@@ -31,11 +31,13 @@ namespace MatchZy
             if (!isDemoRecordingEnabled)
             {
                 Log("[StartDemoRecording] Demo recording is disabled. Set matchzy_demo_recording_enabled to true to enable.");
+                Log("[DEMO_RECORDING] DISABLED (matchzy_demo_recording_enabled=0)");
                 return;
             }
             if (isDemoRecording)
             {
                 Log("[StartDemoRecording] Demo recording is already in progress.");
+                Log("[DEMO_RECORDING] ALREADY_RECORDING");
                 return;
             }
             
@@ -44,6 +46,7 @@ namespace MatchZy
             if (!tvEnable)
             {
                 Log("[StartDemoRecording] WARNING: tv_enable is 0. Demo recording requires GOTV to be enabled. Set tv_enable 1 in your server config.");
+                Log("[DEMO_RECORDING] WARNING_GOTV_DISABLED (tv_enable=0)");
             }
             
             string demoFileName = FormatCvarValue(demoNameFormat.Replace(" ", "_")) + ".dem";
@@ -66,9 +69,26 @@ namespace MatchZy
                 Log($"[StartDemoRecording]   - Relative path: {tempDemoPath}");
                 Log($"[StartDemoRecording]   - Full path: {fullPath}");
                 Log($"[StartDemoRecording]   - GOTV enabled: {tvEnable}");
+                Log($"[DEMO_RECORDING] START file=\"{demoFileName}\" rel=\"{tempDemoPath}\" gotv={(tvEnable ? 1 : 0)}");
                 Server.ExecuteCommand($"tv_record {tempDemoPath}");
                 isDemoRecording = true;
                 Log($"[StartDemoRecording] Demo recording started successfully.");
+
+                // Emit structured event for MAT admin event viewer (best-effort).
+                // This will be queued for retry automatically if MAT is temporarily unreachable.
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendEventAsync(new MatchZyDemoRecordingStartedEvent
+                        {
+                            MatchId = liveMatchId,
+                            MapNumber = matchConfig.CurrentMapNumber,
+                            FileName = demoFileName
+                        });
+                    }
+                    catch { /* best-effort */ }
+                });
             }
             catch (Exception ex)
             {
@@ -76,6 +96,21 @@ namespace MatchZy
                 // This is to avoid demo loss in any case of exception
                 Server.ExecuteCommand($"tv_record {demoFileName}");
                 isDemoRecording = true;
+                Log($"[DEMO_RECORDING] START_FALLBACK file=\"{demoFileName}\"");
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendEventAsync(new MatchZyDemoRecordingStartedEvent
+                        {
+                            MatchId = liveMatchId,
+                            MapNumber = matchConfig.CurrentMapNumber,
+                            FileName = demoFileName
+                        });
+                    }
+                    catch { /* best-effort */ }
+                });
             }
 
         }
@@ -89,6 +124,7 @@ namespace MatchZy
             Log($"[StopDemoRecording] Demo info - MatchId: {liveMatchId}, MapNumber: {currentMapNumber}, Rounds: {roundNumber}");
             Log($"[StopDemoRecording] Demo file path: {demoPath}");
             Log($"[StopDemoRecording] Upload URL configured: {(string.IsNullOrEmpty(demoUploadURL) ? "NO (demos will only be saved locally)" : $"YES ({demoUploadURL})")}");
+            Log($"[DEMO_RECORDING] STOP_SCHEDULED in={delay:0.##}s matchId={liveMatchId} map={currentMapNumber} rounds={roundNumber} upload={(string.IsNullOrEmpty(demoUploadURL) ? 0 : 1)}");
             
             AddTimer(delay, () =>
             {
@@ -98,6 +134,23 @@ namespace MatchZy
                     Server.ExecuteCommand($"tv_stoprecord");
                 }
                 isDemoRecording = false;
+                Log($"[DEMO_RECORDING] STOPPED matchId={liveMatchId} map={currentMapNumber}");
+
+                // Emit structured stop marker (best-effort).
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SendEventAsync(new MatchZyDemoRecordingStoppedEvent
+                        {
+                            MatchId = liveMatchId,
+                            MapNumber = currentMapNumber,
+                            FileName = Path.GetFileName(demoPath)
+                        });
+                    }
+                    catch { /* best-effort */ }
+                });
+
                 Log($"[StopDemoRecording] Demo recording stopped. Waiting 15s for file to be written to disk before upload...");
                 AddTimer(15, () =>
                 {
@@ -105,8 +158,9 @@ namespace MatchZy
                     if (!string.IsNullOrEmpty(demoUploadURL))
                     {
                         PrintToAllChat($"{ChatColors.Grey}Uploading demo to API...{ChatColors.Default}");
+                        Log($"[DEMO_UPLOAD] QUEUED matchId={liveMatchId} map={currentMapNumber} round={roundNumber} file=\"{Path.GetFileName(demoPath)}\"");
                     }
-                    Task.Run(async () =>
+                    _ = Task.Run(async () =>
                     {
                         await UploadFileAsync(demoPath, demoUploadURL, demoUploadHeaderKey, demoUploadHeaderValue, liveMatchId, currentMapNumber, roundNumber);
                     });

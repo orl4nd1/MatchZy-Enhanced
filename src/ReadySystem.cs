@@ -47,12 +47,32 @@ public partial class MatchZy
             return false;
         }
 
-        if (playerCount == readyCount && playerCount >= minPlayers)
+        // Require full rosters (players_per_team) before the match can start.
+        if (playerCount < minPlayers)
         {
-            return true;
+            return false;
         }
 
-        if (IsTeamForcedReady((CsTeam)team) && readyCount >= minReady)
+        // Interpret minReady as a per-team threshold:
+        // - 0 => everyone connected on that team must ready
+        // - N => at least N players on that team must ready
+        if (minReady <= 0)
+        {
+            if (playerCount == readyCount)
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (readyCount >= minReady)
+            {
+                return true;
+            }
+        }
+
+        // Allow admins to force-ready a team during setup, but do not bypass roster requirements.
+        if (allowForceReady && IsTeamForcedReady((CsTeam)team))
         {
             return true;
         }
@@ -83,7 +103,9 @@ public partial class MatchZy
             if (!playerData[key].IsValid) continue;
             if (playerData[key].TeamNum == team) {
                 playerCount++;
-                if (playerReadyStatus[key] == true) readyCount++;
+                // playerReadyStatus may not yet have been initialized for every connected player.
+                // Treat missing entries as "not ready" instead of throwing.
+                if (playerReadyStatus.TryGetValue(key, out bool isReady) && isReady) readyCount++;
             }
         }
         return (playerCount, readyCount);
