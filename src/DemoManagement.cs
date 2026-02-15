@@ -41,12 +41,28 @@ namespace MatchZy
                 return;
             }
             
-            // Check if GOTV is enabled
-            bool tvEnable = ConVar.Find("tv_enable")!.GetPrimitiveValue<bool>();
-            if (!tvEnable)
+            // Ensure GOTV is enabled (required for tv_record demos).
+            // We force this to reduce operational foot-guns (server configs differ).
+            bool tvEnable = false;
+            try
             {
-                Log("[StartDemoRecording] WARNING: tv_enable is 0. Demo recording requires GOTV to be enabled. Set tv_enable 1 in your server config.");
-                Log("[DEMO_RECORDING] WARNING_GOTV_DISABLED (tv_enable=0)");
+                var tv = ConVar.Find("tv_enable");
+                if (tv != null)
+                {
+                    tvEnable = tv.GetPrimitiveValue<bool>();
+                    if (!tvEnable)
+                    {
+                        Log("[StartDemoRecording] tv_enable is 0. Forcing tv_enable 1 to ensure demo recording works.");
+                        tv.SetValue(1);
+                        // Re-read after forcing.
+                        tvEnable = tv.GetPrimitiveValue<bool>();
+                        Log($"[StartDemoRecording] tv_enable now: {(tvEnable ? 1 : 0)}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[StartDemoRecording] Failed to force tv_enable: {ex.Message}");
             }
             
             string demoFileName = FormatCvarValue(demoNameFormat.Replace(" ", "_")) + ".dem";

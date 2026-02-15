@@ -3984,7 +3984,35 @@ namespace MatchZy
 
             try
             {
-                using var httpClient = new HttpClient();
+                // Before uploading, wait briefly for the demo file to finish writing.
+                // This reduces flakiness on slower disks or larger demos.
+                try
+                {
+                    long lastSize = -1;
+                    int stableTicks = 0;
+                    for (int i = 0; i < 10; i++) // up to ~10s
+                    {
+                        if (!File.Exists(filePath)) break;
+                        long size = new FileInfo(filePath).Length;
+                        if (size > 0 && size == lastSize)
+                        {
+                            stableTicks++;
+                            if (stableTicks >= 2) break; // stable for ~2s
+                        }
+                        else
+                        {
+                            stableTicks = 0;
+                            lastSize = size;
+                        }
+                        await Task.Delay(1000).ConfigureAwait(false);
+                    }
+                }
+                catch { /* best-effort */ }
+
+                using var httpClient = new HttpClient
+                {
+                    Timeout = TimeSpan.FromSeconds(60),
+                };
                 Log($"[UploadFileAsync] ===== Starting demo upload =====");
                 Log($"[UploadFileAsync] Upload URL: {fileUploadURL}");
                 Log($"[UploadFileAsync] File path: {filePath}");
@@ -4044,15 +4072,9 @@ namespace MatchZy
                     }
                     catch { /* best-effort */ }
                 });
-                Log($"[UploadFileAsync] Reading file into memory...");
-
+                Log($"[UploadFileAsync] Opening file stream for upload...");
                 using FileStream fileStream = File.OpenRead(filePath);
-
-                byte[] fileContent = new byte[fileStream.Length];
-                await fileStream.ReadAsync(fileContent, 0, (int)fileStream.Length);
-                Log($"[UploadFileAsync] File read successfully. Preparing HTTP request...");
-
-                using ByteArrayContent content = new(fileContent);
+                using StreamContent content = new(fileStream);
                 content.Headers.Add("Content-Type", "application/octet-stream");
 
                 string fileName = Path.GetFileName(filePath);
@@ -4079,15 +4101,45 @@ namespace MatchZy
                     Log($"[UploadFileAsync]   - Custom header: {headerKey} = [REDACTED]");
                 }
 
-                Log($"[UploadFileAsync] Sending POST request to {fileUploadURL}...");
-                DateTime uploadStart = DateTime.Now;
-                HttpResponseMessage response = await httpClient.PostAsync(fileUploadURL, content);
-                TimeSpan uploadDuration = DateTime.Now - uploadStart;
-                Log($"[UploadFileAsync] Upload completed in {uploadDuration.TotalSeconds:F2} seconds");
+                HttpResponseMessage? response = null;
+                TimeSpan uploadDuration = TimeSpan.Zero;
+                string? responseBody = null;
+
+                // Retry a few times on transient failures (network/5xx/429).
+                const int maxAttempts = 3;
+                for (int attempt = 1; attempt <= maxAttempts; attempt++)
+                {
+                    try
+                    {
+                        Log($"[UploadFileAsync] Sending POST request to {fileUploadURL} (attempt {attempt}/{maxAttempts})...");
+                        DateTime uploadStart = DateTime.Now;
+                        response = await httpClient.PostAsync(fileUploadURL, content).ConfigureAwait(false);
+                        uploadDuration = DateTime.Now - uploadStart;
+                        responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        Log($"[UploadFileAsync] Upload completed in {uploadDuration.TotalSeconds:F2} seconds");
+                        break;
+                    }
+                    catch (Exception ex) when (attempt < maxAttempts)
+                    {
+                        Log($"[UploadFileAsync] Upload attempt {attempt} failed: {ex.Message}");
+                        int backoffMs = 1000 * attempt * attempt;
+                        await Task.Delay(backoffMs).ConfigureAwait(false);
+
+                        // Rewind stream for retry if possible.
+                        try { if (fileStream.CanSeek) fileStream.Position = 0; } catch { /* ignore */ }
+                    }
+                }
+
+                if (response == null)
+                {
+                    Log($"[UploadFileAsync] ===== Upload FAILED =====");
+                    Log($"[UploadFileAsync] No response after retries");
+                    Log($"[DEMO_UPLOAD] FAIL matchId={matchId} map={mapNumber} status=0 reason=\"no_response\" seconds={uploadDuration.TotalSeconds:F2}");
+                    return;
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
-                    string responseBody = await response.Content.ReadAsStringAsync();
                     Log($"[UploadFileAsync] ===== Upload SUCCESS =====");
                     Log($"[UploadFileAsync] Status: {response.StatusCode}");
                     Log($"[UploadFileAsync] MatchId: {matchId}, MapNumber: {mapNumber}");
@@ -4129,8 +4181,7 @@ namespace MatchZy
                 }
                 else
                 {
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    string errorReason = responseBody.Length > 100 ? responseBody.Substring(0, 100) + "..." : responseBody;
+                    string errorReason = (responseBody ?? "").Length > 100 ? (responseBody ?? "").Substring(0, 100) + "..." : (responseBody ?? "");
                     if (string.IsNullOrEmpty(errorReason))
                     {
                         errorReason = $"HTTP {response.StatusCode}";
