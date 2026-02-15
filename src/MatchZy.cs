@@ -63,6 +63,17 @@ namespace MatchZy
         private bool bootstrapFetchInProgress = false;
         private long lastBootstrapAttemptAt = 0;
 
+        // MAT heartbeat integration (server -> allocator API)
+        private string heartbeatUrl = "";
+        private string matchToken = "";
+        private string webhookUrl = "";
+        private CounterStrikeSharp.API.Modules.Timers.Timer? heartbeatTimer = null;
+
+        // Cached CS2 build info for heartbeat (best-effort)
+        private int? cachedCs2BuildId = null;
+        private string? cachedCs2VersionString = null;
+        private long cachedCs2BuildAt = 0;
+
         // Server DB health reporting state
         private bool? lastReportedDbOk = null;
         private string? lastReportedDbError = null;
@@ -165,6 +176,13 @@ namespace MatchZy
             AddTimer(2.0f, () =>
             {
                 TryBootstrapFetch("startup");
+            });
+
+            // MAT heartbeat init: if a heartbeat URL is configured, periodically POST heartbeat snapshots.
+            // This is MAT's source of truth for server online/configured/allocatable state.
+            AddTimer(3.0f, () =>
+            {
+                StartMatHeartbeatTimerIfConfigured();
             });
             
             // Send server_configured event on startup if webhook is configured

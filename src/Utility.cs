@@ -3658,6 +3658,44 @@ namespace MatchZy
                     this.bootstrapToken = bootstrapToken;
                     Log($"[LoadPersistentConfig] Loaded matchzy_bootstrap_token (hidden for security)");
                 }
+
+                // Load MAT heartbeat integration settings
+                var heartbeatUrl = database.LoadConfigValue("matchzy_heartbeat_url");
+                if (!string.IsNullOrEmpty(heartbeatUrl))
+                {
+                    this.heartbeatUrl = heartbeatUrl;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_heartbeat_url: {heartbeatUrl}");
+                }
+
+                var matchToken = database.LoadConfigValue("matchzy_match_token");
+                if (!string.IsNullOrEmpty(matchToken))
+                {
+                    this.matchToken = matchToken;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_match_token (hidden for security)");
+                }
+
+                var webhookUrl = database.LoadConfigValue("matchzy_webhook_url");
+                if (!string.IsNullOrEmpty(webhookUrl))
+                {
+                    this.webhookUrl = webhookUrl;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_webhook_url: {webhookUrl}");
+                }
+
+                // Load report endpoint if it was persisted by a controller
+                var reportEndpoint = database.LoadConfigValue("matchzy_report_endpoint");
+                if (!string.IsNullOrEmpty(reportEndpoint))
+                {
+                    matchReportEndpoint.Value = reportEndpoint;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_report_endpoint: {reportEndpoint}");
+                }
+
+                // Load report token if it was persisted by a controller
+                var reportToken = database.LoadConfigValue("matchzy_report_token");
+                if (!string.IsNullOrEmpty(reportToken))
+                {
+                    matchReportToken.Value = reportToken;
+                    Log("[LoadPersistentConfig] Loaded matchzy_report_token (hidden for security)");
+                }
                 
                 Log("[LoadPersistentConfig] Persistent configuration loaded successfully.");
             }
