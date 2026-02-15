@@ -115,7 +115,6 @@ namespace MatchZy
             StartMatHeartbeatTimerIfConfigured();
         }
 
-        // Optional: admin list integration hooks (no-op in plugin for now, but persisted for controllers/tools)
         [ConsoleCommand("matchzy_admins_url", "Sets MAT admins URL (optional). Use 'clear' to unset.")]
         public void MatchZyAdminsUrl(CCSPlayerController? player, CommandInfo command)
         {
@@ -133,8 +132,11 @@ namespace MatchZy
                 value = "";
             }
 
+            matchzyAdminsUrl = value;
             database.SaveConfigValue("matchzy_admins_url", value);
             Log($"[matchzy_admins_url] Saved admins URL ({(string.IsNullOrWhiteSpace(value) ? "cleared" : "set")})");
+
+            StartMatchzyAdminsRefreshTimerIfConfigured("console");
         }
 
         [ConsoleCommand("matchzy_admins_refresh_seconds", "Sets MAT admins refresh seconds (optional).")]
@@ -154,8 +156,11 @@ namespace MatchZy
                 return;
             }
 
+            matchzyAdminsRefreshSeconds = seconds;
             database.SaveConfigValue("matchzy_admins_refresh_seconds", seconds.ToString());
             Log($"[matchzy_admins_refresh_seconds] Saved admins refresh seconds: {seconds}");
+
+            StartMatchzyAdminsRefreshTimerIfConfigured("console");
         }
 
         [ConsoleCommand("matchzy", "MatchZy root command (ReadyUp-like compat). Usage: matchzy match load <configUrl>")]
@@ -271,49 +276,6 @@ namespace MatchZy
             });
         }
 
-        // --- Optional ReadyUp aliases (safe no-ops if MAT ever sends ru_* by mistake) ---
-
-        [ConsoleCommand("ru_webhook_url", "Alias for matchzy_webhook_url")]
-        public void RuWebhookUrlAlias(CCSPlayerController? player, CommandInfo command)
-        {
-            if (player != null) return;
-            string url = command.ArgByIndex(1);
-            if (string.IsNullOrWhiteSpace(url)) return;
-            Server.ExecuteCommand($"matchzy_webhook_url \"{url.Trim()}\"");
-        }
-
-        [ConsoleCommand("ru_heartbeat_url", "Alias for matchzy_heartbeat_url")]
-        public void RuHeartbeatUrlAlias(CCSPlayerController? player, CommandInfo command)
-        {
-            if (player != null) return;
-            string url = command.ArgByIndex(1);
-            if (string.IsNullOrWhiteSpace(url)) return;
-            Server.ExecuteCommand($"matchzy_heartbeat_url \"{url.Trim()}\"");
-        }
-
-        [ConsoleCommand("ru_match_token", "Alias for matchzy_match_token")]
-        public void RuMatchTokenAlias(CCSPlayerController? player, CommandInfo command)
-        {
-            if (player != null) return;
-            string token = command.ArgByIndex(1);
-            if (string.IsNullOrWhiteSpace(token)) return;
-            Server.ExecuteCommand($"matchzy_match_token \"{token.Trim()}\"");
-        }
-
-        [ConsoleCommand("ru", "Alias for 'matchzy match load ...' (ReadyUp style)")]
-        public void RuRootAlias(CCSPlayerController? player, CommandInfo command)
-        {
-            if (player != null) return;
-            string sub1 = command.ArgByIndex(1);
-            string sub2 = command.ArgByIndex(2);
-            string sub3 = command.ArgByIndex(3);
-            if (string.Equals(sub1, "match", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(sub2, "load", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(sub3))
-            {
-                Server.ExecuteCommand($"matchzy match load \"{sub3.Trim()}\"");
-            }
-        }
     }
 }
 

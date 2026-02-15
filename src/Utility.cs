@@ -3696,8 +3696,88 @@ namespace MatchZy
                     matchReportToken.Value = reportToken;
                     Log("[LoadPersistentConfig] Loaded matchzy_report_token (hidden for security)");
                 }
+
+                // Load optional MAT admin list integration settings
+                var adminsUrl = database.LoadConfigValue("matchzy_admins_url");
+                if (!string.IsNullOrEmpty(adminsUrl))
+                {
+                    matchzyAdminsUrl = adminsUrl.Trim();
+                    Log($"[LoadPersistentConfig] Loaded matchzy_admins_url: {matchzyAdminsUrl}");
+                }
+
+                var adminsRefreshSecondsRaw = database.LoadConfigValue("matchzy_admins_refresh_seconds");
+                if (!string.IsNullOrEmpty(adminsRefreshSecondsRaw) &&
+                    int.TryParse(adminsRefreshSecondsRaw.Trim(), out var secs) &&
+                    secs >= 0)
+                {
+                    matchzyAdminsRefreshSeconds = secs;
+                    Log($"[LoadPersistentConfig] Loaded matchzy_admins_refresh_seconds: {matchzyAdminsRefreshSeconds}");
+                }
+
+                // Load server-level warmup settings (idle-only controls)
+                var warmupEnableRaw = database.LoadConfigValue("matchzy_warmup_enable");
+                if (!string.IsNullOrEmpty(warmupEnableRaw))
+                {
+                    matchzyWarmupEnabled = warmupEnableRaw.Trim() != "0";
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_enable: {(matchzyWarmupEnabled ? 1 : 0)}");
+                }
+                var warmupHtml = database.LoadConfigValue("matchzy_warmup_message_html");
+                if (!string.IsNullOrEmpty(warmupHtml))
+                {
+                    matchzyWarmupMessageHtml = warmupHtml;
+                    Log("[LoadPersistentConfig] Loaded matchzy_warmup_message_html (hidden)");
+                }
+                var warmupRespawnRaw = database.LoadConfigValue("matchzy_warmup_respawn");
+                if (!string.IsNullOrEmpty(warmupRespawnRaw))
+                {
+                    matchzyWarmupRespawn = warmupRespawnRaw.Trim() != "0";
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_respawn: {(matchzyWarmupRespawn ? 1 : 0)}");
+                }
+                var warmupIgnoreRaw = database.LoadConfigValue("matchzy_warmup_ignore_win_conditions");
+                if (!string.IsNullOrEmpty(warmupIgnoreRaw))
+                {
+                    matchzyWarmupIgnoreWinConditions = warmupIgnoreRaw.Trim() != "0";
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_ignore_win_conditions: {(matchzyWarmupIgnoreWinConditions ? 1 : 0)}");
+                }
+                var warmupRoundtimeRaw = database.LoadConfigValue("matchzy_warmup_roundtime_minutes");
+                if (!string.IsNullOrEmpty(warmupRoundtimeRaw) && float.TryParse(warmupRoundtimeRaw.Trim(), out var rt))
+                {
+                    matchzyWarmupRoundtimeMinutes = Math.Clamp(rt, 1.0f, 120.0f);
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_roundtime_minutes: {matchzyWarmupRoundtimeMinutes}");
+                }
+                var warmupStartMoneyRaw = database.LoadConfigValue("matchzy_warmup_startmoney");
+                if (!string.IsNullOrEmpty(warmupStartMoneyRaw) && int.TryParse(warmupStartMoneyRaw.Trim(), out var sm))
+                {
+                    matchzyWarmupStartmoney = Math.Clamp(sm, 0, 60000);
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_startmoney: {matchzyWarmupStartmoney}");
+                }
+                var warmupMaxMoneyRaw = database.LoadConfigValue("matchzy_warmup_maxmoney");
+                if (!string.IsNullOrEmpty(warmupMaxMoneyRaw) && int.TryParse(warmupMaxMoneyRaw.Trim(), out var mm))
+                {
+                    matchzyWarmupMaxmoney = Math.Clamp(mm, 0, 60000);
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_maxmoney: {matchzyWarmupMaxmoney}");
+                }
+                var warmupBuyRaw = database.LoadConfigValue("matchzy_warmup_buy_anywhere");
+                if (!string.IsNullOrEmpty(warmupBuyRaw))
+                {
+                    matchzyWarmupBuyAnywhere = warmupBuyRaw.Trim() != "0";
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_buy_anywhere: {(matchzyWarmupBuyAnywhere ? 1 : 0)}");
+                }
+                var warmupInfAmmoRaw = database.LoadConfigValue("matchzy_warmup_infinite_ammo");
+                if (!string.IsNullOrEmpty(warmupInfAmmoRaw))
+                {
+                    matchzyWarmupInfiniteAmmo = warmupInfAmmoRaw.Trim() != "0";
+                    Log($"[LoadPersistentConfig] Loaded matchzy_warmup_infinite_ammo: {(matchzyWarmupInfiniteAmmo ? 1 : 0)}");
+                }
                 
                 Log("[LoadPersistentConfig] Persistent configuration loaded successfully.");
+
+                // Start admin refresh polling if configured.
+                Server.NextFrame(() =>
+                {
+                    StartMatchzyAdminsRefreshTimerIfConfigured("persistent_config");
+                    ApplyMatchzyWarmupSettings("persistent_config");
+                });
             }
             catch (Exception ex)
             {
