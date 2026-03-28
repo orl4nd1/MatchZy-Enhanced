@@ -1,0 +1,15 @@
+obj/
+bin/
+publish/
+build/
+/.vs
+MatchZy.sln
+MatchZy-*/
+*.zip
+
+# macOS
+.DS_Store
+
+.env
+
+*.log
