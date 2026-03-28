@@ -2,10 +2,15 @@ obj/
 bin/
 publish/
 build/
+/.vscode
 /.vs
 MatchZy.sln
 MatchZy-*/
 *.zip
+.github/
+.vscode/
+/.github/
+/.vscode/
 
 # macOS
 .DS_Store
