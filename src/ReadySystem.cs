@@ -116,8 +116,8 @@ public partial class MatchZy
     }
 
     /// <summary>
-    /// Checks if both teams have the minimum required players and marks all players as ready if auto-ready is enabled.
-    /// Only marks players as ready when both teams have at least MinPlayersToReady players.
+    /// Marks CT/T players as ready (simulated .ready) when auto-ready is enabled.
+    /// Match start is still gated by normal readiness checks (team size / min ready).
     /// </summary>
     public void CheckAndAutoReadyPlayers()
     {
@@ -135,32 +135,11 @@ public partial class MatchZy
             return;
         }
 
-        // When not in match setup, use a sensible default (1 player per team for warmup)
-        // When in match setup, use match config's min_players_to_ready
-        int minPlayersPerTeam;
-        if (isMatchSetup)
-        {
-            minPlayersPerTeam = GetTeamMinReady((int)CsTeam.CounterTerrorist);
-        }
-        else
-        {
-            // In warmup mode without match loaded, require at least 1 player per team
-            // This allows auto-ready to work in casual warmup scenarios
-            minPlayersPerTeam = 1;
-        }
-        
-        // Ensure at least 1 player per team is required (prevent auto-ready with 0 players)
-        if (minPlayersPerTeam <= 0)
-        {
-            minPlayersPerTeam = 1;
-        }
-        
-        Log($"[CheckAndAutoReadyPlayers] isMatchSetup={isMatchSetup}, minPlayersPerTeam={minPlayersPerTeam}");
-
         (int ctPlayerCount, int ctReadyCount) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
         (int tPlayerCount, int tReadyCount) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
+        int totalPlayersOnPlayableTeams = ctPlayerCount + tPlayerCount;
 
-        Log($"[CheckAndAutoReadyPlayers] CT: {ctPlayerCount}/{minPlayersPerTeam} min required (ready: {ctReadyCount}), T: {tPlayerCount}/{minPlayersPerTeam} min required (ready: {tReadyCount})");
+        Log($"[CheckAndAutoReadyPlayers] isMatchSetup={isMatchSetup}, CT={ctPlayerCount} (ready: {ctReadyCount}), T={tPlayerCount} (ready: {tReadyCount}), totalPlayable={totalPlayersOnPlayableTeams}");
         Log($"[CheckAndAutoReadyPlayers] playerData count: {playerData.Count}, readyStatus count: {playerReadyStatus.Count}");
 
         // Debug: Log all players in playerData
@@ -173,16 +152,17 @@ public partial class MatchZy
             }
         }
 
-        // Check if both teams have at least the minimum required players (respects min_players_to_ready)
-        bool bothTeamsHaveMinimum = ctPlayerCount >= minPlayersPerTeam && tPlayerCount >= minPlayersPerTeam;
-
-        if (!bothTeamsHaveMinimum)
+        // User-requested behavior:
+        // If there is at least one player currently in a playable team (CT/T),
+        // auto-ready should simulate .ready for all unready players already on CT/T.
+        if (totalPlayersOnPlayableTeams <= 0)
         {
-            Log($"[CheckAndAutoReadyPlayers] Teams don't have minimum players yet - CT: {ctPlayerCount}/{minPlayersPerTeam}, T: {tPlayerCount}/{minPlayersPerTeam}");
+            Log("[CheckAndAutoReadyPlayers] No players on CT/T yet; skipping auto-ready scheduling.");
             return;
         }
 
-        // Both teams are filled - mark all players on both teams as ready
+        // Mark all players currently on CT/T as ready (simulated), regardless of per-team minimums.
+        // Match start itself remains gated by CheckLiveRequired/IsTeamReady.
         bool anyReadyScheduled = false;
 
         foreach (var key in playerData.Keys)
@@ -236,12 +216,12 @@ public partial class MatchZy
 
         if (anyReadyScheduled)
         {
-            Log($"[CheckAndAutoReadyPlayers] Both teams have minimum players ({minPlayersPerTeam}) - scheduled simulated .ready for unready players");
+            Log("[CheckAndAutoReadyPlayers] Scheduled simulated .ready for unready players on CT/T.");
         }
         
         // Always check if match can start, even if no new players were marked ready
         // This handles the case where players were already ready by default
-        Log($"[CheckAndAutoReadyPlayers] Both teams have minimum players ({minPlayersPerTeam}) - checking if match can start");
+        Log("[CheckAndAutoReadyPlayers] Auto-ready pass complete - checking if match can start.");
         CheckLiveRequired();
     }
 
@@ -283,6 +263,26 @@ public partial class MatchZy
         }
         autoReadyPendingReadyTimers.Clear();
         autoReadyOptOutUserIds.Clear();
+    }
+
+    /// <summary>
+    /// During warmup ready phase: mark player unready and cancel any pending simulated .ready for them.
+    /// Opt-out from auto-ready (.unready) is kept until disconnect (cleared in disconnect handler).
+    /// Call when a player fully connects or lands on CT/T from another team so reconnect / team picks do not leave stale timers or ready state.
+    /// </summary>
+    private void ResetPlayerWarmupReadyAndAutoReady(CCSPlayerController? player)
+    {
+        if (player == null || !player.UserId.HasValue) return;
+        if (!readyAvailable || matchStarted) return;
+
+        int uid = player.UserId.Value;
+        if (autoReadyPendingReadyTimers.TryGetValue(uid, out var pending))
+        {
+            pending?.Kill();
+            autoReadyPendingReadyTimers.Remove(uid);
+        }
+
+        playerReadyStatus[uid] = false;
     }
 
     private void ClearAutoReadySimulationState()
@@ -428,13 +428,14 @@ public partial class MatchZy
             if (!playerData.ContainsKey(userId))
             {
                 playerData[userId] = player;
-                connectedPlayers++;
                 added++;
             }
 
             autoReadySimulationBotUserIds.Add(userId);
             trackedBots.Add(player);
         }
+
+        connectedPlayers = GetRealPlayersCount();
 
         Log($"[AutoReadySimulation] Bot registration pass complete: totalBotsFound={totalBotsFound}, newlyTracked={added}, trackedBotUserIds={autoReadySimulationBotUserIds.Count}.");
 

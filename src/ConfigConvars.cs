@@ -144,6 +144,16 @@ namespace MatchZy
         public FakeConVar<string> tournamentUpdated = new("matchzy_tournament_updated", "Unix timestamp of last tournament status update", "0");
         public FakeConVar<string> tournamentNextMatch = new("matchzy_tournament_next_match", "Next match slug/identifier queued for this server", "");
 
+        /// <summary>
+        /// Value written to matchzy_tournament_status when the match goes live (StartLive / unpause).
+        /// Default "live". Some host panels (e.g. KitsuneLab) stop the container when they see exactly "live";
+        /// in that case set this to "playing" (still treated as match-in-progress by MatchZy).
+        /// </summary>
+        public FakeConVar<string> tournamentGoLiveStatus = new(
+            "matchzy_tournament_go_live_status",
+            "Status string published when match goes live. Default: live. Use playing if an external panel stops the server on live.",
+            "live");
+
         // Match report upload
         public FakeConVar<string> matchReportEndpoint = new("matchzy_report_endpoint", "HTTP endpoint for match report uploads (https://host/api/events/report)", "");
         public FakeConVar<string> matchReportServerId = new("matchzy_report_server_id", "Server identifier to send with match report uploads", "");

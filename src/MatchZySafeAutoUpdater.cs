@@ -271,6 +271,7 @@ public partial class MatchZy
                      or "warmup"
                      or "knife"
                      or "live"
+                     or "playing"
                      or "paused"
                      or "halftime";
         // "postgame", "idle", "error" are considered safe to restart.
@@ -281,6 +282,16 @@ public partial class MatchZy
     /// </summary>
     private void PrepareServerShutdown()
     {
+        // Extra hard safety: never shutdown while MatchZy is in any pre/live match flow.
+        // This protects against status propagation races where tournament_status may still
+        // look "safe" for a frame even though warmup/live just started.
+        if (!IsServerSafeToShutdownNow())
+        {
+            Logger.LogWarning("[MatchZySafeAutoUpdater] Shutdown aborted: MatchZy internal state is not safe yet. Will retry.");
+            AddTimer(ShutdownRetryDelaySeconds, TryShutdownRespectingMatchZy, TimerFlags.STOP_ON_MAPCHANGE);
+            return;
+        }
+
         var players = Utilities.GetPlayers()
             .Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false })
             .ToList();
@@ -310,6 +321,14 @@ public partial class MatchZy
 
     private void ShutdownServer()
     {
+        // Re-check safety right before quitting to avoid shutting down during state transitions.
+        if (!IsServerSafeToShutdownNow())
+        {
+            Logger.LogWarning("[MatchZySafeAutoUpdater] Final shutdown step aborted: server no longer in a safe state. Deferring.");
+            AddTimer(ShutdownRetryDelaySeconds, TryShutdownRespectingMatchZy, TimerFlags.STOP_ON_MAPCHANGE);
+            return;
+        }
+
         // Second machine-parseable marker indicating that we are actually quitting now:
         //   [MATCHZY_UPDATE_SHUTDOWN] required_version=<number>
         Logger.LogInformation("[MatchZySafeAutoUpdater] Initiating server shutdown for CS2 update {Version}.", _requiredVersion);
@@ -336,6 +355,32 @@ public partial class MatchZy
             // Best effort only.
         }
         Server.ExecuteCommand("quit");
+    }
+
+    private bool IsServerSafeToShutdownNow()
+    {
+        try
+        {
+            // Status-level safety gate.
+            string status = GetMatchZyStatus();
+            if (IsMatchInProgress(status))
+            {
+                return false;
+            }
+
+            // Internal-state safety gate (defensive against status race/null reads).
+            if (isMatchSetup || readyAvailable || isWarmup || isKnifeRound || isMatchLive || matchStarted || isPaused)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            // If we cannot determine safety, fail closed.
+            return false;
+        }
     }
 
     /// <summary>

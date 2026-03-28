@@ -469,6 +469,22 @@ namespace MatchZy
             return playerData.Count;
         }
 
+        /// <summary>
+        /// Published to matchzy_tournament_status when entering live play (and on unpause back to live).
+        /// </summary>
+        private string GetTournamentLiveStatusValue()
+        {
+            try
+            {
+                string s = tournamentGoLiveStatus.Value.Trim();
+                return string.IsNullOrEmpty(s) ? "live" : s;
+            }
+            catch
+            {
+                return "live";
+            }
+        }
+
         // Helper function to update tournament status ConVars
         private void UpdateTournamentStatus(string status, string matchSlug = "")
         {
@@ -498,11 +514,20 @@ namespace MatchZy
             if (!isWarmup || matchStarted) return;
             List<string> unreadyPlayers = new();
 
-            foreach (var key in playerReadyStatus.Keys)
+            // Build this list from playerData (source of truth for connected players),
+            // then treat missing ready entries as "not ready".
+            foreach (var kvp in playerData)
             {
-                if (playerReadyStatus[key] == false)
+                int key = kvp.Key;
+                var player = kvp.Value;
+
+                if (player == null || !player.IsValid) continue;
+                if (player.IsHLTV) continue;
+
+                bool isReady = playerReadyStatus.TryGetValue(key, out bool ready) && ready;
+                if (!isReady)
                 {
-                    unreadyPlayers.Add(playerData[key].PlayerName);
+                    unreadyPlayers.Add(player.PlayerName);
                 }
             }
             if (unreadyPlayers.Count > 0)
@@ -1169,7 +1194,12 @@ namespace MatchZy
             {
                 await SendEventAsync(goingLiveEvent);
             });
-            UpdateTournamentStatus("live");
+            string liveStatus = GetTournamentLiveStatusValue();
+            UpdateTournamentStatus(liveStatus);
+            if (!string.Equals(liveStatus, "live", StringComparison.OrdinalIgnoreCase))
+            {
+                Log($"[StartLive] Tournament status set to '{liveStatus}' (not default 'live'). Panels that only react to 'live' should ignore this; if the server still stops, reconfigure the host automation (e.g. KitsuneLab).");
+            }
             CrashBreadcrumb("StartLive: exit");
         }
 
@@ -1654,12 +1684,45 @@ namespace MatchZy
             }
         }
 
+        /// <summary>
+        /// Same conditions as starting live from warmup (used to cancel an in-flight auto-ready countdown if the roster breaks).
+        /// </summary>
+        private bool IsLiveRequirementSatisfied()
+        {
+            if (!readyAvailable || matchStarted) return false;
+
+            int countOfReadyPlayers = playerReadyStatus.Count(kv => kv.Value == true);
+
+            if (isMatchSetup)
+            {
+                return AreAllConfiguredPlayersConnectedAndOnCorrectTeams()
+                    && IsTeamsReady()
+                    && IsSpectatorsReady();
+            }
+
+            if (minimumReadyRequired == 0)
+            {
+                return countOfReadyPlayers >= connectedPlayers && connectedPlayers > 0;
+            }
+
+            (int ctPlayers, int ctReady) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
+            (int tPlayers, int tReady) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
+
+            return minimumReadyRequired > 0
+                && ctPlayers >= minimumReadyRequired
+                && tPlayers >= minimumReadyRequired
+                && ctReady >= minimumReadyRequired
+                && tReady >= minimumReadyRequired;
+        }
+
         private void CheckLiveRequired()
         {
             if (!readyAvailable || matchStarted) return;
+            // Avoid scheduling another countdown / live check while HandleMatchStart is mid-flight
+            // (matchStarted stays false until StartLive -> SetLiveFlags; timer/auto-ready can re-enter).
+            if (handleMatchStartInProgress) return;
 
             int countOfReadyPlayers = playerReadyStatus.Count(kv => kv.Value == true);
-            bool liveRequired = false;
 
             Log($"[CheckLiveRequired] isMatchSetup={isMatchSetup}, readyAvailable={readyAvailable}, matchStarted={matchStarted}, minimumReadyRequired={minimumReadyRequired}, readyPlayers={countOfReadyPlayers}, connectedPlayers={connectedPlayers}");
 
@@ -1670,39 +1733,22 @@ namespace MatchZy
                 bool teamsReady = IsTeamsReady();
                 bool specsReady = IsSpectatorsReady();
                 Log($"[CheckLiveRequired] Match-setup mode: allConfiguredPlayersConnectedAndOnCorrectTeams={allConfiguredPlayersConnectedAndOnCorrectTeams}, IsTeamsReady={teamsReady}, IsSpectatorsReady={specsReady}");
-
-                if (allConfiguredPlayersConnectedAndOnCorrectTeams && teamsReady && specsReady)
-                {
-                    liveRequired = true;
-                }
             }
-            else if (minimumReadyRequired == 0)
+            else if (minimumReadyRequired != 0)
             {
-                if (countOfReadyPlayers >= connectedPlayers && connectedPlayers > 0)
-                {
-                    liveRequired = true;
-                }
-            }
-            else
-            {
-                // When no match is loaded, interpret minimumReadyRequired as a per-team threshold
-                // (CT and T), not a global ready count.
-                (int ctPlayers, int ctReady) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.CounterTerrorist, false);
-                (int tPlayers, int tReady) = GetTeamPlayerCount((int)CounterStrikeSharp.API.Modules.Utils.CsTeam.Terrorist, false);
-
+                (int ctPlayers, int ctReady) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
+                (int tPlayers, int tReady) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
                 Log($"[CheckLiveRequired] No-match mode: minReadyPerTeam={minimumReadyRequired}, CT ready={ctReady}/{ctPlayers}, T ready={tReady}/{tPlayers}");
-
-                if (
-                    minimumReadyRequired > 0 &&
-                    ctPlayers >= minimumReadyRequired &&
-                    tPlayers >= minimumReadyRequired &&
-                    ctReady >= minimumReadyRequired &&
-                    tReady >= minimumReadyRequired
-                )
-                {
-                    liveRequired = true;
-                }
             }
+
+            if (matchStartCountdownTimer != null && !IsLiveRequirementSatisfied())
+            {
+                matchStartCountdownTimer.Kill();
+                matchStartCountdownTimer = null;
+                Log("[CheckLiveRequired] Match start countdown cancelled (requirements no longer satisfied).");
+            }
+
+            bool liveRequired = IsLiveRequirementSatisfied();
 
             Log($"[CheckLiveRequired] liveRequired={liveRequired}");
 
@@ -1715,7 +1761,7 @@ namespace MatchZy
                 }
                 else
                 {
-                    HandleMatchStart();
+                    HandleMatchStart(allowAutoReadySimulationWithoutHumans: true);
                 }
             }
         }
@@ -1785,7 +1831,7 @@ namespace MatchZy
         private void StartMatchCountdown()
         {
             // Prevent multiple countdowns
-            if (matchStartCountdownTimer != null || matchStarted)
+            if (matchStartCountdownTimer != null || matchStarted || handleMatchStartInProgress)
             {
                 return;
             }
@@ -1803,6 +1849,14 @@ namespace MatchZy
                     return;
                 }
 
+                if (!IsLiveRequirementSatisfied())
+                {
+                    matchStartCountdownTimer?.Kill();
+                    matchStartCountdownTimer = null;
+                    Log("[StartMatchCountdown] Countdown cancelled mid-run (requirements no longer satisfied).");
+                    return;
+                }
+
                 matchStartCountdownSeconds--;
                 
                 if (matchStartCountdownSeconds > 0)
@@ -1813,7 +1867,9 @@ namespace MatchZy
                 {
                     matchStartCountdownTimer?.Kill();
                     matchStartCountdownTimer = null;
-                    HandleMatchStart();
+                    // Defer to next frame + same override as admin .start (avoids timer re-entrancy races).
+                    Server.NextFrame(() =>
+                        HandleMatchStart(allowAutoReadySimulationWithoutHumans: true));
                 }
             }, TimerFlags.REPEAT);
         }
@@ -1884,7 +1940,37 @@ namespace MatchZy
 
         private void HandleMatchStart(bool allowAutoReadySimulationWithoutHumans = false)
         {
+            if (matchStarted)
+            {
+                Log("[HandleMatchStart] Ignoring: match already started.");
+                return;
+            }
+
+            if (handleMatchStartInProgress)
+            {
+                Log("[HandleMatchStart] Ignoring re-entrant call (nested CheckLiveRequired / concurrent start).");
+                return;
+            }
+
+            handleMatchStartInProgress = true;
+            try
+            {
+                RunHandleMatchStartCore(allowAutoReadySimulationWithoutHumans);
+            }
+            finally
+            {
+                handleMatchStartInProgress = false;
+            }
+        }
+
+        private void RunHandleMatchStartCore(bool allowAutoReadySimulationWithoutHumans)
+        {
             CrashBreadcrumb($"HandleMatchStart: enter (isMatchSetup={isMatchSetup}, isKnifeRequired={isKnifeRequired}, allowAutoReadySimOverride={allowAutoReadySimulationWithoutHumans})");
+            if (matchStartCountdownTimer != null)
+            {
+                matchStartCountdownTimer.Kill();
+                matchStartCountdownTimer = null;
+            }
             // Auto-ready simulation helper safety:
             // When we're running the ready-simulation bots (0 humans on server), we should
             // never transition into knife/live. Doing so appears to trigger CS2 instability
@@ -2951,7 +3037,7 @@ namespace MatchZy
                 {
                     await SendEventAsync(matchUnpausedEvent);
                 });
-                UpdateTournamentStatus("live");
+                UpdateTournamentStatus(GetTournamentLiveStatusValue());
             }
             else
             {
@@ -3319,8 +3405,18 @@ namespace MatchZy
             foreach (string key in matchConfig.ChangedCvars.Keys)
             {
                 string value = matchConfig.ChangedCvars[key];
-                Log($"[ExecuteChangedConvars] Execing: {key} \"{value}\"");
-                Server.ExecuteCommand($"{key} \"{value}\"");
+                // Avoid always wrapping values in quotes:
+                // - Numeric/bool-like values (e.g. 1, 0, true, false, 0.3) should be passed raw.
+                // - Text values with spaces should be quoted.
+                string trimmed = value.Trim();
+                bool needsQuotes =
+                    trimmed.Length == 0 ||
+                    trimmed.Contains(' ') ||
+                    trimmed.Contains('\t');
+
+                string renderedValue = needsQuotes ? $"\"{trimmed}\"" : trimmed;
+                Log($"[ExecuteChangedConvars] Execing: {key} {renderedValue}");
+                Server.ExecuteCommand($"{key} {renderedValue}");
             }
         }
 
